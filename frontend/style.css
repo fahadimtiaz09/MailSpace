@@ -51,6 +51,7 @@ a { color: var(--primary); }
 .btn-light:hover:not(:disabled) { background: #e8eef8; }
 .btn-danger { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
 .btn-block { width: 100%; }
+a.btn { display: inline-block; text-decoration: none; }
 
 .icon-btn {
   background: none;

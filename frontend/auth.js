@@ -67,7 +67,6 @@ if (signupForm) {
     const username = usernameInput.value.trim();
     const password = signupForm.elements.password.value;
     const confirmPassword = signupForm.elements.confirm_password.value;
-    const accountType = signupForm.elements.account_type.value;
 
     // Quick checks in the browser (the backend will check again — never trust only the browser)
     if (!/^[a-z0-9._]{3,20}$/.test(username)) {
@@ -87,7 +86,7 @@ if (signupForm) {
     try {
       await api("/api/auth/signup", {
         method: "POST",
-        body: { username, password, account_type: accountType },
+        body: { username, password },
       });
       showMessage("Account created! Opening your inbox...", "success");
       setTimeout(() => (window.location.href = "/"), 1000);

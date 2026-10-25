@@ -63,32 +63,27 @@ function hideState() {
 async function loadUser() {
   try {
     const data = await api("/api/auth/me");
+    // Logged in: show email and Log out
     $("user-email").textContent = data.user.email;
+    $("logout-btn").classList.remove("hidden");
     renderProfile(data.user);
   } catch (err) {
     if (err.status === 401) {
-      window.location.href = "/login.html"; // not logged in
+      window.location.href = "/login.html"; // not logged in -> go to login page
       return;
     }
+    // Backend not ready yet: show Log in / Sign up buttons
+    $("login-link").classList.remove("hidden");
+    $("signup-link").classList.remove("hidden");
     showBanner("⚠️ " + err.message + " You are seeing the design only.");
   }
 }
 
 function renderProfile(user) {
-  const types = {
-    regular: "Regular account",
-    temp15: "Temporary (15 days)",
-    temp30: "Temporary (30 days)",
-  };
-  const box = $("profile-box");
-  box.replaceChildren(
+  $("profile-box").replaceChildren(
     el("div", "profile-name", user.username),
-    el("div", null, user.email),
-    el("div", null, types[user.account_type] || user.account_type)
+    el("div", null, user.email)
   );
-  if (user.expires_at) {
-    box.append(el("div", null, "Expires: " + new Date(user.expires_at).toLocaleDateString()));
-  }
 }
 
 // ---------- Folders ----------
