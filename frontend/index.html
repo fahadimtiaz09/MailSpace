@@ -3,25 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MailSpace</title>
+  <title>Inbox · MailSpace</title>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
-  <main class="card">
-    <h1>📬 MailSpace</h1>
-    <p>Our email website is starting!</p>
-    <p id="status">Checking backend...</p>
-  </main>
+<body class="app-page">
 
-  <script>
-    fetch("/api/health")
-      .then(response => response.json())
-      .then(data => {
-        document.getElementById("status").textContent = "✅ " + data.message;
-      })
-      .catch(() => {
-        document.getElementById("status").textContent = "❌ Backend not reachable";
-      });
-  </script>
+  <!-- ===== Top bar ===== -->
+  <header class="topbar">
+    <button id="menu-btn" class="icon-btn only-mobile" aria-label="Open menu">☰</button>
+    <div class="brand">📬 <span>MailSpace</span></div>
+
+    <form id="search-form" class="search">
+      <input id="search-input" type="search" placeholder="Search mail" aria-label="Search mail">
+    </form>
+
+    <div class="user-menu">
+      <span id="user-email" class="muted hide-mobile">Loading...</span>
+      <button id="logout-btn" class="btn btn-light">Log out</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <div class="layout">
+    <!-- ===== Sidebar ===== -->
+    <aside id="sidebar" class="sidebar">
+      <button id="compose-btn" class="btn btn-primary btn-block">✏️ Compose</button>
+
+      <nav>
+        <a href="#inbox" data-folder="inbox" class="folder-link">📥 Inbox <span class="count" id="count-inbox"></span></a>
+        <a href="#sent" data-folder="sent" class="folder-link">📤 Sent</a>
+        <a href="#drafts" data-folder="drafts" class="folder-link">📝 Drafts <span class="count" id="count-drafts"></span></a>
+        <a href="#starred" data-folder="starred" class="folder-link">⭐ Starred</a>
+        <a href="#spam" data-folder="spam" class="folder-link">🚫 Spam <span class="count" id="count-spam"></span></a>
+        <a href="#trash" data-folder="trash" class="folder-link">🗑️ Trash</a>
+      </nav>
+
+      <div id="profile-box" class="profile-box"></div>
+    </aside>
+    <div id="overlay" class="overlay hidden"></div>
+
+    <!-- ===== Main area ===== -->
+    <main class="content">
+      <!-- List of messages -->
+      <section id="list-view">
+        <div class="list-header">
+          <h2 id="folder-title">Inbox</h2>
+          <button id="refresh-btn" class="icon-btn" title="Refresh">⟳</button>
+        </div>
+        <div id="list-state" class="state hidden"></div>
+        <ul id="message-list" class="message-list"></ul>
+        <div id="pager" class="pager hidden">
+          <button id="prev-btn" class="btn btn-light">‹ Newer</button>
+          <span id="page-info"></span>
+          <button id="next-btn" class="btn btn-light">Older ›</button>
+        </div>
+      </section>
+
+      <!-- One open message -->
+      <section id="read-view" class="hidden">
+        <div class="read-toolbar">
+          <button id="back-btn" class="btn btn-light">← Back</button>
+          <button id="star-btn" class="btn btn-light">☆ Star</button>
+          <button id="unread-btn" class="btn btn-light">Mark unread</button>
+          <button id="spam-btn" class="btn btn-light">Report spam</button>
+          <button id="trash-btn" class="btn btn-light">🗑️ Delete</button>
+          <button id="restore-btn" class="btn btn-light hidden">Restore</button>
+          <button id="delete-forever-btn" class="btn btn-danger hidden">Delete forever</button>
+        </div>
+        <h2 id="read-subject"></h2>
+        <div id="read-meta" class="read-meta"></div>
+        <div id="read-body" class="read-body"></div>
+        <div id="read-attachments" class="attachments"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===== Compose window ===== -->
+  <div id="compose-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="compose-title">
+    <form id="compose-form" class="modal-box" novalidate>
+      <div class="modal-header">
+        <h3 id="compose-title">New message</h3>
+        <button type="button" id="compose-close" class="icon-btn" aria-label="Close">✕</button>
+      </div>
+
+      <div id="compose-message" class="alert hidden"></div>
+
+      <label for="compose-to">To</label>
+      <input id="compose-to" name="to" type="text" placeholder="ali@mailspace.local, sara@mailspace.local">
+      <div class="hint">Separate multiple addresses with commas.</div>
+
+      <label for="compose-subject">Subject</label>
+      <input id="compose-subject" name="subject" type="text" maxlength="200">
+
+      <label for="compose-body">Message</label>
+      <textarea id="compose-body" name="body" rows="10"></textarea>
+
+      <label class="file-label">📎 Attach files
+        <input type="file" id="attachments" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
+      </label>
+      <div class="hint">Up to 5 files, 10 MB each. Images, PDF, Word and text files. Attachments are not saved in drafts.</div>
+      <ul id="file-list" class="file-list"></ul>
+
+      <div class="modal-actions">
+        <button type="button" id="save-draft-btn" class="btn btn-light">Save draft</button>
+        <button type="submit" id="send-btn" class="btn btn-primary">Send</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/api.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

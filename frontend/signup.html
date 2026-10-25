@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign up · MailSpace</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="brand">📬 <span>MailSpace</span></div>
+    <h1>Create your account</h1>
+    <p class="muted">Get your own MailSpace address.</p>
+
+    <div id="form-message" class="alert hidden"></div>
+
+    <form id="signup-form" novalidate>
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autocomplete="username" maxlength="20" required>
+      <div class="hint">Your address: <strong id="email-preview">username@mailspace.local</strong></div>
+      <div class="hint">3–20 characters: lowercase letters, numbers, dot (.) or underscore (_).</div>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" required>
+      <div class="hint">At least 8 characters.</div>
+
+      <label for="confirm_password">Confirm password</label>
+      <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+
+      <label for="account_type">Account type</label>
+      <select id="account_type" name="account_type">
+        <option value="regular">Regular (does not expire)</option>
+        <option value="temp15">Temporary – 15 days</option>
+        <option value="temp30">Temporary – 30 days</option>
+      </select>
+      <div class="hint">Temporary accounts and their messages are deleted after they expire.</div>
+
+      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="/login.html">Log in</a></p>
+  </main>
+
+  <script src="/api.js"></script>
+  <script src="/auth.js"></script>
+</body>
+</html>

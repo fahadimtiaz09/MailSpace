@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in · MailSpace</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <div class="brand">📬 <span>MailSpace</span></div>
+    <h1>Welcome back</h1>
+    <p class="muted">Log in to open your inbox.</p>
+
+    <div id="form-message" class="alert hidden"></div>
+
+    <form id="login-form" novalidate>
+      <label for="login">Username or email</label>
+      <input id="login" name="login" type="text" autocomplete="username" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button type="submit" class="btn btn-primary btn-block">Log in</button>
+    </form>
+
+    <p class="auth-switch">New here? <a href="/signup.html">Create an account</a></p>
+  </main>
+
+  <script src="/api.js"></script>
+  <script src="/auth.js"></script>
+</body>
+</html>
