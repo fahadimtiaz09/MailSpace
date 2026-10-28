@@ -80,10 +80,20 @@ async function loadUser() {
 }
 
 function renderProfile(user) {
-  $("profile-box").replaceChildren(
+  const types = {
+    regular: "Regular account",
+    temp15: "Temporary (15 days)",
+    temp30: "Temporary (30 days)",
+  };
+  const box = $("profile-box");
+  box.replaceChildren(
     el("div", "profile-name", user.username),
-    el("div", null, user.email)
+    el("div", null, user.email),
+    el("div", null, types[user.account_type] || user.account_type)
   );
+  if (user.expires_at) {
+    box.append(el("div", null, "Expires: " + new Date(user.expires_at).toLocaleDateString()));
+  }
 }
 
 // ---------- Folders ----------

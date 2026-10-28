@@ -27,6 +27,13 @@
       <label for="confirm_password">Confirm password</label>
       <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
 
+      <label for="account_type">Account type</label>
+      <select id="account_type" name="account_type">
+        <option value="regular">Regular (does not expire)</option>
+        <option value="temp15">Temporary – 15 days</option>
+        <option value="temp30">Temporary – 30 days</option>
+      </select>
+      <div class="hint">Temporary accounts and their messages are deleted after they expire.</div>
      
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
     </form>
