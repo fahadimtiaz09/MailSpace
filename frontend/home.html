@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MailSpace · Email on your own domain</title>
+  <meta name="description" content="MailSpace gives you a private, secure email address on your own domain.">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="home-page">
+
+  <!-- ===== Top navigation ===== -->
+  <header class="home-nav">
+    <a href="/" class="brand">📬 <span>MailSpace</span></a>
+    <nav class="home-links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#inbox-delivery">Inbox delivery</a>
+    </nav>
+    <div class="home-actions">
+      <a id="nav-login" href="/login.html" class="btn btn-light">Log in</a>
+      <a id="nav-signup" href="/signup.html" class="btn btn-primary">Sign up</a>
+      <a id="nav-inbox" href="/inbox" class="btn btn-primary hidden">Open inbox</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===== Hero (first screen) ===== -->
+    <section class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Private email for people and businesses</p>
+        <h1>Professional email on <span class="highlight">your own domain</span></h1>
+        <p class="hero-sub">
+          Get an address like <strong>you@yourbusiness.com</strong>. MailSpace keeps your inbox
+          organised, your files safe, and your messages authenticated so they reach the inbox.
+        </p>
+        <div class="hero-buttons">
+          <a href="/signup.html" class="btn btn-primary btn-lg">Create free account</a>
+          <a href="#how" class="btn btn-light btn-lg">See how it works</a>
+        </div>
+      </div>
+
+      <!-- A small picture of an inbox (decoration only) -->
+      <div class="hero-preview" aria-hidden="true">
+        <div class="preview-row unread">Ali Khan <span>Meeting tomorrow at 10</span></div>
+        <div class="preview-row unread">Sara Ahmed <span>Invoice attached 📎</span></div>
+        <div class="preview-row">MailSpace Team <span>Welcome to your new inbox!</span></div>
+        <div class="preview-row">Bilal <span>Project files for review</span></div>
+      </div>
+    </section>
+
+    <!-- ===== Features ===== -->
+    <div class="band">
+      <section id="features" class="home-section">
+        <h2>Everything you need in one inbox</h2>
+        <p class="section-sub">Simple enough for anyone, careful enough for your business.</p>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <h3>Your own domain</h3>
+            <p>Use your business name in your email address. We show you exactly which DNS records to add.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">✅</div>
+            <h3>Built for the inbox</h3>
+            <p>Messages are authenticated with SPF, DKIM and DMARC, the checks Gmail and Outlook use.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>Private and secure</h3>
+            <p>Passwords are hashed, sessions are protected, and only you can open your messages.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📎</div>
+            <h3>Safe attachments</h3>
+            <p>Photos and documents are checked before they are stored, and only recipients can download them.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⏳</div>
+            <h3>Temporary accounts</h3>
+            <p>Need an address for 15 or 30 days? Create one that cleans itself up when it expires.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔎</div>
+            <h3>Folders and search</h3>
+            <p>Inbox, Sent, Drafts, Starred, Spam and Trash, with search across all your mail.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== How it works ===== -->
+    <section id="how" class="home-section">
+      <h2>How it works</h2>
+      <p class="section-sub">Three steps from sign-up to your first email.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Create your account</h3>
+          <p>Pick a username and get your MailSpace address in seconds.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Connect your domain</h3>
+          <p>Add the records we give you at your domain provider. We check them for you.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Send and receive</h3>
+          <p>Email anyone, including Gmail and Outlook users, from your own address.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Inbox delivery ===== -->
+    <div class="band">
+      <section id="inbox-delivery" class="home-section">
+        <h2>Made to land in the inbox</h2>
+        <p class="section-sub">
+          Every MailSpace domain is set up with the three standards that email providers check
+          before deciding where a message goes.
+        </p>
+
+        <div class="trust-badges">
+          <span class="badge">SPF</span>
+          <span class="badge">DKIM</span>
+          <span class="badge">DMARC</span>
+        </div>
+
+        <p class="section-sub small">Example of what Gmail shows for an authenticated message:</p>
+        <pre class="auth-result">Authentication-Results: mx.google.com;
+   spf=<span class="pass">pass</span> smtp.mailfrom=yourdomain.com
+   dkim=<span class="pass">pass</span> header.d=yourdomain.com
+   dmarc=<span class="pass">pass</span> header.from=yourdomain.com</pre>
+      </section>
+    </div>
+
+    <!-- ===== Final call to action ===== -->
+    <section class="cta-band">
+      <h2>Ready for your own inbox?</h2>
+      <p>Create your MailSpace account. It only takes a minute.</p>
+      <a href="/signup.html" class="btn btn-white btn-lg">Get started</a>
+    </section>
+  </main>
+
+  <footer class="home-footer">
+    © <span id="year"></span> MailSpace · A university project
+  </footer>
+
+  <script src="/api.js"></script>
+  <script>
+    // If the visitor is already logged in, show "Open inbox" instead of Log in / Sign up
+    api("/api/auth/me")
+      .then(() => {
+        document.getElementById("nav-login").classList.add("hidden");
+        document.getElementById("nav-signup").classList.add("hidden");
+        document.getElementById("nav-inbox").classList.remove("hidden");
+      })
+      .catch(() => {}); // not logged in: keep the Log in / Sign up buttons
+
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

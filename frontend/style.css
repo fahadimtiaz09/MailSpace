@@ -342,3 +342,141 @@ textarea { resize: vertical; }
   .msg-main { display: block; }
   .content { padding: 10px; }
 }
+/* ===== Public home page ===== */
+a.brand { text-decoration: none; }
+.btn-lg { padding: 14px 22px; font-size: 16px; }
+.btn-white { background: white; color: var(--primary); }
+
+.home-page { background: var(--surface); }
+
+.home-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--border);
+}
+.home-links { display: flex; gap: 20px; }
+.home-links a { color: var(--text); text-decoration: none; font-size: 15px; }
+.home-links a:hover { color: var(--primary); }
+.home-actions { margin-left: auto; display: flex; gap: 10px; }
+
+.hero {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 24px;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.eyebrow {
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 12px;
+}
+.hero h1 { font-size: 46px; line-height: 1.15; margin: 0 0 18px; }
+.highlight { color: var(--primary); }
+.hero-sub { font-size: 18px; color: var(--muted); line-height: 1.6; margin: 0 0 28px; }
+.hero-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.hero-preview {
+  background: var(--bg);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.12);
+}
+.preview-row {
+  background: white;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.preview-row:last-child { margin-bottom: 0; }
+.preview-row.unread { box-shadow: inset 3px 0 0 var(--primary); font-weight: 700; }
+.preview-row span { color: var(--muted); font-weight: 400; text-align: right; }
+
+.band { background: var(--bg); }
+.home-section { max-width: 1100px; margin: 0 auto; padding: 64px 24px; }
+.home-section h2 { font-size: 32px; text-align: center; margin: 0 0 10px; }
+.section-sub {
+  text-align: center;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 auto 40px;
+}
+.section-sub.small { font-size: 14px; margin-bottom: 12px; }
+
+.feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+.feature-icon { font-size: 28px; }
+.feature-card h3 { margin: 10px 0 8px; font-size: 18px; }
+.feature-card p { margin: 0; color: var(--muted); line-height: 1.6; font-size: 15px; }
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.step { text-align: center; padding: 12px; }
+.step-number {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.step h3 { margin: 0 0 8px; }
+.step p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+.trust-badges { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 28px; }
+.badge { background: #dcfce7; color: #166534; padding: 10px 18px; border-radius: 999px; font-weight: 700; }
+.auth-result {
+  max-width: 640px;
+  margin: 0 auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 20px;
+  border-radius: 12px;
+  font-family: Consolas, monospace;
+  font-size: 14px;
+  overflow-x: auto;
+}
+.auth-result .pass { color: #4ade80; font-weight: 700; }
+
+.cta-band { background: var(--primary); color: white; text-align: center; padding: 56px 24px; }
+.cta-band h2 { margin: 0 0 10px; font-size: 30px; }
+.cta-band p { margin: 0 0 24px; opacity: 0.9; }
+
+.home-footer {
+  text-align: center;
+  padding: 28px 24px;
+  color: var(--muted);
+  font-size: 14px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 800px) {
+  .home-nav { padding: 12px 16px; gap: 12px; }
+  .home-nav .brand span { display: inline; }
+  .home-links { display: none; }
+  .hero { grid-template-columns: 1fr; padding: 40px 16px; gap: 32px; }
+  .hero h1 { font-size: 32px; }
+  .feature-grid, .steps { grid-template-columns: 1fr; }
+  .home-section { padding: 48px 16px; }
+}
