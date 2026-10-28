@@ -28,6 +28,12 @@ def create_app():
 
     @app.route("/")
     def home():
+        # Public landing page for visitors
+        return send_from_directory(Config.FRONTEND_DIR, "home.html")
+
+    @app.route("/inbox")
+    def inbox():
+        # The email app itself
         return send_from_directory(Config.FRONTEND_DIR, "index.html")
 
     @app.route("/api/health")
