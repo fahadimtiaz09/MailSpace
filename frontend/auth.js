@@ -3,7 +3,7 @@
 // ============================================================
 
 // Temporary domain shown in the preview. The backend decides the real address.
-const MAIL_DOMAIN = "mailspace.local";
+const MAIL_DOMAIN = "fahadimtiaz.site";
 
 function showMessage(text, type = "error") {
   const box = document.getElementById("form-message");

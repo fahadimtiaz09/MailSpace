@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from config import Config
 from database import addresses, attachment_files, domains, mailboxes, messages, users
 from routes.domains import allowed_from_addresses
+from email_service import ExternalSendError, external_sending_ready, send_external
 from security import is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
@@ -333,34 +334,31 @@ def save_draft():
         "folder": "drafts", "is_read": True, "is_starred": False, **fields,
     }).inserted_id
     return jsonify({"draft_id": str(entry_id)}), 201
-
 # ---------- Sending ----------
 def resolve_recipients(to_emails):
-    """Find the MailSpace user behind every address.
-    Returns ({email: user}, None) on success, or (None, "error message")."""
-    found = {}
+    """Sort addresses into MailSpace mailboxes and outside addresses.
+    Returns (internal {email: user}, external [emails], None)
+    or (None, None, "error message")."""
+    internal, external = {}, []
     for email in to_emails:
         domain = email.rsplit("@", 1)[1]
-        user = None
 
         if domain == Config.MAIL_DOMAIN:
-            # A normal MailSpace address, like ali@mailspace.local
+            # A normal MailSpace address, like nimra@fahadimtiaz.site
             user = users.find_one({"email": email, "status": "active"})
         elif domains.find_one({"name": domain, "status": "verified"}):
             # A custom address on a verified customer domain, like info@nimranoor.site
             address = addresses.find_one({"email": email})
-            if address:
-                user = users.find_one({"_id": address["user_id"], "status": "active"})
+            user = users.find_one({"_id": address["user_id"], "status": "active"}) if address else None
         else:
-            return None, (
-                f"Sending to outside addresses like {email} isn't set up yet. "
-                "For now you can only email MailSpace addresses."
-            )
+            # Gmail, Outlook or any other provider
+            external.append(email)
+            continue
 
         if user is None or is_expired(user):
-            return None, f"No MailSpace mailbox found for {email}."
-        found[email] = user
-    return found, None
+            return None, None, f"No MailSpace mailbox found for {email}."
+        internal[email] = user
+    return internal, external, None
 
 
 @messages_bp.post("/messages/send")
@@ -384,9 +382,19 @@ def send_message():
     if invalid:
         return error(f'"{invalid[0]}" is not a valid email address.')
 
-    found, problem = resolve_recipients(to_emails)
+    found, external, problem = resolve_recipients(to_emails)
     if problem:
         return error(problem)
+
+    if external:
+        if not external_sending_ready():
+            return error("Sending to outside addresses is not set up on this server.")
+        if not from_email.endswith("@" + Config.MAIL_DOMAIN):
+            return error(
+                f"Outside addresses can only be emailed from your @{Config.MAIL_DOMAIN} address. "
+                "Choose it in the From box."
+            )
+
     # Two addresses can belong to the same person: give them only one copy
     recipients = list({u["_id"]: u for u in found.values()}.values())
 
@@ -395,11 +403,30 @@ def send_message():
     except ValueError as exc:
         return error(str(exc))
 
+    # 1) Outside addresses first. If the provider refuses, nothing is saved.
+    external_id = None
+    if external:
+        if sum(a["size"] for a in attachments) > Config.MAX_EXTERNAL_ATTACHMENTS:
+            delete_files(attachments)
+            return error("Attachments to outside addresses can be at most 25 MB in total.")
+        try:
+            files_for_provider = [
+                (a["filename"], attachment_files.get(a["file_id"]).read()) for a in attachments
+            ]
+            external_id = send_external(from_email, me["username"], external, subject, body, files_for_provider)
+        except ExternalSendError as exc:
+            delete_files(attachments)
+            return error(f"Could not send to {', '.join(external)}: {exc}", 502)
+
+    # 2) Save the message and give every MailSpace user their own copy
     now = now_utc()
     try:
         message_id = messages.insert_one({
             "sender_id": me["_id"], "sender_email": from_email,
             "to_emails": to_emails, "recipient_ids": [u["_id"] for u in recipients],
+            "external_recipients": external,
+            "external_status": "accepted" if external else None,  # accepted by the provider, not yet "delivered"
+            "external_id": external_id,
             "subject": subject, "body": body, "attachments": attachments,
             "is_draft": False, "created_at": now,
         }).inserted_id
@@ -425,4 +452,6 @@ def send_message():
         if draft and draft["folder"] == "drafts":
             delete_entry(draft)
 
+    if external:
+        return jsonify({"message": "Message sent. The email provider accepted it for delivery."}), 201
     return jsonify({"message": "Message sent"}), 201

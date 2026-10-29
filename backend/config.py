@@ -18,6 +18,8 @@ class Config:
     MONGODB_URI = os.getenv("MONGODB_URI")
     MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "mailspace")
     MAIL_DOMAIN = os.getenv("MAIL_DOMAIN", "mailspace.local").lower()
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY")            # for emails to Gmail, Outlook, ...
+    MAX_EXTERNAL_ATTACHMENTS = 25 * 1024 * 1024             # 25 MB total, like Gmail
 
     FRONTEND_DIR = BASE_DIR / "frontend"
     UPLOAD_DIR = BASE_DIR / "uploads"  # outside the frontend folder, so not public
