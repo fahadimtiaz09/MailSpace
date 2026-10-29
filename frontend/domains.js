@@ -93,7 +93,8 @@ function renderDomain(d) {
   const wrap = el("div", "table-wrap");
   wrap.append(table);
   card.append(wrap);
-
+  // Email addresses (only after the domain is verified)
+  if (verified) card.append(renderAddresses(d));
   // Buttons
   const actions = el("div", "domain-actions");
   if (!verified) {
@@ -108,7 +109,75 @@ function renderDomain(d) {
 
   return card;
 }
+// ---------- Addresses on a verified domain ----------
+function renderAddresses(d) {
+  const section = el("div", "address-section");
+  section.append(el("h4", null, "Email addresses on " + d.name));
 
+  const list = el("ul", "address-list");
+  if (d.addresses.length === 0) {
+    list.append(el("li", "muted", "No addresses yet. Create your first one below."));
+  }
+  d.addresses.forEach((a) => {
+    const item = el("li");
+    const remove = el("button", "btn btn-light btn-small", "Delete");
+    remove.type = "button";
+    remove.addEventListener("click", () => deleteAddress(d, a));
+    item.append(el("span", null, "📧 " + a.email), remove);
+    list.append(item);
+  });
+  section.append(list);
+
+  const form = el("form", "address-form");
+  const input = el("input");
+  input.type = "text";
+  input.placeholder = "info";
+  input.maxLength = 30;
+  input.setAttribute("aria-label", "New address name");
+  const button = el("button", "btn btn-primary", "Create address");
+  button.type = "submit";
+  form.append(input, el("span", "address-suffix", "@" + d.name), button);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    createAddress(d, input.value.trim().toLowerCase());
+  });
+  section.append(form);
+
+  return section;
+}
+
+async function createAddress(d, localPart) {
+  hideMessage();
+  if (!localPart) {
+    showMessage("Type a name for the address, for example info");
+    return;
+  }
+  try {
+    const data = await api("/api/domains/" + encodeURIComponent(d.id) + "/addresses", {
+      method: "POST",
+      body: { local_part: localPart },
+    });
+    showMessage(data.address.email + " was created. Emails to it will arrive in your inbox.", "success");
+    loadDomains();
+  } catch (err) {
+    showMessage(err.message);
+  }
+}
+
+async function deleteAddress(d, a) {
+  if (!confirm("Delete " + a.email + "? New emails to it will no longer arrive.")) return;
+  hideMessage();
+  try {
+    await api(
+      "/api/domains/" + encodeURIComponent(d.id) + "/addresses/" + encodeURIComponent(a.id),
+      { method: "DELETE" }
+    );
+    showMessage(a.email + " was deleted.", "success");
+    loadDomains();
+  } catch (err) {
+    showMessage(err.message);
+  }
+}
 // ---------- Actions ----------
 async function verifyDomain(id, button) {
   hideMessage();
@@ -126,7 +195,7 @@ async function verifyDomain(id, button) {
 }
 
 async function removeDomain(d) {
-  if (!confirm("Remove " + d.name + " from MailSpace?")) return;
+    if (!confirm("Remove " + d.name + " from MailSpace? Its email addresses will be deleted too.")) return;
   hideMessage();
   try {
     await api("/api/domains/" + encodeURIComponent(d.id), { method: "DELETE" });

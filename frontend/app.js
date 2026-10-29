@@ -145,7 +145,21 @@ function startCountdown(expiresAt, node) {
   tick();                                  // show it immediately
   countdownTimer = setInterval(tick, 1000); // then update every second
 }
-
+// ---------- "From" addresses for Compose ----------
+async function loadFromAddresses() {
+  const select = $("compose-from");
+  try {
+    const data = await api("/api/domains/from-addresses");
+    select.replaceChildren();
+    data.addresses.forEach((email) => {
+      const option = el("option", null, email);
+      option.value = email;
+      select.append(option);
+    });
+  } catch {
+    // If this fails, the server will simply use your main address
+  }
+}
 // ---------- Folders ----------
 function folderFromHash() {
   const name = location.hash.replace("#", "");
@@ -446,6 +460,7 @@ $("compose-form").addEventListener("submit", async (event) => {
 
   // FormData is needed because we are sending files
   const formData = new FormData();
+    if (form.elements.from.value) formData.append("from", form.elements.from.value);
   formData.append("to", recipients.join(","));
   formData.append("subject", form.elements.subject.value.trim());
   formData.append("body", form.elements.body.value);
@@ -570,3 +585,4 @@ window.addEventListener("hashchange", () => {
 state.folder = folderFromHash();
 loadUser();
 loadMessages();
+loadFromAddresses();

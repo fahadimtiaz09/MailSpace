@@ -30,6 +30,7 @@ users = db["users"]
 messages = db["messages"]
 mailboxes = db["mailboxes"]
 domains = db["domains"]
+addresses = db["addresses"]
 
 
 def init_indexes():
@@ -46,6 +47,14 @@ def init_indexes():
     messages.create_index("sender_id")
     messages.create_index("attachments.id")
 
+    # A user can add a domain only once; a domain can be VERIFIED by only one account
+    domains.create_index([("owner_id", ASCENDING), ("name", ASCENDING)], unique=True)
+    domains.create_index("name", unique=True, partialFilterExpression={"status": "verified"})
+    
+    # Each custom address (like info@nimranoor.site) can exist only once
+    addresses.create_index("email", unique=True)
+    addresses.create_index("domain_id")
+    addresses.create_index("user_id")
 
 def ping():
     client.admin.command("ping")

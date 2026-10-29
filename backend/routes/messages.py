@@ -7,7 +7,8 @@ from pymongo import DESCENDING
 from werkzeug.utils import secure_filename
 
 from config import Config
-from database import mailboxes, messages, users
+from database import addresses, domains, mailboxes, messages, users
+from routes.domains import allowed_from_addresses
 from security import is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
@@ -324,8 +325,35 @@ def save_draft():
     }).inserted_id
     return jsonify({"draft_id": str(entry_id)}), 201
 
-
 # ---------- Sending ----------
+def resolve_recipients(to_emails):
+    """Find the MailSpace user behind every address.
+    Returns ({email: user}, None) on success, or (None, "error message")."""
+    found = {}
+    for email in to_emails:
+        domain = email.rsplit("@", 1)[1]
+        user = None
+
+        if domain == Config.MAIL_DOMAIN:
+            # A normal MailSpace address, like ali@mailspace.local
+            user = users.find_one({"email": email, "status": "active"})
+        elif domains.find_one({"name": domain, "status": "verified"}):
+            # A custom address on a verified customer domain, like info@nimranoor.site
+            address = addresses.find_one({"email": email})
+            if address:
+                user = users.find_one({"_id": address["user_id"], "status": "active"})
+        else:
+            return None, (
+                f"Sending to outside addresses like {email} isn't set up yet. "
+                "For now you can only email MailSpace addresses."
+            )
+
+        if user is None or is_expired(user):
+            return None, f"No MailSpace mailbox found for {email}."
+        found[email] = user
+    return found, None
+
+
 @messages_bp.post("/messages/send")
 @login_required
 def send_message():
@@ -333,6 +361,11 @@ def send_message():
     to_emails = parse_recipients(request.form.get("to", ""))
     subject = request.form.get("subject", "").strip()[:200]
     body = request.form.get("body", "")[:20000]
+    from_email = request.form.get("from", me["email"]).strip().lower()
+
+    # You may only send from your own addresses
+    if from_email not in allowed_from_addresses(me):
+        return error("You can't send from that address.")
 
     if not to_emails:
         return error("Add at least one recipient.")
@@ -342,21 +375,11 @@ def send_message():
     if invalid:
         return error(f'"{invalid[0]}" is not a valid email address.')
 
-    external = [e for e in to_emails if not e.endswith("@" + Config.MAIL_DOMAIN)]
-    if external:
-        return error(
-            f"Sending to outside addresses like {external[0]} isn't set up yet. "
-            f"For now you can only email MailSpace users (@{Config.MAIL_DOMAIN})."
-        )
-
-    found = {
-        u["email"]: u
-        for u in users.find({"email": {"$in": to_emails}, "status": "active"})
-        if not is_expired(u)
-    }
-    missing = [e for e in to_emails if e not in found]
-    if missing:
-        return error(f"No MailSpace account found for {missing[0]}.")
+    found, problem = resolve_recipients(to_emails)
+    if problem:
+        return error(problem)
+    # Two addresses can belong to the same person: give them only one copy
+    recipients = list({u["_id"]: u for u in found.values()}.values())
 
     try:
         attachments = save_attachments(request.files.getlist("attachments"))
@@ -366,20 +389,20 @@ def send_message():
     now = now_utc()
     try:
         message_id = messages.insert_one({
-            "sender_id": me["_id"], "sender_email": me["email"],
-            "to_emails": to_emails, "recipient_ids": [u["_id"] for u in found.values()],
+            "sender_id": me["_id"], "sender_email": from_email,
+            "to_emails": to_emails, "recipient_ids": [u["_id"] for u in recipients],
             "subject": subject, "body": body, "attachments": attachments,
             "is_draft": False, "created_at": now,
         }).inserted_id
 
         shared = {
-            "message_id": message_id, "from_email": me["email"], "to_emails": to_emails,
+            "message_id": message_id, "from_email": from_email, "to_emails": to_emails,
             "subject": subject, "snippet": make_snippet(body),
-            "search_text": make_search_text(me["email"], to_emails, subject, body),
+            "search_text": make_search_text(from_email, to_emails, subject, body),
             "has_attachments": bool(attachments), "is_starred": False, "created_at": now,
         }
         entries = [{**shared, "user_id": me["_id"], "folder": "sent", "is_read": True}]
-        for recipient in found.values():
+        for recipient in recipients:
             entries.append({**shared, "user_id": recipient["_id"], "folder": "inbox", "is_read": False})
         mailboxes.insert_many(entries)
     except Exception:

@@ -1,4 +1,5 @@
-"""domains.py — customers add their own domain and prove they own it with a DNS record."""
+"""domains.py — customers add their own domain, prove they own it,
+and create email addresses on it (like info@yourbusiness.com)."""
 import re
 import secrets
 
@@ -8,14 +9,16 @@ from flask import Blueprint, g, jsonify, request
 from pymongo.errors import DuplicateKeyError
 
 from config import Config
-from database import domains
+from database import addresses, domains
 from security import login_required, now_utc, parse_object_id, rate_limited, to_iso
 
 domains_bp = Blueprint("domains", __name__, url_prefix="/api/domains")
 
 DOMAIN_PATTERN = re.compile(r"^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+LOCAL_PART_PATTERN = re.compile(r"^[a-z0-9._]{1,30}$")
 VERIFY_HOST = "_mailspace"
 MAX_DOMAINS_PER_USER = 3
+MAX_ADDRESSES_PER_DOMAIN = 10
 
 
 def error(message, status=400):
@@ -29,7 +32,7 @@ def clean_domain_name(value):
     return name.split("/")[0].rstrip(".")
 
 
-def public_domain(d):
+def public_domain(d, domain_addresses=None):
     return {
         "id": str(d["_id"]),
         "name": d["name"],
@@ -44,7 +47,12 @@ def public_domain(d):
                 "purpose": "Proves you own this domain",
             },
         ],
+        "addresses": domain_addresses or [],
     }
+
+
+def public_address(a):
+    return {"id": str(a["_id"]), "email": a["email"]}
 
 
 def find_domain(domain_id):
@@ -53,6 +61,13 @@ def find_domain(domain_id):
     if oid is None:
         return None
     return domains.find_one({"_id": oid, "owner_id": g.user["_id"]})
+
+
+def allowed_from_addresses(user):
+    """All addresses this user may send from: their main address + their custom ones."""
+    emails = [user["email"]]
+    emails += [a["email"] for a in addresses.find({"user_id": user["_id"]}).sort("email", 1)]
+    return emails
 
 
 def lookup_txt(hostname):
@@ -68,11 +83,17 @@ def lookup_txt(hostname):
     return [b"".join(r.strings).decode("utf-8", "replace") for r in answers]
 
 
+# ---------- Domains ----------
 @domains_bp.get("")
 @login_required
 def list_domains():
-    cursor = domains.find({"owner_id": g.user["_id"]}).sort("created_at", 1)
-    return jsonify({"domains": [public_domain(d) for d in cursor]})
+    uid = g.user["_id"]
+    by_domain = {}
+    for a in addresses.find({"user_id": uid}).sort("email", 1):
+        by_domain.setdefault(a["domain_id"], []).append(public_address(a))
+
+    cursor = domains.find({"owner_id": uid}).sort("created_at", 1)
+    return jsonify({"domains": [public_domain(d, by_domain.get(d["_id"])) for d in cursor]})
 
 
 @domains_bp.post("")
@@ -148,5 +169,57 @@ def remove_domain(domain_id):
     d = find_domain(domain_id)
     if d is None:
         return error("Domain not found.", 404)
+    addresses.delete_many({"domain_id": d["_id"]})  # its addresses go too
     domains.delete_one({"_id": d["_id"]})
     return jsonify({"ok": True})
+
+
+# ---------- Addresses on a verified domain ----------
+@domains_bp.post("/<domain_id>/addresses")
+@login_required
+def create_address(domain_id):
+    d = find_domain(domain_id)
+    if d is None:
+        return error("Domain not found.", 404)
+    if d["status"] != "verified":
+        return error("Verify the domain before creating addresses.")
+
+    local = str((request.get_json(silent=True) or {}).get("local_part", "")).strip().lower()
+    if not LOCAL_PART_PATTERN.fullmatch(local) or ".." in local \
+            or local.startswith(".") or local.endswith("."):
+        return error("Use 1–30 characters: lowercase letters, numbers, dot or underscore.")
+    if addresses.count_documents({"domain_id": d["_id"]}) >= MAX_ADDRESSES_PER_DOMAIN:
+        return error(f"You can create up to {MAX_ADDRESSES_PER_DOMAIN} addresses per domain.")
+
+    doc = {
+        "user_id": g.user["_id"],
+        "domain_id": d["_id"],
+        "email": f"{local}@{d['name']}",
+        "created_at": now_utc(),
+    }
+    try:
+        doc["_id"] = addresses.insert_one(doc).inserted_id
+    except DuplicateKeyError:
+        return error("That address already exists.", 409)
+
+    return jsonify({"address": public_address(doc)}), 201
+
+
+@domains_bp.delete("/<domain_id>/addresses/<address_id>")
+@login_required
+def delete_address(domain_id, address_id):
+    d = find_domain(domain_id)
+    oid = parse_object_id(address_id)
+    if d is None or oid is None:
+        return error("Address not found.", 404)
+    result = addresses.delete_one({"_id": oid, "domain_id": d["_id"], "user_id": g.user["_id"]})
+    if result.deleted_count == 0:
+        return error("Address not found.", 404)
+    return jsonify({"ok": True})
+
+
+@domains_bp.get("/from-addresses")
+@login_required
+def from_addresses():
+    """Addresses for the "From" dropdown in Compose."""
+    return jsonify({"addresses": allowed_from_addresses(g.user)})
