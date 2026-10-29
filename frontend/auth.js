@@ -40,7 +40,7 @@ if (loginForm) {
     setLoading(loginForm, true, "Logging in...");
     try {
       await api("/api/auth/login", { method: "POST", body: { login, password } });
-      window.location.href = "/"; // go to the inbox
+      window.location.href = "/inbox"; // go to the inbox
     } catch (err) {
       showMessage(err.message);
       setLoading(loginForm, false);
@@ -90,7 +90,7 @@ if (signupForm) {
         body: { username, password, account_type: accountType  },
       });
       showMessage("Account created! Opening your inbox...", "success");
-      setTimeout(() => (window.location.href = "/"), 1000);
+      setTimeout(() => (window.location.href = "/inbox"), 1000);
     } catch (err) {
       showMessage(err.message);
       setLoading(signupForm, false);
@@ -101,6 +101,6 @@ if (signupForm) {
 // If the user is already logged in, skip these pages and open the inbox
 if (loginForm || signupForm) {
   api("/api/auth/me")
-    .then(() => (window.location.href = "/"))
+    .then(() => (window.location.href = "/inbox"))
     .catch(() => {}); // not logged in (or backend not ready) — stay here
 }
