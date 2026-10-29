@@ -1,13 +1,16 @@
 """messages.py — inbox, sending, drafts, folders, search and attachments."""
+import io
 import re
 import uuid
 
-from flask import Blueprint, current_app, g, jsonify, request, send_from_directory
+from gridfs.errors import NoFile
+
+from flask import Blueprint, current_app, g, jsonify, request, send_file, send_from_directory
 from pymongo import DESCENDING
 from werkzeug.utils import secure_filename
 
 from config import Config
-from database import addresses, domains, mailboxes, messages, users
+from database import addresses, attachment_files, domains, mailboxes, messages, users
 from routes.domains import allowed_from_addresses
 from security import is_expired, login_required, now_utc, parse_object_id, to_iso
 
@@ -85,10 +88,13 @@ def list_item(entry):
 def delete_files(attachments):
     for attachment in attachments:
         try:
-            (Config.UPLOAD_DIR / attachment["stored_name"]).unlink(missing_ok=True)
-        except OSError:
-            current_app.logger.warning("Could not delete file %s", attachment["stored_name"])
-
+            if attachment.get("file_id"):
+                attachment_files.delete(attachment["file_id"])  # stored in MongoDB (GridFS)
+            elif attachment.get("stored_name"):
+                # older attachments that were saved on disk before GridFS
+                (Config.UPLOAD_DIR / attachment["stored_name"]).unlink(missing_ok=True)
+        except Exception:
+            current_app.logger.warning("Could not delete attachment %s", attachment.get("id"))
 
 def delete_entry(entry):
     """Remove one user's copy. Delete the message itself when nobody has a copy left."""
@@ -98,11 +104,9 @@ def delete_entry(entry):
         if message:
             delete_files(message.get("attachments", []))
 
-
 # ---------- Attachments ----------
-def file_content_matches(path, ext):
-    with open(path, "rb") as fh:
-        head = fh.read(1024)
+def file_content_matches(data, ext):
+    head = data[:1024]
     if ext == "txt":
         return b"\x00" not in head  # text files have no zero bytes
     return any(head.startswith(sig) for sig in FILE_SIGNATURES.get(ext, []))
@@ -113,7 +117,6 @@ def save_attachments(files):
     if len(files) > Config.MAX_FILES:
         raise ValueError(f"You can attach up to {Config.MAX_FILES} files.")
 
-    Config.UPLOAD_DIR.mkdir(exist_ok=True)
     saved = []
     try:
         for file in files:
@@ -122,26 +125,21 @@ def save_attachments(files):
             if ext not in Config.ALLOWED_EXTENSIONS:
                 raise ValueError(f'"{raw_name}" is not an allowed file type.')
 
-            # Clean the name for display; store the file under a random name
             display_name = secure_filename(raw_name) or "attachment"
             if not display_name.lower().endswith("." + ext):
                 display_name += "." + ext
-            attachment_id = uuid.uuid4().hex
-            stored_name = f"{attachment_id}.{ext}"
-            path = Config.UPLOAD_DIR / stored_name
 
-            file.save(path)
-            size = path.stat().st_size
-            if size > Config.MAX_FILE_SIZE:
-                path.unlink(missing_ok=True)
+            # Read at most 10 MB + 1 byte, so a huge file is caught without loading all of it
+            data = file.read(Config.MAX_FILE_SIZE + 1)
+            if len(data) > Config.MAX_FILE_SIZE:
                 raise ValueError(f'"{display_name}" is larger than 10 MB.')
-            if not file_content_matches(path, ext):
-                path.unlink(missing_ok=True)
+            if not file_content_matches(data, ext):
                 raise ValueError(f'"{display_name}" does not look like a real .{ext} file.')
 
+            file_id = attachment_files.put(data, filename=display_name, content_type=MIME_TYPES.get(ext))
             saved.append({
-                "id": attachment_id, "filename": display_name,
-                "stored_name": stored_name, "size": size, "ext": ext,
+                "id": uuid.uuid4().hex, "file_id": file_id,
+                "filename": display_name, "size": len(data), "ext": ext,
             })
     except ValueError:
         delete_files(saved)  # don't leave half-uploaded files behind
@@ -160,11 +158,22 @@ def download_attachment(attachment_id):
         return error("File not found.", 404)
 
     attachment = next(a for a in message["attachments"] if a["id"] == attachment_id)
+    mimetype = MIME_TYPES.get(attachment["ext"], "application/octet-stream")
+
+    if attachment.get("file_id"):
+        try:
+            stored = attachment_files.get(attachment["file_id"])
+        except NoFile:
+            return error("File not found.", 404)
+        return send_file(
+            io.BytesIO(stored.read()), mimetype=mimetype,
+            as_attachment=True, download_name=attachment["filename"],
+        )
+
+    # Older attachments that were saved on disk
     return send_from_directory(
         Config.UPLOAD_DIR, attachment["stored_name"],
-        as_attachment=True,
-        download_name=attachment["filename"],
-        mimetype=MIME_TYPES.get(attachment["ext"], "application/octet-stream"),
+        as_attachment=True, download_name=attachment["filename"], mimetype=mimetype,
     )
 
 

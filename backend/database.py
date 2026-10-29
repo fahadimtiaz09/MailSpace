@@ -18,6 +18,7 @@ mailboxes  one document per USER per message: that user's own copy
             search_text, has_attachments, created_at}
 """
 from pymongo import ASCENDING, DESCENDING, MongoClient
+from gridfs import GridFS
 
 from config import Config, check_config
 
@@ -31,6 +32,8 @@ messages = db["messages"]
 mailboxes = db["mailboxes"]
 domains = db["domains"]
 addresses = db["addresses"]
+# Attachment files are stored inside MongoDB (GridFS), because the online server's disk is temporary
+attachment_files = GridFS(db, collection="attachment_files")
 
 
 def init_indexes():
