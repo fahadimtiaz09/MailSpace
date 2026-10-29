@@ -480,3 +480,16 @@ a.brand { text-decoration: none; }
   .feature-grid, .steps { grid-template-columns: 1fr; }
   .home-section { padding: 48px 16px; }
 }
+/* ===== Countdown for temporary accounts ===== */
+.countdown {
+  margin: 8px 0 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+.countdown.urgent {
+  background: #fee2e2;
+  color: #991b1b;
+}

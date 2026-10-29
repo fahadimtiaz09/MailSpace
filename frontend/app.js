@@ -92,8 +92,58 @@ function renderProfile(user) {
     el("div", null, types[user.account_type] || user.account_type)
   );
   if (user.expires_at) {
-    box.append(el("div", null, "Expires: " + new Date(user.expires_at).toLocaleDateString()));
+    const expiresAt = new Date(user.expires_at);
+    const countdown = el("div", "countdown");
+    box.append(countdown, el("div", null, "Expires: " + expiresAt.toLocaleString()));
+    startCountdown(expiresAt, countdown);
   }
+}
+
+// ---------- Countdown for temporary accounts ----------
+let countdownTimer;
+
+function formatRemaining(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return days + "d " + hours + "h " + minutes + "m";
+  const pad = (n) => String(n).padStart(2, "0");
+  return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+}
+
+function startCountdown(expiresAt, node) {
+  clearInterval(countdownTimer);
+  let warned = false;
+
+  function tick() {
+    const remaining = expiresAt.getTime() - Date.now();
+
+    if (remaining <= 0) {
+      clearInterval(countdownTimer);
+      node.textContent = "⏳ Account expired";
+      node.classList.add("urgent");
+      showBanner("⏳ This temporary account has expired. You will be logged out.");
+      setTimeout(() => (window.location.href = "/login.html"), 3000);
+      return;
+    }
+
+    node.textContent = "⏳ " + formatRemaining(remaining) + " left";
+    node.classList.toggle("urgent", remaining < 24 * 3600 * 1000);
+
+    // Warn once when less than 3 days are left
+    if (!warned && remaining < 3 * 24 * 3600 * 1000) {
+      warned = true;
+      showBanner(
+        "⚠️ Your temporary account expires in " + formatRemaining(remaining) +
+        ". Download anything you want to keep."
+      );
+    }
+  }
+
+  tick();                                  // show it immediately
+  countdownTimer = setInterval(tick, 1000); // then update every second
 }
 
 // ---------- Folders ----------
