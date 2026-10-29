@@ -29,6 +29,7 @@ db = client[Config.MONGODB_DATABASE]
 users = db["users"]
 messages = db["messages"]
 mailboxes = db["mailboxes"]
+domains = db["domains"]
 
 
 def init_indexes():
