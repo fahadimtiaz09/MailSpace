@@ -4,44 +4,104 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign up · MailSpace</title>
+  <meta name="theme-color" content="#F7F9FF">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="auth-page">
-  <main class="auth-card">
-    <a href="/" class="brand">📬 <span>MailSpace</span></a>
-    <h1>Create your account</h1>
-    <p class="muted">Get your own MailSpace address.</p>
+  <aside class="auth-side on-dark" aria-hidden="true">
+    <a href="/" class="brand" tabindex="-1"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgesi1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgssi1" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpsi1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgesi1)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgssi1)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpsi1)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg><span class="brand-text">Mail<span class="brand-space">Space</span></span></a>
+    <div class="dots"></div>
+    <div class="auth-quote">
+      <h2>Your new address is one step away.</h2>
+      <p>Create a free MailSpace account, then connect your own domain whenever you're ready.</p>
+      <ul class="auth-points">
+        <li><svg class="i i-sm"><use href="/icons.svg#check-circle"/></svg>Your own @fahadimtiaz.site address in seconds</li>
+        <li><svg class="i i-sm"><use href="/icons.svg#check-circle"/></svg>Connect a domain you own and create addresses on it</li>
+        <li><svg class="i i-sm"><use href="/icons.svg#check-circle"/></svg>Inbox, folders, search and checked attachments</li>
+      </ul>
+    </div>
+    <svg class="waves" viewBox="0 0 600 300" preserveAspectRatio="none">
+      <path d="M0 160C120 110 220 210 340 170S520 90 600 120V300H0Z" fill="#fff" opacity=".08"/>
+      <path d="M0 210C140 170 240 250 380 215S540 160 600 180V300H0Z" fill="#fff" opacity=".08"/>
+      <path d="M0 250C150 225 260 285 400 260S540 225 600 235V300H0Z" fill="#fff" opacity=".1"/>
+    </svg>
+    <p class="auth-side-foot">MailSpace · mail.fahadimtiaz.site</p>
+  </aside>
 
-    <div id="form-message" class="alert hidden"></div>
+  <div class="auth-main">
+    <div class="auth-top">
+      <a href="/" class="brand"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgesi2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgssi2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpsi2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgesi2)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgssi2)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpsi2)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg><span class="brand-text">Mail<span class="brand-space">Space</span></span></a>
+      <button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Switch theme">
+        <svg class="i i-moon" aria-hidden="true"><use href="/icons.svg#moon"/></svg>
+        <svg class="i i-sun" aria-hidden="true"><use href="/icons.svg#sun"/></svg>
+      </button>
+    </div>
 
-    <form id="signup-form" novalidate>
-      <label for="username">Username</label>
-      <input id="username" name="username" type="text" autocomplete="username" maxlength="20" required>
-      <div class="hint">Your address: <strong id="email-preview">username@fahadimtiaz.site</strong></div>
-      <div class="hint">3–20 characters: lowercase letters, numbers, dot (.) or underscore (_).</div>
+    <main class="auth-card">
+      <h1>Create your account</h1>
+      <p class="muted">Pick a username — that's your new email address.</p>
 
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" autocomplete="new-password" required>
-      <div class="hint">At least 8 characters.</div>
+      <div id="form-message" class="alert hidden" role="alert"></div>
 
-      <label for="confirm_password">Confirm password</label>
-      <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+      <form id="signup-form" novalidate>
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" class="input" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" required aria-describedby="username-hint">
+          <div class="address-preview"><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#at"/></svg><span>Your address: <strong id="email-preview">username@fahadimtiaz.site</strong></span></div>
+          <span id="username-hint" class="hint">3–20 characters: lowercase letters, numbers, dot (.) or underscore (_).</span>
+        </div>
 
-      <label for="account_type">Account type</label>
-      <select id="account_type" name="account_type">
-        <option value="regular">Regular (does not expire)</option>
-        <option value="temp15">Temporary – 15 days</option>
-        <option value="temp30">Temporary – 30 days</option>
-      </select>
-      <div class="hint">Temporary accounts and their messages are deleted after they expire.</div>
-     
-      <button type="submit" class="btn btn-primary btn-block">Create account</button>
-    </form>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-group">
+            <input id="password" name="password" class="input" type="password" autocomplete="new-password" required aria-describedby="password-hint">
+            <button type="button" class="icon-btn icon-btn-sm pw-toggle" aria-label="Show password"><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#eye"/></svg></button>
+          </div>
+          <div class="strength" id="strength" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <span id="password-hint" class="hint">At least 8 characters. Longer is stronger.</span>
+        </div>
 
-    <p class="auth-switch">Already have an account? <a href="/login.html">Log in</a></p>
-  </main>
+        <div class="field">
+          <label for="confirm_password">Confirm password</label>
+          <input id="confirm_password" name="confirm_password" class="input" type="password" autocomplete="new-password" required>
+        </div>
+
+        <fieldset class="field" style="border:0;padding:0;margin:0 0 18px">
+          <legend class="label" style="margin-bottom:8px">Account type</legend>
+          <div class="choice-grid">
+            <label class="choice">
+              <input type="radio" name="account_type" value="regular" checked>
+              <span class="choice-dot"></span>
+              <span><strong>Regular</strong><span class="small">Your account doesn't expire.</span></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="account_type" value="temp15">
+              <span class="choice-dot"></span>
+              <span><strong>Temporary — 15 days</strong><span class="small">Deleted with its messages after 15 days.</span></span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="account_type" value="temp30">
+              <span class="choice-dot"></span>
+              <span><strong>Temporary — 30 days</strong><span class="small">Deleted with its messages after 30 days.</span></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Create account</button>
+      </form>
+
+      <p class="auth-switch">Already have an account? <a href="/login.html">Log in</a></p>
+    </main>
+  </div>
 
   <script src="/api.js"></script>
+  <script src="/ui.js"></script>
   <script src="/auth.js"></script>
 </body>
 </html>

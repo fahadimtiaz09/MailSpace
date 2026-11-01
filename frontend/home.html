@@ -3,164 +3,572 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MailSpace · Email on your own domain</title>
-  <meta name="description" content="MailSpace gives you a private, secure email address on your own domain.">
+  <title>MailSpace · Professional email on your own domain</title>
+  <meta name="description" content="Custom-domain email, an organized inbox and full control over your domain — all in one place.">
+  <meta name="theme-color" content="#F7F9FF">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta property="og:title" content="MailSpace">
+  <meta property="og:description" content="Professional email on your own domain.">
+  <meta property="og:image" content="https://mail.fahadimtiaz.site/social-card.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/home.css">
 </head>
-<body class="home-page">
+<body class="home">
+  <a class="skip-link" href="#main">Skip to content</a>
 
-  <!-- ===== Top navigation ===== -->
-  <header class="home-nav">
-    <a href="/" class="brand">📬 <span>MailSpace</span></a>
-    <nav class="home-links">
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#inbox-delivery">Inbox delivery</a>
-    </nav>
-    <div class="home-actions">
-      <a id="nav-login" href="/login.html" class="btn btn-light">Log in</a>
-      <a id="nav-signup" href="/signup.html" class="btn btn-primary">Sign up</a>
-      <a id="nav-inbox" href="/inbox" class="btn btn-primary hidden">Open inbox</a>
+  <!-- ================= Navigation ================= -->
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="/" class="brand"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgeho1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgsho1" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpho1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgeho1)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgsho1)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpho1)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg><span class="brand-text">Mail<span class="brand-space">Space</span></span></a>
+
+      <nav class="nav-links" id="nav-links" aria-label="Main">
+        <div class="nav-drop">
+          <button type="button" class="nav-drop-btn" aria-expanded="false" aria-controls="features-menu">
+            Features <svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#chevron-down"/></svg>
+          </button>
+          <div class="nav-drop-menu" id="features-menu">
+            <a href="#domains"><span class="dm-icon"><svg class="i"><use href="/icons.svg#globe"/></svg></span><span><strong>Your own domain</strong><small>Addresses on a domain you own</small></span></a>
+            <a href="#inbox"><span class="dm-icon"><svg class="i"><use href="/icons.svg#inbox"/></svg></span><span><strong>A calmer inbox</strong><small>Clean list, quiet reading pane</small></span></a>
+            <a href="#domains"><span class="dm-icon"><svg class="i"><use href="/icons.svg#shield"/></svg></span><span><strong>Domain verification</strong><small>Ownership checked on public DNS</small></span></a>
+            <a href="#features"><span class="dm-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span><span><strong>More productivity</strong><small>Search, reply, drafts, attachments</small></span></a>
+          </div>
+        </div>
+        <a href="#how">How it works</a>
+        <a href="#security">Security</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#about">About</a>
+        <div class="nav-mobile-actions">
+          <a href="/login.html" class="btn btn-lg btn-block js-guest">Sign in</a>
+          <a href="/signup.html" class="btn btn-primary btn-lg btn-block js-guest">Get started</a>
+          <a href="/inbox" class="btn btn-primary btn-lg btn-block js-member hidden">Open inbox</a>
+        </div>
+      </nav>
+
+      <div class="nav-actions">
+        <button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="Switch theme">
+          <svg class="i i-moon" aria-hidden="true"><use href="/icons.svg#moon"/></svg>
+          <svg class="i i-sun" aria-hidden="true"><use href="/icons.svg#sun"/></svg>
+        </button>
+        <a href="/login.html" class="btn btn-ghost nav-signin js-guest">Sign in</a>
+        <a href="/signup.html" class="btn btn-primary nav-cta js-guest">Get started <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+        <a href="/inbox" class="btn btn-primary nav-cta js-member hidden">Open inbox <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+        <button type="button" class="icon-btn nav-burger" id="nav-burger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-links">
+          <svg class="i" aria-hidden="true"><use href="/icons.svg#menu"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
-  <main>
-    <!-- ===== Hero (first screen) ===== -->
+  <main id="main">
+    <!-- ================= Hero ================= -->
     <section class="hero">
-      <div class="hero-text">
-        <p class="eyebrow">Private email for people and businesses</p>
-        <h1>Professional email on <span class="highlight">your own domain</span></h1>
-        <p class="hero-sub">
-          Get an address like <strong>you@yourbusiness.com</strong>. MailSpace keeps your inbox
-          organised, your files safe, and your messages authenticated so they reach the inbox.
-        </p>
-        <div class="hero-buttons">
-          <a href="/signup.html" class="btn btn-primary btn-lg">Create free account</a>
-          <a href="#how" class="btn btn-light btn-lg">See how it works</a>
+      <div class="hero-bg" aria-hidden="true">
+        <div class="glow glow-a"></div>
+        <div class="glow glow-b"></div>
+        <div class="glow glow-c"></div>
+        <svg class="hero-waves" viewBox="0 0 1440 600" preserveAspectRatio="none">
+          <path class="wave w1" d="M0 360C200 280 380 420 600 360S980 200 1200 250 1380 330 1440 310V600H0Z"/>
+          <path class="wave w2" d="M0 420C220 360 400 470 640 430S1000 300 1220 340 1390 410 1440 395V600H0Z"/>
+          <path class="wave w3" d="M0 500C240 460 440 540 680 510S1040 420 1260 450 1400 495 1440 485V600H0Z"/>
+        </svg>
+        <div class="dot-field dot-field-a"></div>
+        <div class="dot-field dot-field-b"></div>
+        <div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="pill reveal-hero"><span class="pill-dot"></span>Professional Email Hosting</p>
+          <h1 class="reveal-hero"><span class="nowrap">Professional email,</span> <span class="nowrap">on your <span class="accent">domain.</span></span></h1>
+          <p class="hero-sub reveal-hero">Get custom-domain email, an organized inbox and full control over your domain — all in one place.</p>
+          <div class="hero-buttons reveal-hero">
+            <a href="/signup.html" class="btn btn-primary btn-lg btn-pill js-guest">Create your account <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+            <a href="/inbox" class="btn btn-primary btn-lg btn-pill js-member hidden">Open your inbox <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+            <a href="#how" class="btn btn-lg btn-text"><span class="play"><svg class="i" aria-hidden="true"><use href="/icons.svg#play"/></svg></span>See how it works</a>
+          </div>
+        </div>
+
+        <!-- Floating, tilted inbox preview (illustration) -->
+        <div class="hero-visual" aria-hidden="true">
+          <div class="plane-wrap">
+            <svg class="plane-trail" viewBox="0 0 220 120"><path d="M4 112C60 108 96 80 120 58S180 18 214 10"/></svg>
+            <span class="plane"><svg class="i"><use href="/icons.svg#plane"/></svg></span>
+          </div>
+          <div class="tilt">
+            <div class="pv-window pv-hero" id="hero-window">
+              <div class="pv-topbar">
+                <div class="pv-brand"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgeho2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgsho2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpho2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgeho2)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgsho2)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpho2)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg><span class="brand-text">Mail<span class="brand-space">Space</span></span></div>
+                <div class="pv-search"><svg class="i i-sm"><use href="/icons.svg#search"/></svg>Search emails...</div>
+                <span class="pv-av sm" style="--h:215">FI</span>
+              </div>
+              <div class="pv-app">
+                <div class="pv-side">
+                  <div class="pv-compose"><svg class="i i-sm"><use href="/icons.svg#pencil"/></svg>Compose</div>
+                  <div class="pv-nav active"><svg class="i i-sm"><use href="/icons.svg#inbox"/></svg>Inbox<b id="hero-count">2</b></div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#star"/></svg>Starred</div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#send"/></svg>Sent</div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#draft"/></svg>Drafts</div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#spam"/></svg>Spam</div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#trash"/></svg>Trash</div>
+                  <div class="pv-nav-gap"></div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#globe"/></svg>Domains</div>
+                  <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#settings"/></svg>Settings</div>
+                </div>
+                <div class="pv-list">
+                  <div class="pv-list-head"><strong>Inbox</strong></div>
+                  <div class="pv-row pv-new" id="hero-new">
+                    <span class="pv-av" style="--h:150">RK</span>
+                    <div><strong>Rania Karim</strong><em>Signed contract</em><small>Here's the signed copy…</small></div>
+                    <time>now</time>
+                  </div>
+                  <div class="pv-row unread selected">
+                    <span class="pv-av" style="--h:215">SJ</span>
+                    <div><strong>Sarah Johnson</strong><em>Project update</em><small>Here's the latest update on…</small></div>
+                    <time>10:42</time>
+                  </div>
+                  <div class="pv-row unread">
+                    <span class="pv-av mark"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgeho3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgsho3" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpho3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgeho3)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgsho3)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpho3)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg></span>
+                    <div><strong>MailSpace</strong><em>Welcome to MailSpace!</em><small>Thanks for joining…</small></div>
+                    <time>9:30</time>
+                  </div>
+                  <div class="pv-row">
+                    <span class="pv-av" style="--h:20">AM</span>
+                    <div><strong>Alex Morgan</strong><em>Meeting tomorrow</em><small>Let's discuss the new…</small></div>
+                    <time>Yest.</time>
+                  </div>
+                  <div class="pv-row">
+                    <span class="pv-av" style="--h:275">DK</span>
+                    <div><strong>David Kim</strong><em>Documents attached</em><small>Please find the files…</small></div>
+                    <time>Mon</time>
+                  </div>
+                </div>
+                <div class="pv-read">
+                  <div class="pv-read-title"><h4>Project update</h4><svg class="i i-sm"><use href="/icons.svg#star"/></svg></div>
+                  <div class="pv-read-head">
+                    <span class="pv-av lg" style="--h:215">SJ</span>
+                    <div><strong>Sarah Johnson</strong><small>to me</small></div>
+                    <time>10:42</time>
+                  </div>
+                  <div class="pv-body">
+                    <p>Hi Fahad,</p>
+                    <p>Here's the latest update on the project. Everything is on track for the upcoming release.</p>
+                    <p>Best regards,<br>Sarah</p>
+                  </div>
+                  <div class="pv-attach"><svg class="i i-sm"><use href="/icons.svg#file"/></svg>project-plan.pdf</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- A small picture of an inbox (decoration only) -->
-      <div class="hero-preview" aria-hidden="true">
-        <div class="preview-row unread">Ali Khan <span>Meeting tomorrow at 10</span></div>
-        <div class="preview-row unread">Sara Ahmed <span>Invoice attached 📎</span></div>
-        <div class="preview-row">MailSpace Team <span>Welcome to your new inbox!</span></div>
-        <div class="preview-row">Bilal <span>Project files for review</span></div>
+      <!-- Trust row -->
+      <div class="container">
+        <ul class="trust reveal">
+          <li><span class="trust-icon"><svg class="i"><use href="/icons.svg#mail"/></svg></span>Secure &amp; private</li>
+          <li><span class="trust-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span>Your address in seconds</li>
+          <li><span class="trust-icon"><svg class="i"><use href="/icons.svg#shield"/></svg></span>Your domain, your control</li>
+        </ul>
+
+        <!-- Four feature cards -->
+        <div id="features" class="mini-features">
+          <a href="#domains" class="mini reveal">
+            <span class="mini-icon"><svg class="i"><use href="/icons.svg#globe"/></svg></span>
+            <span><strong>Your domain</strong><small>Use your own domain and email addresses.</small></span>
+          </a>
+          <a href="#inbox" class="mini reveal">
+            <span class="mini-icon"><svg class="i"><use href="/icons.svg#check-circle"/></svg></span>
+            <span><strong>A calmer inbox</strong><small>A clean, organized interface.</small></span>
+          </a>
+          <a href="#domains" class="mini reveal">
+            <span class="mini-icon"><svg class="i"><use href="/icons.svg#lock"/></svg></span>
+            <span><strong>Domain verification</strong><small>Ownership checked against public DNS.</small></span>
+          </a>
+          <a href="#how" class="mini reveal">
+            <span class="mini-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span>
+            <span><strong>More productivity</strong><small>Get more done, faster.</small></span>
+          </a>
+        </div>
       </div>
     </section>
 
-    <!-- ===== Features ===== -->
-    <div class="band">
-      <section id="features" class="home-section">
-        <h2>Everything you need in one inbox</h2>
-        <p class="section-sub">Simple enough for anyone, careful enough for your business.</p>
-
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-icon">🌐</div>
-            <h3>Your own domain</h3>
-            <p>Use your business name in your email address. We show you exactly which DNS records to add.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">✅</div>
-            <h3>Built for the inbox</h3>
-            <p>Messages are authenticated with SPF, DKIM and DMARC, the checks Gmail and Outlook use.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔒</div>
-            <h3>Private and secure</h3>
-            <p>Passwords are hashed, sessions are protected, and only you can open your messages.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📎</div>
-            <h3>Safe attachments</h3>
-            <p>Photos and documents are checked before they are stored, and only recipients can download them.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">⏳</div>
-            <h3>Temporary accounts</h3>
-            <p>Need an address for 15 or 30 days? Create one that cleans itself up when it expires.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔎</div>
-            <h3>Folders and search</h3>
-            <p>Inbox, Sent, Drafts, Starred, Spam and Trash, with search across all your mail.</p>
-          </div>
+    <!-- ================= Inbox showcase ================= -->
+    <section id="inbox" class="showcase" aria-labelledby="showcase-title">
+      <div class="sec-bg" aria-hidden="true"><div class="glow sg-left"></div><div class="glow sg-right"></div><svg class="sec-lines" viewBox="0 0 1440 300" preserveAspectRatio="none"><path class="wave" d="M0 180C240 110 460 250 720 170S1180 90 1440 150"/><path class="wave" d="M0 220C260 160 500 280 760 210S1200 140 1440 200"/></svg><div class="dot-field df-tr"></div><div class="dot-field df-bl"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>The inbox</p>
+          <h2 id="showcase-title">An inbox that stays out of your way</h2>
+          <p>Folders on the left, your messages in the middle, and the one you're reading on the right.</p>
         </div>
-      </section>
-    </div>
 
-    <!-- ===== How it works ===== -->
-    <section id="how" class="home-section">
-      <h2>How it works</h2>
-      <p class="section-sub">Three steps from sign-up to your first email.</p>
-
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h3>Create your account</h3>
-          <p>Pick a username and get your MailSpace address in seconds.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <h3>Connect your domain</h3>
-          <p>Add the records we give you at your domain provider. We check them for you.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3>Send and receive</h3>
-          <p>Email anyone, including Gmail and Outlook users, from your own address.</p>
+        <div class="showcase-frame reveal" aria-hidden="true">
+          <div class="pv-window pv-big">
+            <div class="pv-topbar">
+              <div class="pv-brand"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgeho4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgsho4" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpho4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgeho4)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgsho4)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpho4)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg><span class="brand-text">Mail<span class="brand-space">Space</span></span></div>
+              <div class="pv-search"><svg class="i i-sm"><use href="/icons.svg#search"/></svg>Search emails...</div>
+              <div class="pv-top-right"><span class="pv-dot-btn"><svg class="i i-sm"><use href="/icons.svg#moon"/></svg></span><span class="pv-av sm" style="--h:215">FI</span></div>
+            </div>
+            <div class="pv-app">
+              <div class="pv-side">
+                <div class="pv-compose"><svg class="i i-sm"><use href="/icons.svg#pencil"/></svg>Compose</div>
+                <div class="pv-nav active"><svg class="i i-sm"><use href="/icons.svg#inbox"/></svg>Inbox<b>12</b></div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#star"/></svg>Starred</div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#send"/></svg>Sent</div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#draft"/></svg>Drafts<b class="muted-b">1</b></div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#spam"/></svg>Spam</div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#trash"/></svg>Trash</div>
+                <div class="pv-nav-title">Manage</div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#globe"/></svg>Domains</div>
+                <div class="pv-nav"><svg class="i i-sm"><use href="/icons.svg#settings"/></svg>Settings</div>
+              </div>
+              <div class="pv-list">
+                <div class="pv-list-head"><strong>Inbox</strong><span class="pv-count">12 unread</span></div>
+                <div class="pv-list-tools">
+                  <span class="pv-check"></span>
+                  <span><svg class="i i-sm"><use href="/icons.svg#mail-open"/></svg></span>
+                  <span><svg class="i i-sm"><use href="/icons.svg#star"/></svg></span>
+                  <span><svg class="i i-sm"><use href="/icons.svg#trash"/></svg></span>
+                  <i></i>
+                  <small>Newest first</small>
+                </div>
+                <div class="pv-row unread selected">
+                  <span class="pv-av" style="--h:215">SJ</span>
+                  <div><strong>Sarah Johnson</strong><em>Project update</em><small>Here's the latest update on the project…</small></div>
+                  <time>10:42 AM</time>
+                </div>
+                <div class="pv-row unread">
+                  <span class="pv-av mark"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgeho5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgsho5" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpho5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgeho5)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgsho5)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpho5)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg></span>
+                  <div><strong>MailSpace</strong><em>Welcome to MailSpace</em><small>Thanks for getting started with us…</small></div>
+                  <time>9:30 AM</time>
+                </div>
+                <div class="pv-row">
+                  <span class="pv-av" style="--h:20">AM</span>
+                  <div><strong>Alex Morgan</strong><em>Meeting tomorrow</em><small>Let's discuss the new features…</small></div>
+                  <time>Yesterday</time>
+                </div>
+                <div class="pv-row">
+                  <span class="pv-av" style="--h:275">DK</span>
+                  <div><strong>David Kim</strong><em>Documents attached</em><small>Please find the files attached…</small></div>
+                  <time>Mon<svg class="i i-sm"><use href="/icons.svg#paperclip"/></svg></time>
+                </div>
+                <div class="pv-row">
+                  <span class="pv-av" style="--h:150">ST</span>
+                  <div><strong>Support Team</strong><em>Account tips</em><small>Here are a few ways to get started…</small></div>
+                  <time>Mon</time>
+                </div>
+              </div>
+              <div class="pv-read">
+                <div class="pv-read-title big">
+                  <h4>Project update</h4>
+                  <span class="pv-tools"><svg class="i i-sm"><use href="/icons.svg#star"/></svg><svg class="i i-sm"><use href="/icons.svg#reply"/></svg><svg class="i i-sm"><use href="/icons.svg#more"/></svg></span>
+                </div>
+                <div class="pv-read-head">
+                  <span class="pv-av lg" style="--h:215">SJ</span>
+                  <div><strong>Sarah Johnson <span>&lt;sarah@fahadimtiaz.site&gt;</span></strong><small>to me</small></div>
+                  <time>10:42 AM</time>
+                </div>
+                <div class="pv-body">
+                  <p>Hi Fahad,</p>
+                  <p>Here's the latest update on the project. Everything is on track for the upcoming release.</p>
+                  <p>Let me know if you have any questions.</p>
+                  <p>Best regards,<br>Sarah</p>
+                </div>
+                <div class="pv-attachments">
+                  <div class="pv-file"><span class="pdf"><svg class="i i-sm"><use href="/icons.svg#file"/></svg></span><div><strong>project-plan.pdf</strong><small>PDF · 184 KB</small></div></div>
+                </div>
+                <div class="pv-reply"><span><svg class="i i-sm"><use href="/icons.svg#reply"/></svg>Reply</span><span><svg class="i i-sm"><use href="/icons.svg#reply-all"/></svg>Reply all</span><span><svg class="i i-sm"><use href="/icons.svg#forward"/></svg>Forward</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Inbox delivery ===== -->
-    <div class="band">
-      <section id="inbox-delivery" class="home-section">
-        <h2>Made to land in the inbox</h2>
-        <p class="section-sub">
-          Every MailSpace domain is set up with the three standards that email providers check
-          before deciding where a message goes.
-        </p>
-
-        <div class="trust-badges">
-          <span class="badge">SPF</span>
-          <span class="badge">DKIM</span>
-          <span class="badge">DMARC</span>
+    <!-- ================= Domain management ================= -->
+    <section id="domains" class="domains-show" aria-labelledby="domains-title">
+      <div class="domains-bg sec-bg band" aria-hidden="true"><svg class="sec-waves sec-waves-top" viewBox="0 0 1440 120" preserveAspectRatio="none"><path class="wave sw1" d="M0 70C220 20 420 110 700 70S1120 10 1440 60V0H0Z"/><path class="wave sw2" d="M0 45C260 90 480 10 760 45S1180 95 1440 35V0H0Z"/></svg><svg class="sec-waves sec-waves-bottom" viewBox="0 0 1440 120" preserveAspectRatio="none"><path class="wave sw1" d="M0 70C220 20 420 110 700 70S1120 10 1440 60V0H0Z"/><path class="wave sw2" d="M0 45C260 90 480 10 760 45S1180 95 1440 35V0H0Z"/></svg><div class="glow glow-d"></div><div class="glow sg-right"></div><div class="dot-field df-tl"></div><div class="dot-field df-br"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container domains-grid">
+        <div class="domains-copy reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>Domain Management</p>
+          <h2 id="domains-title">Manage your <span class="accent">domains</span> with ease.</h2>
+          <p>Add a domain, verify ownership with one DNS record, and create addresses on it — with step-by-step help along the way.</p>
+          <div class="hero-buttons">
+            <a href="/signup.html" class="btn btn-primary btn-lg btn-pill js-guest">Add domain <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+            <a href="/domains.html" class="btn btn-primary btn-lg btn-pill js-member hidden">Go to My domains <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+            <a href="#faq" class="btn btn-lg btn-text"><span class="play"><svg class="i" aria-hidden="true"><use href="/icons.svg#arrow-circle"/></svg></span>Learn more</a>
+          </div>
         </div>
 
-        <p class="section-sub small">Example of what Gmail shows for an authenticated message:</p>
-        <pre class="auth-result">Authentication-Results: mx.google.com;
-   spf=<span class="pass">pass</span> smtp.mailfrom=yourdomain.com
-   dkim=<span class="pass">pass</span> header.d=yourdomain.com
-   dmarc=<span class="pass">pass</span> header.from=yourdomain.com</pre>
-      </section>
-    </div>
+        <div class="globe-wrap reveal" aria-hidden="true">
+          <div class="globe">
+            <svg viewBox="0 0 200 200" class="globe-svg">
+              <defs>
+                <radialGradient id="globe-fill" cx="35%" cy="30%" r="75%">
+                  <stop offset="0" stop-color="#FFFFFF"/>
+                  <stop offset=".45" stop-color="#CFE0FF"/>
+                  <stop offset="1" stop-color="#7EA6F5"/>
+                </radialGradient>
+                <clipPath id="globe-clip"><circle cx="100" cy="100" r="86"/></clipPath>
+              </defs>
+              <circle cx="100" cy="100" r="86" fill="url(#globe-fill)"/>
+              <g clip-path="url(#globe-clip)" class="globe-lines">
+                <ellipse cx="100" cy="100" rx="86" ry="28"/>
+                <ellipse cx="100" cy="100" rx="86" ry="58"/>
+                <line x1="14" y1="100" x2="186" y2="100"/>
+                <g class="meridians">
+                  <ellipse cx="100" cy="100" rx="20" ry="86"/>
+                  <ellipse cx="100" cy="100" rx="50" ry="86"/>
+                  <ellipse cx="100" cy="100" rx="76" ry="86"/>
+                  <line x1="100" y1="14" x2="100" y2="186"/>
+                </g>
+              </g>
+              <circle cx="100" cy="100" r="86" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.5"/>
+            </svg>
+            <span class="orbit"><i></i></span>
+          </div>
+          <div class="globe-chip"><span class="chip-icon ok"><svg class="i i-sm"><use href="/icons.svg#check"/></svg></span>Verified</div>
+        </div>
 
-    <!-- ===== Final call to action ===== -->
-    <section class="cta-band">
-      <h2>Ready for your own inbox?</h2>
-      <p>Create your MailSpace account. It only takes a minute.</p>
-      <a href="/signup.html" class="btn btn-white btn-lg">Get started</a>
+        <div class="pv-window pv-domains reveal" aria-hidden="true" id="domain-demo">
+          <div class="pvd-top"><strong>Your domains</strong><span class="pvd-add"><svg class="i i-sm"><use href="/icons.svg#plus"/></svg>Add domain</span></div>
+          <div class="pvd-domain">
+            <div class="pvd-row">
+              <span class="pvd-mark"><svg class="i"><use href="/icons.svg#globe"/></svg></span>
+              <strong>nimranoor.site</strong>
+              <span class="pvd-badge ok"><i></i>Verified</span>
+              <svg class="i i-sm pvd-more"><use href="/icons.svg#more"/></svg>
+            </div>
+            <div class="pvd-status-title">Setup status</div>
+            <div class="pvd-grid">
+              <span><b class="ok"><svg class="i i-sm"><use href="/icons.svg#check"/></svg></b><strong>Ownership</strong><small>Verified</small></span>
+              <span><b class="ok"><svg class="i i-sm"><use href="/icons.svg#check"/></svg></b><strong>DNS record</strong><small>Found</small></span>
+              <span><b class="ok"><svg class="i i-sm"><use href="/icons.svg#check"/></svg></b><strong>Addresses</strong><small>3 created</small></span>
+            </div>
+            <div class="pvd-foot"><span class="pvd-view">View details <svg class="i i-sm"><use href="/icons.svg#arrow-right"/></svg></span></div>
+          </div>
+          <div class="pvd-domain compact">
+            <div class="pvd-row">
+              <span class="pvd-mark"><svg class="i"><use href="/icons.svg#globe"/></svg></span>
+              <strong>yourbusiness.com</strong>
+              <span class="pvd-badge wait" id="pvd-status"><i></i><span>Verifying...</span></span>
+              <svg class="i i-sm pvd-more"><use href="/icons.svg#more"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= How it works ================= -->
+    <section id="how" class="how" aria-labelledby="how-title">
+      <div class="sec-bg" aria-hidden="true"><div class="glow sg-center"></div><svg class="sec-lines" viewBox="0 0 1440 300" preserveAspectRatio="none"><path class="wave" d="M0 180C240 110 460 250 720 170S1180 90 1440 150"/><path class="wave" d="M0 220C260 160 500 280 760 210S1200 140 1440 200"/></svg><div class="dot-field df-tl"></div><div class="dot-field df-br"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>How it works</p>
+          <h2 id="how-title">Up and running in three steps</h2>
+          <p>No servers to configure and no technical setup to learn.</p>
+        </div>
+        <ol class="steps">
+          <li class="step reveal">
+            <span class="step-num">1</span>
+            <h3>Create your account</h3>
+            <p>Choose a username and get your MailSpace address straight away.</p>
+          </li>
+          <li class="step reveal">
+            <span class="step-num">2</span>
+            <h3>Add your domain</h3>
+            <p>Enter your domain, copy one TXT record to your DNS, and click Check now.</p>
+          </li>
+          <li class="step reveal">
+            <span class="step-num">3</span>
+            <h3>Start using MailSpace</h3>
+            <p>Create addresses on your domain and manage everything from one inbox.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ================= Security ================= -->
+    <section id="security" class="security" aria-labelledby="security-title">
+      <div class="sec-bg band" aria-hidden="true"><svg class="sec-waves sec-waves-top" viewBox="0 0 1440 120" preserveAspectRatio="none"><path class="wave sw1" d="M0 70C220 20 420 110 700 70S1120 10 1440 60V0H0Z"/><path class="wave sw2" d="M0 45C260 90 480 10 760 45S1180 95 1440 35V0H0Z"/></svg><svg class="sec-waves sec-waves-bottom" viewBox="0 0 1440 120" preserveAspectRatio="none"><path class="wave sw1" d="M0 70C220 20 420 110 700 70S1120 10 1440 60V0H0Z"/><path class="wave sw2" d="M0 45C260 90 480 10 760 45S1180 95 1440 35V0H0Z"/></svg><div class="glow sg-left"></div><div class="glow sg-right"></div><div class="dot-field df-tr"></div><div class="dot-field df-bl"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>Security</p>
+          <h2 id="security-title">Security that's built in, not bolted on</h2>
+          <p>Here's exactly what protects your account today — no vague promises.</p>
+        </div>
+        <div class="sec-grid">
+          <div class="sec-card reveal"><span class="sec-icon"><svg class="i"><use href="/icons.svg#key"/></svg></span><h3>Hashed passwords</h3><p>Passwords are stored only as secure hashes, never as readable text.</p></div>
+          <div class="sec-card reveal"><span class="sec-icon"><svg class="i"><use href="/icons.svg#lock"/></svg></span><h3>Protected sessions</h3><p>Login cookies can't be read by scripts and travel only over HTTPS. Every change is checked against cross-site forgery.</p></div>
+          <div class="sec-card reveal"><span class="sec-icon"><svg class="i"><use href="/icons.svg#clock"/></svg></span><h3>Brute-force limits</h3><p>Repeated login, sign-up and verification attempts are slowed down automatically.</p></div>
+          <div class="sec-card reveal"><span class="sec-icon"><svg class="i"><use href="/icons.svg#paperclip"/></svg></span><h3>Checked attachments</h3><p>Files are checked to confirm they really are the type they claim to be.</p></div>
+          <div class="sec-card reveal"><span class="sec-icon"><svg class="i"><use href="/icons.svg#eye-off"/></svg></span><h3>Private by default</h3><p>Only people in a conversation can open its attachments. Every mailbox is separate.</p></div>
+          <div class="sec-card reveal"><span class="sec-icon"><svg class="i"><use href="/icons.svg#shield"/></svg></span><h3>Plain-text reading</h3><p>Messages are shown as text, so scripts and tracking pixels in an email never run.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Pricing ================= -->
+    <section id="pricing" class="pricing" aria-labelledby="pricing-title">
+      <div class="sec-bg" aria-hidden="true"><div class="glow sg-right"></div><div class="glow sg-left"></div><svg class="sec-lines" viewBox="0 0 1440 300" preserveAspectRatio="none"><path class="wave" d="M0 180C240 110 460 250 720 170S1180 90 1440 150"/><path class="wave" d="M0 220C260 160 500 280 760 210S1200 140 1440 200"/></svg><div class="dot-field df-tl"></div><div class="dot-field df-br"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>Pricing</p>
+          <h2 id="pricing-title">Free to use. No card needed.</h2>
+          <p>Every MailSpace account is free today. Pick the kind of account that suits you.</p>
+        </div>
+        <div class="price-grid">
+          <article class="price-card featured reveal">
+            <span class="price-tag">Recommended</span>
+            <h3>Regular account</h3>
+            <p class="price"><strong>Free</strong><span>doesn't expire</span></p>
+            <ul>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Your own @fahadimtiaz.site address</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Up to 3 custom domains</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Up to 10 addresses per domain</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>5 attachments per message, 10 MB each</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Send to Gmail, Outlook and others</li>
+            </ul>
+            <a href="/signup.html" class="btn btn-primary btn-lg btn-pill btn-block">Create your account <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+          </article>
+          <article class="price-card reveal">
+            <h3>Temporary account</h3>
+            <p class="price"><strong>Free</strong><span>for 15 or 30 days</span></p>
+            <ul>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Everything in a regular account</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Live countdown in your sidebar</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Account and messages removed when it expires</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Good for one-off projects and sign-ups</li>
+            </ul>
+            <a href="/signup.html" class="btn btn-lg btn-pill btn-block">Create a temporary account</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= About ================= -->
+    <section id="about" class="about" aria-labelledby="about-title">
+      <div class="sec-bg" aria-hidden="true"><div class="glow sg-center"></div><div class="dot-field df-tr"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container about-inner reveal">
+        <h2 id="about-title">About MailSpace</h2>
+        <div class="about-text">
+          <p>MailSpace is an independent email service built by a small team who wanted professional email to feel simple. We focus on the parts people use every day — a dependable inbox and a domain setup anyone can follow.</p>
+          <p>We're adding features carefully. When something isn't ready yet, we'll say so rather than pretend.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= FAQ ================= -->
+    <section id="faq" class="faq" aria-labelledby="faq-title">
+      <div class="sec-bg" aria-hidden="true"><div class="glow sg-left"></div><svg class="sec-lines" viewBox="0 0 1440 300" preserveAspectRatio="none"><path class="wave" d="M0 180C240 110 460 250 720 170S1180 90 1440 150"/><path class="wave" d="M0 220C260 160 500 280 760 210S1200 140 1440 200"/></svg><div class="dot-field df-br"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
+      <div class="container faq-inner">
+        <div class="section-head reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>FAQ</p>
+          <h2 id="faq-title">Questions, answered</h2>
+          <p>Can't find what you need? Create an account and explore — it's free.</p>
+        </div>
+        <div class="faq-list reveal">
+          <details>
+            <summary>Can I use my own domain?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>Yes. Add it under My domains, publish one TXT record at your DNS provider, and once it's verified you can create up to 10 addresses on it. Today, addresses on your domain send and receive mail between MailSpace accounts; mail to Gmail, Outlook and other providers is sent from your main MailSpace address.</p></div>
+          </details>
+          <details>
+            <summary>How does domain verification work?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>We give you a TXT record for <code>_mailspace.yourdomain</code> containing a unique code. When you click Check now, MailSpace looks the record up on public DNS servers. If the code matches, your domain is verified. A domain can be verified by only one MailSpace account.</p></div>
+          </details>
+          <details>
+            <summary>Is MailSpace secure?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>Passwords are hashed, login cookies are protected and HTTPS-only, requests are guarded against cross-site forgery, repeated login attempts are rate-limited, attachments are checked and private to the conversation, and messages are shown as plain text. MailSpace doesn't offer end-to-end encryption.</p></div>
+          </details>
+          <details>
+            <summary>Can I manage multiple domains?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>Yes — up to 3 domains per account, each with up to 10 addresses. Every domain is verified separately.</p></div>
+          </details>
+          <details>
+            <summary>Can I send attachments?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>Yes. Attach up to 5 files of 10 MB each: JPG, PNG, GIF, PDF, Word (DOC, DOCX) and text files. Messages to outside providers can carry up to 25 MB of attachments in total. Attachments aren't saved with drafts.</p></div>
+          </details>
+          <details>
+            <summary>How does email authentication work?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>SPF, DKIM and DMARC are DNS records that help receiving servers confirm a message really comes from the domain it claims. MailSpace sends mail to outside providers through Resend from its own sending domain. Setting up SPF, DKIM and DMARC for your custom domain isn't available yet.</p></div>
+          </details>
+          <details>
+            <summary>Can I receive email from Gmail or Outlook?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>Not yet. Right now, incoming mail is delivered between MailSpace accounts. You can send to Gmail, Outlook and other providers from your main MailSpace address.</p></div>
+          </details>
+          <details>
+            <summary>Is there a free account?<svg class="i" aria-hidden="true"><use href="/icons.svg#plus"/></svg></summary>
+            <div class="faq-a"><p>Yes, creating an account is free. Choose a regular account that doesn't expire, or a temporary account that's deleted with its messages after 15 or 30 days.</p></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Call to action ================= -->
+    <section class="cta" aria-labelledby="cta-title">
+      <div class="container">
+        <div class="cta-card reveal">
+          <svg class="cta-waves" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 180C200 120 380 240 600 200S960 100 1200 150V300H0Z" fill="#fff" opacity=".07"/>
+            <path d="M0 230C220 190 400 280 620 250S980 170 1200 210V300H0Z" fill="#fff" opacity=".08"/>
+          </svg>
+          <div class="cta-dots" aria-hidden="true"></div>
+          <span class="cta-plane" aria-hidden="true"><svg class="i"><use href="/icons.svg#plane"/></svg></span>
+          <h2 id="cta-title">Get your new address in under a minute</h2>
+          <p>Start with a free MailSpace address, then bring your own domain whenever you're ready.</p>
+          <div class="cta-buttons">
+            <a href="/signup.html" class="btn btn-lg btn-pill btn-white js-guest">Create your account <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+            <a href="/login.html" class="btn btn-lg btn-pill btn-outline-white js-guest">Sign in</a>
+            <a href="/inbox" class="btn btn-lg btn-pill btn-white js-member hidden">Open your inbox <svg class="i i-sm arrow" aria-hidden="true"><use href="/icons.svg#arrow-right"/></svg></a>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
-  <footer class="home-footer">
-    © <span id="year"></span> MailSpace · A university project
+  <!-- ================= Footer ================= -->
+  <footer class="footer on-dark">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a href="/" class="brand"><svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lgeho6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgsho6" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgpho6" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lgeho6)" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgsho6)"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgpho6)"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg><span class="brand-text">Mail<span class="brand-space">Space</span></span></a>
+        <p>Professional email on your own domain, with an inbox that stays calm.</p>
+      </div>
+      <nav class="footer-col" aria-label="Product">
+        <h3>Product</h3>
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#domains">Domain management</a>
+        <a href="#security">Security</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+      <nav class="footer-col" aria-label="Account">
+        <h3>Account</h3>
+        <a href="/login.html">Sign in</a>
+        <a href="/signup.html">Create account</a>
+        <a href="/inbox">Inbox</a>
+        <a href="/domains.html">My domains</a>
+      </nav>
+      <nav class="footer-col" aria-label="Company">
+        <h3>Company</h3>
+        <a href="#about">About</a>
+        <a href="#faq">FAQ</a>
+        <span class="soon">Privacy policy <em>Soon</em></span>
+        <span class="soon">Terms of service <em>Soon</em></span>
+      </nav>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="year">2026</span> MailSpace</span>
+      <span>mail.fahadimtiaz.site</span>
+    </div>
   </footer>
 
   <script src="/api.js"></script>
-  <script>
-    // If the visitor is already logged in, show "Open inbox" instead of Log in / Sign up
-    api("/api/auth/me")
-      .then(() => {
-        document.getElementById("nav-login").classList.add("hidden");
-        document.getElementById("nav-signup").classList.add("hidden");
-        document.getElementById("nav-inbox").classList.remove("hidden");
-      })
-      .catch(() => {}); // not logged in: keep the Log in / Sign up buttons
-
-    document.getElementById("year").textContent = new Date().getFullYear();
-  </script>
+  <script src="/home.js"></script>
 </body>
 </html>

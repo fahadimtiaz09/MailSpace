@@ -1,14 +1,16 @@
 // ============================================================
-// app.js — the inbox page (folders, reading, compose)
+// app.js — the inbox page: folders, message list, reading pane,
+// reply / forward and the compose window.
+// Needs api.js, ui.js and shell.js.
 // ============================================================
 
 const FOLDERS = {
-  inbox:   { title: "Inbox",   empty: "Your inbox is empty 🎉" },
-  sent:    { title: "Sent",    empty: "You haven't sent any messages yet." },
-  drafts:  { title: "Drafts",  empty: "No drafts saved." },
-  starred: { title: "Starred", empty: "No starred messages." },
-  spam:    { title: "Spam",    empty: "No spam. Nice!" },
-  trash:   { title: "Trash",   empty: "Trash is empty." },
+  inbox:   { title: "Inbox",   icon: "inbox",  emptyTitle: "You're all caught up",   emptyText: "New messages sent to your address will show up here.", action: "compose" },
+  sent:    { title: "Sent",    icon: "send",   emptyTitle: "Nothing sent yet",       emptyText: "Messages you send will be kept here.", action: "compose" },
+  drafts:  { title: "Drafts",  icon: "draft",  emptyTitle: "No drafts",              emptyText: "Use “Save draft” in the compose window to finish a message later." },
+  starred: { title: "Starred", icon: "star",   emptyTitle: "No starred messages",    emptyText: "Star important messages to find them here quickly." },
+  spam:    { title: "Spam",    icon: "spam",   emptyTitle: "No spam",                emptyText: "Messages you report as spam are moved here." },
+  trash:   { title: "Trash",   icon: "trash",  emptyTitle: "Trash is empty",         emptyText: "Deleted messages stay here until you delete them forever." },
 };
 
 const MAX_FILES = 5;
@@ -16,136 +18,797 @@ const MAX_FILE_MB = 10;
 const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx", "txt"];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Everything the page needs to remember
 const state = {
   folder: "inbox",
   page: 1,
   totalPages: 1,
+  total: 0,
   query: "",
-  current: null,   // the message that is open right now
-  draftId: null,   // set when editing an existing draft
-  files: [],       // files chosen in the compose window
+  items: [],        // messages in the current list
+  selectedId: null, // the open message's id
+  picked: new Set(), // ids ticked with the checkboxes
+  current: null,    // the open message (full)
+  draftId: null,    // set when editing an existing draft
+  files: [],        // files chosen in compose
+  composeSnapshot: "",
 };
 
 const $ = (id) => document.getElementById(id);
+let listRequest = 0; // ignore out-of-date responses
 
-// ---------- Small helpers ----------
-let toastTimer;
-function showToast(text, isError = false) {
-  const toast = $("toast");
-  toast.textContent = text;
-  toast.className = "toast" + (isError ? " error" : "");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toast.className = "toast hidden"), 3000);
+// ---------- Folders ----------
+function folderFromHash() {
+  const name = location.hash.replace("#", "");
+  return FOLDERS[name] ? name : "inbox";
 }
 
-function showBanner(text) {
-  $("banner").textContent = text;
-  $("banner").classList.remove("hidden");
+function updateHeading() {
+  Shell.setActiveFolder(state.query ? null : state.folder);
+  $("folder-title").textContent = state.query ? "Search results" : FOLDERS[state.folder].title;
+  const titleBase = state.query ? "Search" : FOLDERS[state.folder].title;
+  document.title = titleBase + " · MailSpace";
 }
 
-function showState(type, text) {
-  const box = $("list-state");
-  box.className = "state" + (type === "error" ? " error" : "");
-  box.replaceChildren();
-  if (type === "loading") {
-    box.append(el("div", "spinner"), el("div", null, "Loading messages..."));
-  } else {
-    box.append(el("div", null, text));
+function updateMeta() {
+  let text;
+  if (state.query) text = state.total + (state.total === 1 ? " match" : " matches") + " for “" + state.query + "”";
+  else text = state.total === 0 ? "No messages" : state.total + (state.total === 1 ? " message" : " messages");
+  $("folder-meta").textContent = text;
+}
+
+// ---------- Message list ----------
+function showSkeleton() {
+  const list = $("message-list");
+  list.replaceChildren();
+  for (let i = 0; i < 7; i++) {
+    const row = el("li", "skeleton-row");
+    row.setAttribute("aria-hidden", "true");
+    const lines = el("div", "lines");
+    const a = el("span", "skeleton"); a.style.width = (40 + (i * 13) % 35) + "%";
+    const b = el("span", "skeleton"); b.style.width = (70 + (i * 7) % 25) + "%";
+    const c = el("span", "skeleton"); c.style.width = (50 + (i * 11) % 30) + "%";
+    lines.append(a, b, c);
+    row.append(el("span", "skeleton avatar-s"), lines);
+    list.append(row);
   }
 }
 
-function hideState() {
-  $("list-state").className = "state hidden";
-}
+async function loadMessages({ quiet = false } = {}) {
+  updateHeading();
+  state.picked.clear();
+  updateBulk();
+  const requestId = ++listRequest;
+  if (!quiet) {
+    showSkeleton();
+    $("pager").classList.add("hidden");
+  }
 
-// ---------- Logged-in user ----------
-async function loadUser() {
+  const params = new URLSearchParams({ folder: state.query ? "all" : state.folder, page: state.page });
+  if (state.query) params.set("q", state.query);
+
   try {
-    const data = await api("/api/auth/me");
-    // Logged in: show email and Log out
-    $("user-email").textContent = data.user.email;
-    $("logout-btn").classList.remove("hidden");
-    renderProfile(data.user);
+    const data = await api("/api/messages?" + params.toString());
+    if (requestId !== listRequest) return;
+    state.totalPages = data.total_pages || 1;
+    state.total = data.total || 0;
+    state.items = data.messages;
+    renderList();
+    updateMeta();
+    updatePager();
   } catch (err) {
-    if (err.status === 401) {
-      window.location.href = "/login.html"; // not logged in -> go to login page
-      return;
-    }
-    // Backend not ready yet: show Log in / Sign up buttons
-    $("login-link").classList.remove("hidden");
-    $("signup-link").classList.remove("hidden");
-    showBanner("⚠️ " + err.message + " You are seeing the design only.");
+    if (requestId !== listRequest) return;
+    renderListError(err.message);
   }
+  Shell.refreshCounts();
 }
 
-function renderProfile(user) {
-  const types = {
-    regular: "Regular account",
-    temp15: "Temporary (15 days)",
-    temp30: "Temporary (30 days)",
-  };
-  const box = $("profile-box");
-  box.replaceChildren(
-    el("div", "profile-name", user.username),
-    el("div", null, user.email),
-    el("div", null, types[user.account_type] || user.account_type)
+function renderList() {
+  const list = $("message-list");
+  list.replaceChildren();
+  updateBulk();
+  if (state.items.length === 0) {
+    list.append(state.query ? searchEmpty() : folderEmpty());
+    return;
+  }
+  state.items.forEach((m, index) => {
+    const row = renderRow(m);
+    row.style.animationDelay = Math.min(index, 12) * 18 + "ms";
+    list.append(row);
+  });
+}
+
+function folderEmpty() {
+  const f = FOLDERS[state.folder];
+  const li = el("li", "empty");
+  const art = el("div", "empty-art");
+  art.append(icon(f.icon));
+  li.append(art, el("h3", null, f.emptyTitle), el("p", null, f.emptyText));
+  if (f.action === "compose") {
+    const b = el("button", "btn btn-soft btn-sm");
+    b.type = "button";
+    b.append(icon("pencil", "i-sm"), el("span", null, "Write a message"));
+    b.addEventListener("click", () => openCompose());
+    li.append(b);
+  }
+  return li;
+}
+
+function searchEmpty() {
+  const li = el("li", "empty");
+  const art = el("div", "empty-art");
+  art.append(icon("search"));
+  const b = el("button", "btn btn-sm", "Clear search");
+  b.type = "button";
+  b.addEventListener("click", () => setSearch(""));
+  li.append(art, el("h3", null, "No matches"), el("p", null, "Nothing in your mail matches “" + state.query + "”. Try a name, address or word from the subject."), b);
+  return li;
+}
+
+function renderListError(message) {
+  const list = $("message-list");
+  const li = el("li", "empty");
+  const art = el("div", "empty-art");
+  art.style.background = "var(--error-soft)";
+  art.style.color = "var(--error-text)";
+  art.append(icon("alert"));
+  const b = el("button", "btn btn-sm", "Try again");
+  b.type = "button";
+  b.addEventListener("click", () => loadMessages());
+  li.append(art, el("h3", null, "Couldn't load messages"), el("p", null, message), b);
+  list.replaceChildren(li);
+  $("folder-meta").textContent = " ";
+}
+
+function isOutgoing(m) {
+  return m.folder === "sent" || m.folder === "drafts";
+}
+
+function renderRow(m) {
+  const li = el("li", "msg" + (m.is_read ? "" : " unread") + (m.id === state.selectedId ? " selected" : ""));
+  li.dataset.id = m.id;
+  li.tabIndex = 0;
+
+  const outgoing = isOutgoing(m);
+  const who = outgoing
+    ? (m.to && m.to.length ? "To: " + m.to.join(", ") : "(no recipients)")
+    : nameFromEmail(m.from);
+  const avatarEmail = outgoing ? (m.to && m.to[0]) || "?" : m.from;
+  li.setAttribute("aria-label",
+    (m.is_read ? "" : "Unread, ") + (outgoing ? who : "From " + m.from) + ", " + (m.subject || "no subject"));
+
+  const top = el("div", "msg-top");
+  const from = el("span", "msg-from truncate", who);
+  if (!outgoing) from.title = m.from;
+  const flags = el("span", "msg-flags");
+  if (m.folder === "drafts") flags.append(el("span", "badge badge-warning no-dot", "Draft"));
+  if (m.has_attachments) flags.append(icon("paperclip"));
+  if (m.is_starred) flags.append(icon("star-fill", "is-starred"));
+  top.append(from, flags, el("span", "msg-date", formatDate(m.created_at)));
+
+  const lines = el("div", "msg-lines");
+  lines.append(
+    el("div", "msg-subject truncate", m.subject || "(no subject)"),
+    el("div", "msg-snippet truncate", m.snippet || " ")
   );
-  if (user.expires_at) {
-    const expiresAt = new Date(user.expires_at);
-    const countdown = el("div", "countdown");
-    box.append(countdown, el("div", null, "Expires: " + expiresAt.toLocaleString()));
-    startCountdown(expiresAt, countdown);
+
+  // Quick actions
+  const actions = el("div", "msg-actions");
+  if (m.folder === "trash") {
+    actions.append(quickAction("restore", "Restore", () => rowAction(m, "restore", "Restored")));
+  } else {
+    const star = quickAction(m.is_starred ? "star-fill" : "star", m.is_starred ? "Unstar" : "Star", () => toggleStar(m));
+    if (m.is_starred) star.classList.add("starred");
+    actions.append(star);
+    if (m.folder !== "drafts") {
+      actions.append(quickAction(m.is_read ? "mail" : "mail-open", m.is_read ? "Mark as unread" : "Mark as read",
+        () => toggleRead(m)));
+    }
+    actions.append(quickAction("trash", "Move to trash", () => rowAction(m, "trash", "Moved to trash")));
+  }
+
+  // Avatar doubles as a checkbox for selecting several messages
+  const av = el("span", "msg-av");
+  const pick = el("input", "pick");
+  pick.type = "checkbox";
+  pick.checked = state.picked.has(m.id);
+  pick.setAttribute("aria-label", "Select “" + (m.subject || "no subject") + "”");
+  pick.addEventListener("click", (event) => event.stopPropagation());
+  pick.addEventListener("change", () => {
+    if (pick.checked) state.picked.add(m.id);
+    else state.picked.delete(m.id);
+    li.classList.toggle("picked", pick.checked);
+    updateBulk();
+  });
+  av.append(avatar(avatarEmail), pick);
+  if (pick.checked) li.classList.add("picked");
+
+  li.append(av, top, lines, actions);
+
+  const open = () => (m.folder === "drafts" ? openDraft(m.id) : openMessage(m.id));
+  li.addEventListener("click", open);
+  li.addEventListener("keydown", (event) => {
+    if (event.target !== li) return;
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); }
+    if (event.key === "ArrowDown" && li.nextElementSibling) { event.preventDefault(); li.nextElementSibling.focus(); }
+    if (event.key === "ArrowUp" && li.previousElementSibling) { event.preventDefault(); li.previousElementSibling.focus(); }
+  });
+  return li;
+}
+
+function quickAction(iconName, label, handler) {
+  const b = iconButton(iconName, label, "icon-btn");
+  b.dataset.tip = label;
+  b.addEventListener("click", (event) => {
+    event.stopPropagation();
+    handler();
+  });
+  return b;
+}
+
+function rowFor(id) {
+  return document.querySelector('.msg[data-id="' + CSS.escape(id) + '"]');
+}
+
+function replaceRow(m) {
+  const row = rowFor(m.id);
+  if (row) {
+    const fresh = renderRow(m);
+    fresh.style.animation = "none";
+    row.replaceWith(fresh);
   }
 }
 
-// ---------- Countdown for temporary accounts ----------
-let countdownTimer;
-
-function formatRemaining(ms) {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  if (days > 0) return days + "d " + hours + "h " + minutes + "m";
-  const pad = (n) => String(n).padStart(2, "0");
-  return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
+function removeRow(id) {
+  const row = rowFor(id);
+  state.items = state.items.filter((m) => m.id !== id);
+  state.total = Math.max(0, state.total - 1);
+  updateMeta();
+  if (!row) return;
+  row.classList.add("removing");
+  setTimeout(() => {
+    row.remove();
+    if (state.items.length === 0) loadMessages({ quiet: true });
+  }, 210);
 }
 
-function startCountdown(expiresAt, node) {
-  clearInterval(countdownTimer);
-  let warned = false;
+function messageAction(id, action) {
+  return api("/api/messages/" + encodeURIComponent(id), { method: "PATCH", body: { action } });
+}
 
-  function tick() {
-    const remaining = expiresAt.getTime() - Date.now();
-
-    if (remaining <= 0) {
-      clearInterval(countdownTimer);
-      node.textContent = "⏳ Account expired";
-      node.classList.add("urgent");
-      showBanner("⏳ This temporary account has expired. You will be logged out.");
-      setTimeout(() => (window.location.href = "/login.html"), 3000);
-      return;
+async function toggleStar(m) {
+  const action = m.is_starred ? "unstar" : "star";
+  try {
+    await messageAction(m.id, action);
+    m.is_starred = !m.is_starred;
+    if (state.current && state.current.id === m.id) {
+      state.current.is_starred = m.is_starred;
+      updateToolbar(state.current);
     }
+    if (state.folder === "starred" && !state.query && !m.is_starred) removeRow(m.id);
+    else replaceRow(m);
+    toast(m.is_starred ? "Starred" : "Star removed", "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
 
-    node.textContent = "⏳ " + formatRemaining(remaining) + " left";
-    node.classList.toggle("urgent", remaining < 24 * 3600 * 1000);
+async function toggleRead(m) {
+  const action = m.is_read ? "unread" : "read";
+  try {
+    await messageAction(m.id, action);
+    m.is_read = !m.is_read;
+    replaceRow(m);
+    Shell.refreshCounts();
+    toast(m.is_read ? "Marked as read" : "Marked as unread", "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
 
-    // Warn once when less than 3 days are left
-    if (!warned && remaining < 3 * 24 * 3600 * 1000) {
-      warned = true;
-      showBanner(
-        "⚠️ Your temporary account expires in " + formatRemaining(remaining) +
-        ". Download anything you want to keep."
-      );
+async function rowAction(m, action, doneText) {
+  try {
+    await messageAction(m.id, action);
+    if (state.selectedId === m.id) closeReader();
+    removeRow(m.id);
+    Shell.refreshCounts();
+    toast(doneText, "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+function updatePager() {
+  const show = state.totalPages > 1;
+  $("pager").classList.toggle("hidden", !show);
+  if (!show) return;
+  const start = (state.page - 1) * 20 + 1;
+  const end = Math.min(state.total, state.page * 20);
+  $("page-info").textContent = start + "–" + end + " of " + state.total;
+  $("prev-btn").disabled = state.page <= 1;
+  $("next-btn").disabled = state.page >= state.totalPages;
+}
+
+// ---------- Selecting several messages ----------
+const BULK_ACTIONS = {
+  read: "Marked as read",
+  unread: "Marked as unread",
+  star: "Starred",
+  not_spam: "Moved to inbox",
+  restore: "Restored",
+  trash: "Moved to trash",
+  delete_forever: "Deleted forever",
+};
+
+function bulkAllowed(action) {
+  const f = state.query ? "all" : state.folder;
+  if (action === "restore" || action === "delete_forever") return f === "trash";
+  if (action === "not_spam") return f === "spam";
+  if (action === "trash") return f !== "trash";
+  if (action === "star") return f !== "trash";
+  return f !== "trash" && f !== "drafts";
+}
+
+function updateBulk() {
+  const n = state.picked.size;
+  const total = state.items.length;
+  const all = $("pick-all");
+  all.checked = n > 0 && n === total;
+  all.indeterminate = n > 0 && n < total;
+  all.disabled = total === 0;
+  $("bulk").classList.toggle("hidden", n === 0);
+  document.querySelector(".list-pane").classList.toggle("picking", n > 0);
+  document.querySelectorAll("[data-bulk]").forEach((b) => b.classList.toggle("hidden", !bulkAllowed(b.dataset.bulk)));
+  $("tools-label").textContent = n > 0 ? n + " selected" : (state.query ? "All folders" : "Newest first");
+}
+
+$("pick-all").addEventListener("change", (event) => {
+  state.picked = event.target.checked ? new Set(state.items.map((m) => m.id)) : new Set();
+  document.querySelectorAll(".msg").forEach((row) => {
+    const on = state.picked.has(row.dataset.id);
+    row.classList.toggle("picked", on);
+    const box = row.querySelector(".pick");
+    if (box) box.checked = on;
+  });
+  updateBulk();
+});
+
+document.querySelectorAll("[data-bulk]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const action = button.dataset.bulk;
+    const ids = [...state.picked];
+    if (ids.length === 0) return;
+    if (action === "delete_forever") {
+      const ok = await confirmDialog({
+        title: "Delete " + ids.length + (ids.length === 1 ? " message" : " messages") + " forever?",
+        message: "They'll be removed from your mailbox and can't be recovered.",
+        confirmText: "Delete forever",
+        danger: true,
+      });
+      if (!ok) return;
     }
+    document.querySelectorAll("[data-bulk]").forEach((b) => (b.disabled = true));
+    const results = await Promise.allSettled(ids.map((id) => messageAction(id, action)));
+    document.querySelectorAll("[data-bulk]").forEach((b) => (b.disabled = false));
+    const done = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.length - done;
+    if (state.selectedId && ids.includes(state.selectedId) && !["read", "star"].includes(action)) closeReader();
+    if (done) toast(BULK_ACTIONS[action] + " · " + done + (done === 1 ? " message" : " messages"), "success");
+    if (failed) toast(failed + (failed === 1 ? " message" : " messages") + " couldn't be changed: " + results.find((r) => r.status === "rejected").reason.message, "error");
+    loadMessages({ quiet: true });
+  });
+});
+
+// ---------- Reading pane ----------
+async function openMessage(id) {
+  state.selectedId = id;
+  document.querySelectorAll(".msg.selected").forEach((r) => r.classList.remove("selected"));
+  const row = rowFor(id);
+  if (row) row.classList.add("selected");
+
+  showReader();
+  const article = $("read-article");
+  article.replaceChildren(readerSkeleton());
+
+  try {
+    const data = await api("/api/messages/" + encodeURIComponent(id));
+    if (state.selectedId !== id) return;
+    state.current = data.message;
+    renderReader(data.message);
+    $("read-scroll").scrollTop = 0;
+
+    // The server marks it as read
+    const item = state.items.find((m) => m.id === id);
+    if (item && !item.is_read) {
+      item.is_read = true;
+      replaceRow(item);
+      const fresh = rowFor(id);
+      if (fresh) fresh.classList.add("selected");
+    }
+    Shell.refreshCounts();
+  } catch (err) {
+    article.replaceChildren(el("div", "alert alert-error", err.message));
+  }
+}
+
+function readerSkeleton() {
+  const box = el("div", "read-loading");
+  [["60%", 26], ["35%", 14], ["100%", 12], ["94%", 12], ["88%", 12], ["40%", 12]].forEach(([w, h]) => {
+    const s = el("span", "skeleton");
+    s.style.width = w;
+    s.style.height = h + "px";
+    box.append(s);
+  });
+  return box;
+}
+
+function showReader() {
+  $("read-empty").classList.add("hidden");
+  $("read-view").classList.remove("hidden");
+  const mail = $("mail");
+  document.body.classList.add("mail-reading");
+  if (!mail.classList.contains("reading")) {
+    mail.classList.add("reading");
+    if (window.matchMedia("(max-width: 900px)").matches) history.pushState({ reading: true }, "");
+  }
+}
+
+function closeReader({ fromHistory = false } = {}) {
+  const mail = $("mail");
+  const wasReading = mail.classList.contains("reading");
+  state.current = null;
+  state.selectedId = null;
+  mail.classList.remove("reading");
+  document.body.classList.remove("mail-reading");
+  document.querySelectorAll(".msg.selected").forEach((r) => r.classList.remove("selected"));
+  $("read-view").classList.add("hidden");
+  $("read-empty").classList.remove("hidden");
+  if (wasReading && !fromHistory && history.state && history.state.reading) history.back();
+}
+
+window.addEventListener("popstate", () => {
+  if ($("mail").classList.contains("reading") && !(history.state && history.state.reading)) {
+    closeReader({ fromHistory: true });
+  }
+});
+
+function renderReader(m) {
+  const article = $("read-article");
+  const outgoing = isOutgoing(m);
+
+  const subject = el("h2", "read-subject", m.subject || "(no subject)");
+  const tags = el("div", "read-tags");
+  tags.append(el("span", "badge no-dot", FOLDERS[m.folder] ? FOLDERS[m.folder].title : m.folder));
+  if (m.is_starred) tags.append(el("span", "badge badge-warning no-dot", "Starred"));
+
+  const from = el("div", "read-from");
+  const text = el("div", "read-from-text");
+  const name = el("div", "read-from-name", nameFromEmail(m.from));
+  name.append(el("span", null, "<" + m.from + ">"));
+  text.append(name, el("div", "read-to", "To: " + ((m.to || []).join(", ") || "(no recipients)")));
+  const date = el("time", "read-date", formatFullDate(m.created_at));
+  date.dateTime = m.created_at;
+  from.append(avatar(m.from, "lg"), text, date);
+
+  // Shown as plain text only — never as HTML
+  const body = el("div", "read-body", m.body || "");
+
+  article.replaceChildren(subject, tags, from, body);
+
+  if (m.attachments && m.attachments.length) {
+    const box = el("div", "attachments");
+    const title = el("div", "attachments-title");
+    title.append(icon("paperclip", "i-sm"), el("span", null, m.attachments.length + (m.attachments.length === 1 ? " attachment" : " attachments")));
+    const grid = el("div", "attachment-grid");
+    m.attachments.forEach((a) => {
+      const ext = (a.filename.split(".").pop() || "").toLowerCase();
+      const link = el("a", "attachment");
+      link.href = "/api/attachments/" + encodeURIComponent(a.id);
+      link.setAttribute("download", a.filename);
+      link.setAttribute("aria-label", "Download " + a.filename);
+      const kind = ext === "pdf" ? "pdf" : ["jpg", "jpeg", "png", "gif"].includes(ext) ? "img" : "";
+      const badge = el("span", "attachment-icon " + kind);
+      badge.append(icon(kind === "img" ? "image" : "file"));
+      const t = el("span", "attachment-text");
+      t.append(el("strong", null, a.filename), el("span", null, ext.toUpperCase() + " · " + formatSize(a.size)));
+      link.append(badge, t, icon("download", "i-sm"));
+      grid.append(link);
+    });
+    box.append(title, grid);
+    article.append(box);
   }
 
-  tick();                                  // show it immediately
-  countdownTimer = setInterval(tick, 1000); // then update every second
+  if (m.folder !== "trash") {
+    const bar = el("div", "reply-bar");
+    const reply = el("button", "btn");
+    reply.type = "button";
+    reply.append(icon("reply", "i-sm"), el("span", null, outgoing ? "Write again" : "Reply"));
+    reply.addEventListener("click", () => replyTo(m));
+    const forward = el("button", "btn");
+    forward.type = "button";
+    forward.append(icon("forward", "i-sm"), el("span", null, "Forward"));
+    forward.addEventListener("click", () => forwardMessage(m));
+    bar.append(reply);
+    if (canReplyAll(m)) {
+      const all = el("button", "btn");
+      all.type = "button";
+      all.append(icon("reply-all", "i-sm"), el("span", null, "Reply all"));
+      all.addEventListener("click", () => replyAll(m));
+      bar.append(all);
+    }
+    bar.append(forward);
+    article.append(bar);
+  }
+
+  updateToolbar(m);
 }
-// ---------- "From" addresses for Compose ----------
+
+function setIcon(button, name) {
+  button.querySelector("use").setAttribute("href", "/icons.svg#" + name);
+}
+
+function updateToolbar(m) {
+  const inTrash = m.folder === "trash";
+  const inSpam = m.folder === "spam";
+  const star = $("star-btn");
+  setIcon(star, m.is_starred ? "star-fill" : "star");
+  star.style.color = m.is_starred ? "#E9A23B" : "";
+  star.setAttribute("aria-pressed", String(m.is_starred));
+  star.setAttribute("aria-label", m.is_starred ? "Unstar" : "Star");
+  star.dataset.tip = m.is_starred ? "Unstar" : "Star";
+
+  star.classList.toggle("hidden", inTrash);
+  $("unread-btn").classList.toggle("hidden", inTrash);
+  $("spam-btn").classList.toggle("hidden", m.folder !== "inbox");
+  $("trash-btn").classList.toggle("hidden", inTrash);
+  $("restore-btn").classList.toggle("hidden", !(inTrash || inSpam));
+  $("restore-btn").querySelector("span").textContent = inSpam ? "Not spam" : "Restore";
+  $("delete-forever-btn").classList.toggle("hidden", !inTrash);
+  $("reply-btn-top").classList.toggle("hidden", inTrash);
+  $("forward-btn-top").classList.toggle("hidden", inTrash);
+  $("reply-all-btn-top").classList.toggle("hidden", !canReplyAll(m));
+}
+
+async function toolbarAction(action, successText) {
+  const m = state.current;
+  if (!m) return;
+  try {
+    await messageAction(m.id, action);
+    toast(successText, "success");
+    const id = m.id;
+    closeReader();
+    removeRow(id);
+    Shell.refreshCounts();
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+// ---------- Reply and forward (prefill compose; sending uses the normal send) ----------
+function quoteBody(m) {
+  const lines = (m.body || "").split("\n").map((line) => "> " + line).join("\n");
+  return "\n\nOn " + formatFullDate(m.created_at) + ", " + m.from + " wrote:\n" + lines;
+}
+
+function withPrefix(prefix, subject) {
+  const s = subject || "";
+  return new RegExp("^" + prefix + ":\\s", "i").test(s) ? s : prefix + ": " + s;
+}
+
+function myAddressIn(list) {
+  const mine = [...composeForm.elements.from.options].map((o) => o.value);
+  return (list || []).find((email) => mine.includes(email));
+}
+
+function replyTo(m) {
+  const outgoing = isOutgoing(m);
+  const to = outgoing ? m.to || [] : [m.from];
+  const from = outgoing ? m.from : myAddressIn(m.to);
+  openCompose({ to, from, subject: withPrefix("Re", m.subject), body: quoteBody(m), focus: "body", title: "Reply" });
+}
+
+// Everyone on the message except you
+function replyAllRecipients(m) {
+  const mine = [...composeForm.elements.from.options].map((o) => o.value);
+  const list = [m.from, ...(m.to || [])].filter((email) => !mine.includes(email));
+  return [...new Set(list)];
+}
+
+function canReplyAll(m) {
+  return !isOutgoing(m) && m.folder !== "trash" && replyAllRecipients(m).length > 1;
+}
+
+function replyAll(m) {
+  openCompose({
+    to: replyAllRecipients(m),
+    from: myAddressIn(m.to),
+    subject: withPrefix("Re", m.subject),
+    body: quoteBody(m),
+    focus: "body",
+    title: "Reply all",
+  });
+}
+
+function forwardMessage(m) {
+  const header = "\n\n---------- Forwarded message ----------\n" +
+    "From: " + m.from + "\n" +
+    "Date: " + formatFullDate(m.created_at) + "\n" +
+    "Subject: " + (m.subject || "(no subject)") + "\n" +
+    "To: " + (m.to || []).join(", ") + "\n\n" + (m.body || "");
+  openCompose({
+    from: isOutgoing(m) ? m.from : myAddressIn(m.to),
+    subject: withPrefix("Fwd", m.subject),
+    body: header,
+    title: "Forward",
+    notice: m.attachments && m.attachments.length
+      ? "Attachments from the original message aren't included when forwarding. Attach them again if needed."
+      : "",
+  });
+}
+
+// ---------- Compose ----------
+const compose = $("compose");
+const composeForm = $("compose-form");
+
+function composeSnapshot() {
+  return [composeForm.elements.to.value, composeForm.elements.subject.value, composeForm.elements.body.value, state.files.length].join("\u0000");
+}
+
+function showComposeMessage(text, type = "error") {
+  const box = $("compose-message");
+  box.className = "alert alert-" + type;
+  box.replaceChildren(icon(type === "error" ? "alert" : "info", "i-sm"), el("span", null, text));
+}
+
+function hideComposeMessage() {
+  $("compose-message").className = "alert hidden";
+}
+
+function openCompose(prefill = {}) {
+  if (compose.classList.contains("open") && isComposeDirty()) {
+    // Don't throw away what's being written: bring the window back instead
+    compose.classList.remove("minimized");
+    toast("Finish or close the message you're writing first.");
+    composeForm.elements.body.focus();
+    return;
+  }
+  composeForm.reset();
+  if (prefill.from && [...composeForm.elements.from.options].some((o) => o.value === prefill.from)) {
+    composeForm.elements.from.value = prefill.from;
+  }
+  state.files = [];
+  renderFileList();
+  state.draftId = prefill.id || null;
+  composeForm.elements.to.value = (prefill.to || []).join(", ");
+  composeForm.elements.subject.value = prefill.subject || "";
+  composeForm.elements.body.value = prefill.body || "";
+  $("compose-title").textContent = prefill.title || (state.draftId ? "Edit draft" : "New message");
+  if (prefill.notice) showComposeMessage(prefill.notice, "info");
+  else hideComposeMessage();
+
+  compose.classList.remove("minimized");
+  compose.classList.add("open");
+  compose.setAttribute("aria-hidden", "false");
+  document.body.classList.add("compose-open");
+  state.composeSnapshot = composeSnapshot();
+
+  requestAnimationFrame(() => {
+    const target = prefill.focus === "body" ? composeForm.elements.body
+      : composeForm.elements.to.value ? composeForm.elements.subject : composeForm.elements.to;
+    target.focus();
+    if (prefill.focus === "body") target.setSelectionRange(0, 0);
+  });
+}
+
+function isComposeDirty() {
+  return composeSnapshot() !== state.composeSnapshot;
+}
+
+function hideCompose() {
+  compose.classList.remove("open", "expanded");
+  compose.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("compose-open");
+  state.draftId = null;
+  const button = $("compose-btn");
+  if (button && window.matchMedia("(min-width: 1181px)").matches) button.focus();
+}
+
+// Closing with unsaved changes asks what to do
+function closeCompose() {
+  if (!compose.classList.contains("open")) return;
+  if (!isComposeDirty()) {
+    hideCompose();
+    return;
+  }
+  const box = el("div", "modal");
+  const head = el("div", "modal-head");
+  const text = el("div");
+  const h = el("h2", null, "Save this message as a draft?");
+  h.id = "discard-title";
+  box.setAttribute("aria-labelledby", "discard-title");
+  text.append(h, el("p", null, state.files.length
+    ? "Your text will be saved. Attachments aren't stored in drafts."
+    : "You can finish it later from Drafts."));
+  head.append(text);
+  const foot = el("div", "modal-foot");
+  foot.style.paddingTop = "22px";
+  const discard = el("button", "btn btn-danger", "Discard");
+  const keep = el("button", "btn", "Keep editing");
+  const save = el("button", "btn btn-primary", "Save draft");
+  [discard, keep, save].forEach((b) => (b.type = "button"));
+  foot.append(discard, keep, save);
+  box.append(head, foot);
+  const close = openModal(box);
+  keep.addEventListener("click", close);
+  discard.addEventListener("click", () => {
+    close();
+    hideCompose();
+    toast("Message discarded");
+  });
+  save.addEventListener("click", async () => {
+    close();
+    if (await saveDraft()) hideCompose();
+  });
+}
+
+function renderFileList() {
+  const list = $("file-list");
+  list.replaceChildren();
+  state.files.forEach((file, index) => {
+    const item = el("li", "file-chip");
+    const remove = iconButton("x", "Remove " + file.name, "icon-btn");
+    remove.addEventListener("click", () => {
+      state.files.splice(index, 1);
+      renderFileList();
+    });
+    item.append(icon("paperclip", "i-sm"), el("span", null, file.name), el("small", null, formatSize(file.size)), remove);
+    list.append(item);
+  });
+  const total = state.files.reduce((sum, f) => sum + f.size, 0);
+  $("compose-hint").textContent = state.files.length
+    ? state.files.length + " of " + MAX_FILES + " files · " + formatSize(total)
+    : "Up to 5 files, 10 MB each";
+}
+
+function parseRecipients(text) {
+  return text.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+
+async function openDraft(id) {
+  try {
+    const data = await api("/api/messages/" + encodeURIComponent(id));
+    openCompose(data.message);
+  } catch (err) {
+    toast(err.message, "error");
+  }
+}
+
+async function saveDraft() {
+  const button = $("save-draft-btn");
+  setBusy(button, true, "Saving…");
+  try {
+    const result = await api("/api/drafts", {
+      method: "POST",
+      body: {
+        draft_id: state.draftId,
+        to: parseRecipients(composeForm.elements.to.value),
+        subject: composeForm.elements.subject.value,
+        body: composeForm.elements.body.value,
+      },
+    });
+    state.draftId = result.draft_id;
+    state.composeSnapshot = composeSnapshot();
+    toast(state.files.length ? "Draft saved (attachments aren't kept in drafts)" : "Draft saved", "success");
+    if (state.folder === "drafts" && !state.query) loadMessages({ quiet: true });
+    Shell.refreshCounts();
+    return true;
+  } catch (err) {
+    showComposeMessage(err.message);
+    return false;
+  } finally {
+    setBusy(button, false);
+  }
+}
+
 async function loadFromAddresses() {
   const select = $("compose-from");
   try {
@@ -156,277 +819,23 @@ async function loadFromAddresses() {
       option.value = email;
       select.append(option);
     });
+    select.closest(".compose-row").classList.toggle("hidden", data.addresses.length < 2);
   } catch {
-    // If this fails, the server will simply use your main address
+    // If this fails, the server uses your main address
+    select.closest(".compose-row").classList.add("hidden");
   }
 }
-// ---------- Folders ----------
-function folderFromHash() {
-  const name = location.hash.replace("#", "");
-  return FOLDERS[name] ? name : "inbox";
-}
-
-function updateHeading() {
-  document.querySelectorAll(".folder-link").forEach((link) => {
-    link.classList.toggle("active", !state.query && link.dataset.folder === state.folder);
-  });
-  $("folder-title").textContent = state.query
-    ? 'Search results for "' + state.query + '"'
-    : FOLDERS[state.folder].title;
-}
-
-// ---------- Message list ----------
-async function loadMessages() {
-  updateHeading();
-  $("message-list").replaceChildren();
-  $("pager").classList.add("hidden");
-  showState("loading");
-
-  const params = new URLSearchParams({
-    folder: state.query ? "all" : state.folder,
-    page: state.page,
-  });
-  if (state.query) params.set("q", state.query);
-
-  try {
-    const data = await api("/api/messages?" + params.toString());
-    state.totalPages = data.total_pages || 1;
-
-    if (data.messages.length === 0) {
-      showState("empty", state.query ? "No messages match your search." : FOLDERS[state.folder].empty);
-    } else {
-      hideState();
-      data.messages.forEach((m) => $("message-list").append(renderMessageItem(m)));
-    }
-    updatePager();
-  } catch (err) {
-    showState("error", err.message);
-  }
-  loadCounts();
-}
-
-function renderMessageItem(m) {
-  const li = el("li", "message-item" + (m.is_read ? "" : " unread"));
-
-  // Star button
-  const star = el("button", "star-toggle" + (m.is_starred ? " starred" : ""), m.is_starred ? "★" : "☆");
-  star.title = m.is_starred ? "Unstar" : "Star";
-  star.addEventListener("click", async (event) => {
-    event.stopPropagation(); // don't open the message
-    try {
-      await messageAction(m.id, m.is_starred ? "unstar" : "star");
-      m.is_starred = !m.is_starred;
-      if (state.folder === "starred" && !state.query) loadMessages();
-      else li.replaceWith(renderMessageItem(m));
-    } catch (err) {
-      showToast(err.message, true);
-    }
-  });
-
-  // Sender (or recipients for sent mail and drafts)
-  const outgoing = m.folder === "sent" || m.folder === "drafts";
-  const who = outgoing
-    ? "To: " + (m.to && m.to.length ? m.to.join(", ") : "(no recipients)")
-    : m.from;
-
-  const main = el("div", "msg-main");
-  const text = el("div", "msg-text");
-  text.append(
-    el("span", null, m.subject || "(no subject)"),
-    el("span", "msg-snippet", m.snippet ? " — " + m.snippet : "")
-  );
-  main.append(el("div", "msg-from", who), text);
-
-  const date = el("div", "msg-date", (m.has_attachments ? "📎 " : "") + formatDate(m.created_at));
-
-  li.append(star, main, date);
-  li.addEventListener("click", () => (m.folder === "drafts" ? openDraft(m.id) : openMessage(m.id)));
-  return li;
-}
-
-function updatePager() {
-  $("pager").classList.toggle("hidden", state.totalPages <= 1);
-  $("page-info").textContent = "Page " + state.page + " of " + state.totalPages;
-  $("prev-btn").disabled = state.page <= 1;
-  $("next-btn").disabled = state.page >= state.totalPages;
-}
-
-async function loadCounts() {
-  try {
-    const counts = await api("/api/messages/counts");
-    ["inbox", "drafts", "spam"].forEach((name) => {
-      const n = counts[name] || 0;
-      $("count-" + name).textContent = n > 0 ? n : "";
-    });
-  } catch {
-    // Counts are optional. Ignore errors here.
-  }
-}
-
-// ---------- Reading one message ----------
-function messageAction(id, action) {
-  return api("/api/messages/" + encodeURIComponent(id), { method: "PATCH", body: { action } });
-}
-
-async function openMessage(id) {
-  try {
-    const data = await api("/api/messages/" + encodeURIComponent(id));
-    state.current = data.message;
-    renderReadView(data.message);
-    $("list-view").classList.add("hidden");
-    $("read-view").classList.remove("hidden");
-    loadCounts(); // the backend marks it as read
-  } catch (err) {
-    showToast(err.message, true);
-  }
-}
-
-function metaLine(label, value) {
-  const line = el("div");
-  line.append(el("strong", null, label + ": "), document.createTextNode(value));
-  return line;
-}
-
-function renderReadView(m) {
-  $("read-subject").textContent = m.subject || "(no subject)";
-  $("read-meta").replaceChildren(
-    metaLine("From", m.from),
-    metaLine("To", (m.to || []).join(", ")),
-    metaLine("Date", new Date(m.created_at).toLocaleString())
-  );
-  $("read-body").textContent = m.body || ""; // shown as plain text, never as HTML
-
-  const box = $("read-attachments");
-  box.replaceChildren();
-  (m.attachments || []).forEach((a) => {
-    const link = el("a", "attachment", "📎 " + a.filename + " (" + formatSize(a.size) + ")");
-    link.href = "/api/attachments/" + encodeURIComponent(a.id);
-    box.append(link);
-  });
-
-  updateToolbar(m);
-}
-
-function updateToolbar(m) {
-  const inTrash = m.folder === "trash";
-  const inSpam = m.folder === "spam";
-  $("star-btn").textContent = m.is_starred ? "★ Starred" : "☆ Star";
-  $("star-btn").classList.toggle("hidden", inTrash);
-  $("unread-btn").classList.toggle("hidden", inTrash);
-  $("spam-btn").classList.toggle("hidden", inTrash || inSpam || m.folder === "sent");
-  $("trash-btn").classList.toggle("hidden", inTrash);
-  $("restore-btn").classList.toggle("hidden", !(inTrash || inSpam));
-  $("restore-btn").textContent = inSpam ? "Not spam" : "Restore";
-  $("delete-forever-btn").classList.toggle("hidden", !inTrash);
-}
-
-function showListView() {
-  state.current = null;
-  $("read-view").classList.add("hidden");
-  $("list-view").classList.remove("hidden");
-}
-
-async function toolbarAction(action, successText, goBackToList) {
-  const m = state.current;
-  if (!m) return;
-  try {
-    await messageAction(m.id, action);
-    showToast(successText);
-    if (goBackToList) {
-      showListView();
-      loadMessages();
-    } else {
-      if (action === "star") m.is_starred = true;
-      if (action === "unstar") m.is_starred = false;
-      updateToolbar(m);
-    }
-  } catch (err) {
-    showToast(err.message, true);
-  }
-}
-
-// ---------- Compose ----------
-function showComposeMessage(text) {
-  $("compose-message").textContent = text;
-  $("compose-message").className = "alert alert-error";
-}
-
-function hideComposeMessage() {
-  $("compose-message").className = "alert hidden";
-}
-
-function openCompose(prefill = {}) {
-  const form = $("compose-form");
-  form.reset();
-  state.files = [];
-  renderFileList();
-  state.draftId = prefill.id || null;
-  form.elements.to.value = (prefill.to || []).join(", ");
-  form.elements.subject.value = prefill.subject || "";
-  form.elements.body.value = prefill.body || "";
-  $("compose-title").textContent = state.draftId ? "Edit draft" : "New message";
-  hideComposeMessage();
-  $("compose-modal").classList.remove("hidden");
-  form.elements.to.focus();
-}
-
-function closeCompose() {
-  $("compose-modal").classList.add("hidden");
-}
-
-async function openDraft(id) {
-  try {
-    const data = await api("/api/messages/" + encodeURIComponent(id));
-    openCompose(data.message);
-  } catch (err) {
-    showToast(err.message, true);
-  }
-}
-
-function parseRecipients(text) {
-  return text
-    .split(/[,;\s]+/)
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function renderFileList() {
-  const list = $("file-list");
-  list.replaceChildren();
-  state.files.forEach((file, index) => {
-    const item = el("li");
-    const remove = el("button", "icon-btn", "✕");
-    remove.type = "button";
-    remove.title = "Remove";
-    remove.addEventListener("click", () => {
-      state.files.splice(index, 1);
-      renderFileList();
-    });
-    item.append(el("span", null, file.name + " (" + formatSize(file.size) + ")"), remove);
-    list.append(item);
-  });
-}
-
-// ---------- Button and form events ----------
-$("compose-btn").addEventListener("click", () => {
-  closeSidebar();
-  openCompose();
-});
-$("compose-close").addEventListener("click", closeCompose);
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeCompose();
-});
 
 $("attachments").addEventListener("change", (event) => {
   hideComposeMessage();
   for (const file of event.target.files) {
     const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      showComposeMessage('"' + file.name + '" is not an allowed file type.');
+      showComposeMessage("“" + file.name + "” can't be attached. Allowed: images, PDF, Word and text files.");
       continue;
     }
     if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      showComposeMessage('"' + file.name + '" is larger than ' + MAX_FILE_MB + " MB.");
+      showComposeMessage("“" + file.name + "” is larger than " + MAX_FILE_MB + " MB.");
       continue;
     }
     if (state.files.length >= MAX_FILES) {
@@ -439,150 +848,270 @@ $("attachments").addEventListener("change", (event) => {
   renderFileList();
 });
 
-$("compose-form").addEventListener("submit", async (event) => {
+// The paperclip is a <label>; make it work with the keyboard too
+document.querySelector(".attach-btn").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    $("attachments").click();
+  }
+});
+
+composeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const form = event.target;
   hideComposeMessage();
 
-  const recipients = parseRecipients(form.elements.to.value);
+  const recipients = parseRecipients(composeForm.elements.to.value);
   if (recipients.length === 0) {
-    showComposeMessage("Please add at least one recipient.");
+    showComposeMessage("Add at least one recipient.");
+    composeForm.elements.to.focus();
     return;
   }
   const invalid = recipients.find((r) => !EMAIL_PATTERN.test(r));
   if (invalid) {
-    showComposeMessage('"' + invalid + "\" doesn't look like an email address.");
+    showComposeMessage("“" + invalid + "” isn't a valid email address.");
+    composeForm.elements.to.focus();
     return;
   }
-  if (!form.elements.subject.value.trim() && !confirm("Send this message without a subject?")) {
-    return;
+  if (!composeForm.elements.subject.value.trim()) {
+    const ok = await confirmDialog({
+      title: "Send without a subject?",
+      message: "A short subject helps people find your message later.",
+      confirmText: "Send anyway",
+      cancelText: "Add a subject",
+      iconName: "info",
+    });
+    if (!ok) {
+      composeForm.elements.subject.focus();
+      return;
+    }
   }
 
   // FormData is needed because we are sending files
   const formData = new FormData();
-    if (form.elements.from.value) formData.append("from", form.elements.from.value);
+  if (composeForm.elements.from.value) formData.append("from", composeForm.elements.from.value);
   formData.append("to", recipients.join(","));
-  formData.append("subject", form.elements.subject.value.trim());
-  formData.append("body", form.elements.body.value);
+  formData.append("subject", composeForm.elements.subject.value.trim());
+  formData.append("body", composeForm.elements.body.value);
   if (state.draftId) formData.append("draft_id", state.draftId);
   state.files.forEach((file) => formData.append("attachments", file));
 
   const sendButton = $("send-btn");
-  sendButton.disabled = true;
-  sendButton.textContent = "Sending...";
+  setBusy(sendButton, true, "Sending…");
   try {
     const result = await api("/api/messages/send", { method: "POST", body: formData });
-    closeCompose();
-    showToast((result && result.message) || "Message sent");
-    loadMessages();
+    setBusy(sendButton, false);
+    hideCompose();
+    toast((result && result.message) || "Message sent", "success");
+    if (["sent", "drafts"].includes(state.folder) || state.query) loadMessages({ quiet: true });
+    else Shell.refreshCounts();
   } catch (err) {
+    setBusy(sendButton, false);
     showComposeMessage(err.message);
-  } finally {
-    sendButton.disabled = false;
-    sendButton.textContent = "Send";
   }
 });
 
-$("save-draft-btn").addEventListener("click", async () => {
-  const form = $("compose-form");
-  try {
-    const result = await api("/api/drafts", {
-      method: "POST",
-      body: {
-        draft_id: state.draftId,
-        to: parseRecipients(form.elements.to.value),
-        subject: form.elements.subject.value,
-        body: form.elements.body.value,
-      },
+$("save-draft-btn").addEventListener("click", saveDraft);
+$("compose-close").addEventListener("click", closeCompose);
+$("discard-btn").addEventListener("click", async () => {
+  if (isComposeDirty()) {
+    const ok = await confirmDialog({
+      title: "Discard this message?",
+      message: state.draftId ? "Changes since you last saved will be lost. The saved draft stays in Drafts." : "What you've written will be lost.",
+      confirmText: "Discard",
+      danger: true,
     });
-    state.draftId = result.draft_id;
-    showToast("Draft saved");
-    if (state.folder === "drafts") loadMessages();
-  } catch (err) {
-    showComposeMessage(err.message);
+    if (!ok) return;
+  }
+  hideCompose();
+  toast("Message discarded");
+});
+$("compose-min").addEventListener("click", () => {
+  compose.classList.toggle("minimized");
+  compose.classList.remove("expanded");
+});
+$("compose-expand").addEventListener("click", () => {
+  compose.classList.toggle("expanded");
+  compose.classList.remove("minimized");
+  setIcon($("compose-expand"), "expand");
+});
+document.querySelector(".compose-head").addEventListener("click", (event) => {
+  if (compose.classList.contains("minimized") && !event.target.closest("button")) compose.classList.remove("minimized");
+});
+composeForm.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    composeForm.requestSubmit();
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && compose.classList.contains("open") && !document.querySelector(".modal-backdrop")) {
+    if (compose.contains(document.activeElement)) closeCompose();
   }
 });
 
-// Toolbar buttons in the reading view
-$("back-btn").addEventListener("click", () => {
-  showListView();
-  loadMessages();
-});
+// ---------- Toolbar ----------
+$("back-btn").addEventListener("click", () => closeReader());
 $("star-btn").addEventListener("click", () => {
-  const starred = state.current && state.current.is_starred;
-  toolbarAction(starred ? "unstar" : "star", starred ? "Star removed" : "Starred", false);
+  const m = state.current;
+  if (!m) return;
+  const item = state.items.find((x) => x.id === m.id) || m;
+  toggleStar(item);
 });
-$("unread-btn").addEventListener("click", () => toolbarAction("unread", "Marked as unread", true));
-$("spam-btn").addEventListener("click", () => toolbarAction("spam", "Moved to spam", true));
-$("trash-btn").addEventListener("click", () => toolbarAction("trash", "Moved to trash", true));
+$("unread-btn").addEventListener("click", async () => {
+  const m = state.current;
+  if (!m) return;
+  try {
+    await messageAction(m.id, "unread");
+    const item = state.items.find((x) => x.id === m.id);
+    closeReader();
+    if (item) { item.is_read = false; replaceRow(item); }
+    Shell.refreshCounts();
+    toast("Marked as unread", "success");
+  } catch (err) {
+    toast(err.message, "error");
+  }
+});
+$("spam-btn").addEventListener("click", () => toolbarAction("spam", "Moved to spam"));
+$("trash-btn").addEventListener("click", () => toolbarAction("trash", "Moved to trash"));
 $("restore-btn").addEventListener("click", () => {
-  const action = state.current && state.current.folder === "spam" ? "not_spam" : "restore";
-  toolbarAction(action, "Message restored", true);
+  const inSpam = state.current && state.current.folder === "spam";
+  toolbarAction(inSpam ? "not_spam" : "restore", inSpam ? "Moved to inbox" : "Message restored");
 });
-$("delete-forever-btn").addEventListener("click", () => {
-  if (confirm("Delete this message forever? This cannot be undone.")) {
-    toolbarAction("delete_forever", "Message deleted forever", true);
-  }
+$("delete-forever-btn").addEventListener("click", async () => {
+  const ok = await confirmDialog({
+    title: "Delete this message forever?",
+    message: "It will be removed from your mailbox and can't be recovered.",
+    confirmText: "Delete forever",
+    danger: true,
+  });
+  if (ok) toolbarAction("delete_forever", "Message deleted forever");
 });
+$("reply-btn-top").addEventListener("click", () => state.current && replyTo(state.current));
+$("reply-all-btn-top").addEventListener("click", () => state.current && replyAll(state.current));
+$("forward-btn-top").addEventListener("click", () => state.current && forwardMessage(state.current));
 
-// Search
-$("search-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  state.query = $("search-input").value.trim();
+// ---------- Search, refresh, pages ----------
+function setSearch(q) {
+  state.query = q;
   state.page = 1;
-  showListView();
-  loadMessages();
-});
-
-// Refresh and pages
-$("refresh-btn").addEventListener("click", loadMessages);
-$("prev-btn").addEventListener("click", () => {
-  if (state.page > 1) {
-    state.page--;
-    loadMessages();
+  const input = $("search-input");
+  if (input && input.value !== q) {
+    input.value = q;
+    input.closest("form").classList.toggle("has-value", q !== "");
   }
+  closeReader();
+  loadMessages();
+}
+document.addEventListener("mailsearch", (event) => setSearch(event.detail));
+document.addEventListener("compose", () => openCompose());
+
+$("refresh-btn").addEventListener("click", (event) => {
+  const svg = event.currentTarget.querySelector("svg");
+  svg.animate([{ transform: "rotate(0)" }, { transform: "rotate(360deg)" }], { duration: 600, easing: "ease-out" });
+  loadMessages({ quiet: true });
+});
+$("prev-btn").addEventListener("click", () => {
+  if (state.page > 1) { state.page--; loadMessages(); $("message-list").scrollTop = 0; }
 });
 $("next-btn").addEventListener("click", () => {
-  if (state.page < state.totalPages) {
-    state.page++;
-    loadMessages();
-  }
+  if (state.page < state.totalPages) { state.page++; loadMessages(); $("message-list").scrollTop = 0; }
 });
 
-// Logout
-$("logout-btn").addEventListener("click", async () => {
-  try {
-    await api("/api/auth/logout", { method: "POST" });
-  } catch {
-    // Even if this fails, go to the login page
-  }
-  window.location.href = "/login.html";
-});
-
-// Mobile sidebar
-function closeSidebar() {
-  $("sidebar").classList.remove("open");
-  $("overlay").classList.add("hidden");
-}
-$("menu-btn").addEventListener("click", () => {
-  $("sidebar").classList.add("open");
-  $("overlay").classList.remove("hidden");
-});
-$("overlay").addEventListener("click", closeSidebar);
-
-// Clicking a folder changes the #hash in the address bar
+// Clicking a folder changes the #hash
 window.addEventListener("hashchange", () => {
-  state.folder = folderFromHash();
+  const folder = folderFromHash();
+  if (folder === state.folder && !state.query && location.hash !== "") return;
+  state.folder = folder;
   state.page = 1;
   state.query = "";
-  $("search-input").value = "";
-  closeSidebar();
-  showListView();
+  const input = $("search-input");
+  if (input) { input.value = ""; input.closest("form").classList.remove("has-value"); }
+  closeReader({ fromHistory: true });
   loadMessages();
 });
 
+// Check for new mail every minute while the tab is visible
+setInterval(async () => {
+  if (document.hidden) return;
+  const before = document.getElementById("count-inbox").textContent;
+  await Shell.refreshCounts();
+  const after = document.getElementById("count-inbox").textContent;
+  if (after !== before && state.folder === "inbox" && !state.query && state.page === 1) {
+    loadMessages({ quiet: true });
+  }
+}, 60000);
+
 // ---------- Start ----------
-state.folder = folderFromHash();
-loadUser();
-loadMessages();
-loadFromAddresses();
+(function start() {
+  const params = new URLSearchParams(location.search);
+  state.folder = folderFromHash();
+  state.query = (params.get("q") || "").trim();
+  if (params.has("q") || params.has("compose")) {
+    history.replaceState(null, "", "/inbox" + location.hash);
+  }
+  Shell.userReady.then(() => {
+    loadMessages();
+    loadFromAddresses().then(() => {
+      if (params.has("compose")) openCompose();
+    });
+  }).catch(() => renderListError("Couldn't reach MailSpace. Check your connection and refresh."));
+})();
+
+// ============================================================
+// Resizable divider between the message list and reading pane
+// ============================================================
+(function () {
+  const mail = document.getElementById("mail");
+  const handle = document.getElementById("pane-resizer");
+  if (!mail || !handle) return;
+  const KEY = "mailspace-list-width";
+  const DEFAULT = 380, MIN = 280, MIN_READ = 360;
+
+  const maxWidth = () => Math.max(MIN, mail.clientWidth - MIN_READ);
+  const clamp = (w) => Math.round(Math.min(maxWidth(), Math.max(MIN, w)));
+  let width = DEFAULT;
+
+  function apply(w, save) {
+    width = clamp(w);
+    mail.style.setProperty("--list-w", width + "px");
+    handle.setAttribute("aria-valuenow", String(width));
+    handle.setAttribute("aria-valuemin", String(MIN));
+    handle.setAttribute("aria-valuemax", String(maxWidth()));
+    if (save) { try { localStorage.setItem(KEY, String(width)); } catch (e) {} }
+  }
+
+  let saved = DEFAULT;
+  try { saved = parseInt(localStorage.getItem(KEY), 10) || DEFAULT; } catch (e) {}
+  apply(saved, false);
+
+  handle.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const left = mail.getBoundingClientRect().left;
+    document.body.classList.add("resizing");
+    const move = (ev) => apply(ev.clientX - left, false);
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", up);
+      document.body.classList.remove("resizing");
+      apply(width, true);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", up);
+  });
+
+  // Keyboard: arrows move 20px (Shift = 60px), Home/End jump to the limits
+  handle.addEventListener("keydown", (e) => {
+    const step = e.shiftKey ? 60 : 20;
+    const map = { ArrowLeft: width - step, ArrowRight: width + step, Home: MIN, End: maxWidth() };
+    if (!(e.key in map)) return;
+    e.preventDefault();
+    apply(map[e.key], true);
+  });
+
+  handle.addEventListener("dblclick", () => apply(DEFAULT, true));
+  window.addEventListener("resize", () => apply(width, false));
+})();

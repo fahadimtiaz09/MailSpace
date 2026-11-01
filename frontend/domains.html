@@ -2,45 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>My domains · MailSpace</title>
+  <meta name="theme-color" content="#F7F9FF">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/app.css">
 </head>
-<body>
-  <header class="topbar">
-    <a href="/" class="brand">📬 <span>MailSpace</span></a>
-    <div class="user-menu">
-      <span id="user-email" class="muted hide-mobile"></span>
-      <a href="/inbox" class="btn btn-light">← Back to inbox</a>
-    </div>
-  </header>
+<body class="app-page" data-page="domains">
+  <a class="skip-link" href="#main">Skip to content</a>
 
-  <main class="domains-main">
-    <h1>🌐 My domains</h1>
-    <p class="muted">
-      Use your own domain with MailSpace. First, prove that you own it by adding one DNS record.
-    </p>
+  <div class="app">
+    <header id="topbar"></header>
+    <aside id="sidebar"></aside>
 
-    <div id="domain-message" class="alert hidden"></div>
-
-    <form id="add-domain-form" class="add-domain" novalidate>
-      <input id="domain-name" name="name" type="text" placeholder="yourbusiness.com"
-             autocomplete="off" aria-label="Domain name">
-      <button type="submit" class="btn btn-primary">Add domain</button>
-    </form>
-
-    <div id="domain-list" class="domain-list"></div>
-
-    <div class="help-box">
-      <strong>Where do I add the record?</strong><br>
-      Add it where your domain's DNS is managed:<br>
-      • <strong>Namecheap:</strong> Domain List → Manage → Advanced DNS → Add New Record → TXT Record<br>
-      • <strong>Netlify DNS:</strong> Domains → your domain → DNS settings → Add new record → TXT<br>
-      In the <strong>Host / Name</strong> box type only <code>_mailspace</code>, without your domain name.
-    </div>
-  </main>
+    <main id="main" class="main main-scroll" tabindex="-1">
+      <div id="domains-view" class="page-wrap"></div>
+    </main>
+  </div>
 
   <script src="/api.js"></script>
+  <script src="/ui.js"></script>
+  <script src="/shell.js"></script>
   <script src="/domains.js"></script>
 </body>
 </html>
