@@ -174,7 +174,7 @@ const Shell = (() => {
       mailGroup.append(a);
     });
 
-    const manageGroup = el("div", "nav-group");
+       const manageGroup = el("div", "nav-group");
     manageGroup.append(el("div", "nav-title", "Manage"));
     [["domains", "/domains.html", "globe", "My domains"], ["settings", "/settings.html", "settings", "Settings"]]
       .forEach(([key, href, iconName, label]) => {
@@ -184,6 +184,15 @@ const Shell = (() => {
         a.append(icon(iconName), el("span", "nav-label", label));
         manageGroup.append(a);
       });
+
+    // Admin link — added only once we know the user is an admin
+    const adminLink = el("a", "nav-link hidden" + (page === "admin" ? " active" : ""));
+    adminLink.href = "/admin.html";
+    adminLink.id = "nav-admin";
+    if (page === "admin") adminLink.setAttribute("aria-current", "page");
+    adminLink.append(icon("shield"), el("span", "nav-label", "Admin"));
+    manageGroup.append(adminLink);
+
     nav.append(mailGroup, manageGroup);
 
     const plan = el("div", "plan-card");
@@ -244,11 +253,15 @@ const Shell = (() => {
     }
   }
 
-  function fillUser(u) {
+    function fillUser(u) {
     const btn = document.querySelector(".account-btn");
     btn.replaceChildren(avatar(u.email, "sm"), icon("chevron-down", "i-sm"));
     const head = document.querySelector(".menu-head");
     head.replaceChildren(el("strong", null, u.username), el("span", null, u.email));
+    if (u.role === "admin") {
+      const link = document.getElementById("nav-admin");
+      if (link) link.classList.remove("hidden");
+    }
     renderPlan(u);
   }
 

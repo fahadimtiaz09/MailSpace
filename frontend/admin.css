@@ -1,0 +1,85 @@
+/* ===== Admin console ===== */
+.admin-notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  border: 1px solid var(--warning);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: .9rem;
+}
+.admin-notice .i { flex: none; margin-top: 1px; }
+
+/* Stat cards */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-xs);
+}
+.stat-card .stat-num { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em; }
+.stat-card .stat-label { color: var(--text-2); font-size: .85rem; margin-top: 2px; }
+
+/* Tabs */
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 18px; flex-wrap: wrap; }
+.admin-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: .9rem;
+  cursor: pointer;
+}
+.admin-tab.active { background: var(--primary-soft); color: var(--primary); border-color: transparent; }
+
+/* Search row */
+.admin-search { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.admin-search .input { flex: 1; min-width: 180px; }
+
+/* Table */
+.admin-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.admin-table th, .admin-table td {
+  text-align: left;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.admin-table th { color: var(--text-2); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+.admin-table tbody tr:hover { background: var(--surface-hover); }
+.admin-table .who { display: flex; align-items: center; gap: 10px; }
+.admin-table .sub { color: var(--text-2); font-size: .85rem; }
+.admin-row-btn { cursor: pointer; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+
+.clip { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Reason box in the view dialog */
+.reason-note { color: var(--text-2); font-size: .88rem; margin: 2px 0 12px; }
+.read-body-admin { white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; margin-top: 14px; }
+.att-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.att-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; font-size: .85rem; text-decoration: none; color: var(--text);
+  background: var(--surface-2);
+}
+
+@media (max-width: 640px) {
+  .admin-table thead { display: none; }
+  .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; }
+  .admin-table tr { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; padding: 6px; }
+  .admin-table td { border: none; padding: 6px 10px; }
+  .table-wrap { border: none; background: transparent; }
+}
