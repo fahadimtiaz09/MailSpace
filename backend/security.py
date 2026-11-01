@@ -36,7 +36,20 @@ def is_expired(user):
     expires_at = user.get("expires_at")
     return expires_at is not None and expires_at <= now_utc()
 
-
+def admin_required(view):
+    """Put @admin_required above a route to allow only platform admins."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        user_id = parse_object_id(session.get("user_id"))
+        user = users.find_one({"_id": user_id}) if user_id else None
+        if user is None or user.get("status") != "active" or is_expired(user):
+            session.clear()
+            return jsonify({"error": "Please log in first."}), 401
+        if user.get("role") != "admin":
+            return jsonify({"error": "Admins only."}), 403
+        g.user = user
+        return view(*args, **kwargs)
+    return wrapper
 def login_required(view):
     """Put @login_required above a route to allow only logged-in, non-expired users."""
     @wraps(view)

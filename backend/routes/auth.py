@@ -27,6 +27,7 @@ def public_user(user):
         "username": user["username"],
         "email": user["email"],
         "account_type": user["account_type"],
+        "role": user.get("role", "user"),
         "created_at": to_iso(user["created_at"]),
         "expires_at": to_iso(user.get("expires_at")),
     }

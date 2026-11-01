@@ -32,6 +32,7 @@ messages = db["messages"]
 mailboxes = db["mailboxes"]
 domains = db["domains"]
 addresses = db["addresses"]
+audit_logs = db["audit_logs"]  # record of every admin review of a user's mail
 # Attachment files are stored inside MongoDB (GridFS), because the online server's disk is temporary
 attachment_files = GridFS(db, collection="attachment_files")
 
@@ -58,6 +59,10 @@ def init_indexes():
     addresses.create_index("email", unique=True)
     addresses.create_index("domain_id")
     addresses.create_index("user_id")
+    
+    # Who reviewed whose mail, when and why. Newest first per target user.
+    audit_logs.create_index([("target_user_id", ASCENDING), ("created_at", DESCENDING)])
+    audit_logs.create_index([("admin_id", ASCENDING), ("created_at", DESCENDING)])
 
 def ping():
     client.admin.command("ping")
