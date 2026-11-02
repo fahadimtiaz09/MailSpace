@@ -15,8 +15,20 @@ def fetch_received_email(email_id):
     """Get the full content (text, subject, from, to) of a received email, or None."""
     if not Config.RESEND_API_KEY:
         return None
-    def fetch_received_attachments(email_id):
-     """List a received email's attachments (each has a temporary download_url)."""
+    req = urllib.request.Request(
+        RECEIVING_URL + email_id,
+        method="GET",
+        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "MailSpace/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
+        return None
+
+
+def fetch_received_attachments(email_id):
+    """List a received email's attachments (each has a temporary download_url)."""
     if not Config.RESEND_API_KEY:
         return []
     req = urllib.request.Request(
@@ -42,17 +54,6 @@ def download_bytes(url, max_bytes):
             return response.read(max_bytes + 1)
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
         return None
-    req = urllib.request.Request(
-        RECEIVING_URL + email_id,
-        method="GET",
-        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "MailSpace/1.0"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=20) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
-        return None
-
 
 class ExternalSendError(Exception):
     """The email provider did not accept the email."""
