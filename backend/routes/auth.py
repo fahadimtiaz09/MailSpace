@@ -1,5 +1,6 @@
 """auth.py — signup, login, logout, current user."""
 import re
+import secrets
 from datetime import timedelta
 
 from flask import Blueprint, g, jsonify, request, session
@@ -9,12 +10,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from config import Config
 from database import users
 from security import is_expired, login_required, now_utc, rate_limited, to_iso
+from email_service import ExternalSendError, external_sending_ready, send_external
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9._]{3,20}$")
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 ACCOUNT_DAYS = {"regular": None, "temp15": 15, "temp30": 30}
+RESET_CODE_TTL = timedelta(minutes=15)
+MAX_CODE_ATTEMPTS = 5
 
 
 def normalize_answer(text):
@@ -200,4 +204,106 @@ def set_recovery():
         update["$unset"] = unset_fields
     if update:
         users.update_one({"_id": g.user["_id"]}, update)
+    return jsonify({"ok": True})
+
+# ---------- Forgot password ----------
+def _find_login(login_value):
+    login_value = str(login_value).strip().lower()
+    if not login_value:
+        return None
+    field = "email" if "@" in login_value else "username"
+    user = users.find_one({field: login_value})
+    if user is None or user.get("status") != "active" or is_expired(user):
+        return None
+    return user
+
+
+@auth_bp.post("/forgot/start")
+def forgot_start():
+    """Step 1: tell the page which recovery methods this account has."""
+    if rate_limited("forgot:" + (request.remote_addr or "?"), 20, 600):
+        return error("Too many attempts. Please wait a few minutes.", 429)
+    user = _find_login((request.get_json(silent=True) or {}).get("login", ""))
+    if user is None:
+        return error("No active account found for that username or email.", 404)
+    return jsonify({
+        "login": user["username"],
+        "recovery_email": mask_email(user.get("recovery_email")),
+        "security_question": user.get("security_question") or None,
+    })
+
+
+@auth_bp.post("/forgot/send-code")
+def forgot_send_code():
+    """Step 2a: email a 6-digit code to the recovery email."""
+    if rate_limited("sendcode:" + (request.remote_addr or "?"), 8, 600):
+        return error("Too many code requests. Please wait a few minutes.", 429)
+    user = _find_login((request.get_json(silent=True) or {}).get("login", ""))
+    if user is None or not user.get("recovery_email"):
+        return error("That account has no recovery email.", 400)
+    if not external_sending_ready():
+        return error("Email sending isn't set up on this server yet.", 503)
+
+    code = f"{secrets.randbelow(900000) + 100000}"  # a 6-digit number
+    users.update_one({"_id": user["_id"]}, {"$set": {
+        "reset_code_hash": generate_password_hash(code),
+        "reset_expires": now_utc() + RESET_CODE_TTL,
+        "reset_attempts": 0,
+    }})
+
+    body = (
+        f"Hi {user['username']},\n\n"
+        f"Your MailSpace password reset code is: {code}\n\n"
+        "It expires in 15 minutes. If you didn't ask for this, you can ignore this email."
+    )
+    try:
+        send_external(f"security@{Config.MAIL_DOMAIN}", "MailSpace Security",
+                      [user["recovery_email"]], "Your MailSpace reset code", body)
+    except ExternalSendError as exc:
+        return error(f"Could not send the code: {exc}", 502)
+
+    return jsonify({"ok": True, "sent_to": mask_email(user["recovery_email"])})
+
+
+@auth_bp.post("/forgot/reset")
+def forgot_reset():
+    """Step 3: check the code OR the security answer, then set a new password."""
+    if rate_limited("reset:" + (request.remote_addr or "?"), 15, 600):
+        return error("Too many attempts. Please wait a few minutes.", 429)
+
+    data = request.get_json(silent=True) or {}
+    user = _find_login(data.get("login", ""))
+    if user is None:
+        return error("No active account found.", 404)
+
+    new_password = str(data.get("new_password", ""))
+    if not 8 <= len(new_password) <= 128:
+        return error("New password must be between 8 and 128 characters.")
+
+    method = str(data.get("method", ""))
+    if method == "email":
+        code = str(data.get("code", "")).strip()
+        stored = user.get("reset_code_hash")
+        expires = user.get("reset_expires")
+        if not stored or not expires or expires <= now_utc():
+            return error("That code has expired. Please request a new one.")
+        if user.get("reset_attempts", 0) >= MAX_CODE_ATTEMPTS:
+            return error("Too many wrong codes. Please request a new one.")
+        if not check_password_hash(stored, code):
+            users.update_one({"_id": user["_id"]}, {"$inc": {"reset_attempts": 1}})
+            return error("That code is wrong.")
+    elif method == "question":
+        stored = user.get("security_answer_hash")
+        if not stored:
+            return error("That account has no security question.")
+        if not check_password_hash(stored, normalize_answer(data.get("answer", ""))):
+            return error("That answer is wrong.")
+    else:
+        return error("Choose how you want to reset.")
+
+    # Success — set the new password and clear the reset code
+    users.update_one({"_id": user["_id"]}, {
+        "$set": {"password_hash": generate_password_hash(new_password)},
+        "$unset": {"reset_code_hash": "", "reset_expires": "", "reset_attempts": ""},
+    })
     return jsonify({"ok": True})
