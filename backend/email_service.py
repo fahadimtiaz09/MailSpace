@@ -8,11 +8,39 @@ from config import Config
 
 RESEND_URL = "https://api.resend.com/emails"
 RECEIVING_URL = "https://api.resend.com/emails/receiving/"
+ATTACH_LIST_URL = "https://api.resend.com/emails/receiving/{}/attachments"
 
 
 def fetch_received_email(email_id):
     """Get the full content (text, subject, from, to) of a received email, or None."""
     if not Config.RESEND_API_KEY:
+        return None
+    def fetch_received_attachments(email_id):
+     """List a received email's attachments (each has a temporary download_url)."""
+    if not Config.RESEND_API_KEY:
+        return []
+    req = urllib.request.Request(
+        ATTACH_LIST_URL.format(email_id),
+        method="GET",
+        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "MailSpace/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
+        return []
+    if isinstance(data, list):
+        return data
+    return data.get("data") or data.get("attachments") or []
+
+
+def download_bytes(url, max_bytes):
+    """Download a file from a URL, up to max_bytes + 1. Returns bytes or None."""
+    req = urllib.request.Request(url, headers={"User-Agent": "MailSpace/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            return response.read(max_bytes + 1)
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
         return None
     req = urllib.request.Request(
         RECEIVING_URL + email_id,
