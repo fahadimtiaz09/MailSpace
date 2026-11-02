@@ -114,3 +114,19 @@ def logout():
 @login_required
 def me():
     return jsonify({"user": public_user(g.user)})
+@auth_bp.post("/change-password")
+@login_required
+def change_password():
+    data = request.get_json(silent=True) or {}
+    current = str(data.get("current_password", ""))
+    new = str(data.get("new_password", ""))
+
+    if not check_password_hash(g.user["password_hash"], current):
+        return error("Your current password is wrong.", 403)
+    if not 8 <= len(new) <= 128:
+        return error("New password must be between 8 and 128 characters.")
+    if check_password_hash(g.user["password_hash"], new):
+        return error("The new password is the same as the current one.")
+
+    users.update_one({"_id": g.user["_id"]}, {"$set": {"password_hash": generate_password_hash(new)}})
+    return jsonify({"ok": True})

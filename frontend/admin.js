@@ -26,8 +26,8 @@ function notice() {
 }
 
 function tabs() {
-  const row = el("div", "admin-tabs");
-  [["overview", "Overview"], ["users", "Users"], ["mail", "Mail"], ["audit", "Audit log"]].forEach(([key, label]) => {
+  const row = el("div", "admin-tabs");  [["overview", "Overview"], ["users", "Users"], ["mail", "Mail"], ["flagged", "Flagged"], ["audit", "Audit log"]].forEach(([key, label]) => {
+
     const b = el("button", "admin-tab" + (state.tab === key ? " active" : ""), label);
     b.type = "button";
     b.addEventListener("click", () => {
@@ -47,8 +47,8 @@ function render() {
   if (state.tab === "overview") renderOverview();
   else if (state.tab === "users") renderUsers();
   else if (state.tab === "mail") renderMail();
-  else renderAudit();
-}
+  else if (state.tab === "flagged") renderMail(true);
+  else renderAudit();}
 
 function body(...nodes) {
   // Re-render keeping head + notice + tabs, replacing only the body (last child)
@@ -63,7 +63,7 @@ async function renderOverview() {
     const cards = [
       ["users", "Users"], ["admins", "Admins"], ["temporary", "Temporary accounts"],
       ["messages", "Messages"], ["domains", "Verified domains"], ["addresses", "Custom addresses"],
-      ["reviews", "Logged reviews"],
+      ["reviews", "Logged reviews"], ["flagged", "Flagged messages"],
     ];
     cards.forEach(([key, label]) => {
       const card = el("div", "stat-card");
@@ -141,7 +141,8 @@ async function renderUsers() {
 }
 
 // ---------- Mail ----------
-async function renderMail() {
+async function renderMail(flaggedOnly = false) {
+  const reload = () => renderMail(flaggedOnly);
   const search = el("form", "admin-search");
   const input = el("input", "input");
   input.type = "search";
@@ -154,16 +155,17 @@ async function renderMail() {
     const chip = el("button", "btn btn-sm", "");
     chip.type = "button";
     chip.append(icon("x", "i-sm"), el("span", null, "Filtered: " + state.userLabel));
-    chip.addEventListener("click", () => { state.userId = ""; state.userLabel = ""; state.page = 1; renderMail(); });
+        chip.addEventListener("click", () => { state.userId = ""; state.userLabel = ""; state.page = 1; reload(); });
     search.append(chip);
   }
-  search.addEventListener("submit", (e) => { e.preventDefault(); state.q = input.value.trim(); state.page = 1; renderMail(); });
+    search.addEventListener("submit", (e) => { e.preventDefault(); state.q = input.value.trim(); state.page = 1; reload(); });
 
   body(search, el("div", null, "Loading…"));
   try {
-    const url = "/api/admin/messages?page=" + state.page +
+      const url = "/api/admin/messages?page=" + state.page +
       "&q=" + encodeURIComponent(state.q) +
-      (state.userId ? "&user_id=" + state.userId : "");
+      (state.userId ? "&user_id=" + state.userId : "") +
+      (flaggedOnly ? "&flagged=1" : "");
     const data = await api(url);
     state.totalPages = data.total_pages;
 
@@ -191,6 +193,7 @@ async function renderMail() {
       subj.append(s);
       if (m.has_attachments) subj.append(" ", icon("paperclip", "i-sm"));
       if (m.external) subj.append(" ", badge("External", "info"));
+      if (m.flagged) subj.append(" ", badge("Flagged", "error"));
       tr.append(subj);
       tr.append(el("td", "sub", shortDate(m.created_at)));
 
@@ -206,7 +209,7 @@ async function renderMail() {
     table.append(thead, tbody);
     const wrap = el("div", "table-wrap");
     wrap.append(table);
-    body(search, wrap, pager(renderMail), countLine(data.total, "messages"));
+    body(search, wrap, pager(reload), countLine(data.total, "messages"));
   } catch (err) {
     body(search, errorBox(err));
   }

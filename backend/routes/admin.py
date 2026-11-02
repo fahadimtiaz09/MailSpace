@@ -42,6 +42,7 @@ def stats():
         "domains": domains.count_documents({"status": "verified"}),
         "addresses": addresses.count_documents({}),
         "reviews": audit_logs.count_documents({}),
+        "flagged": messages.count_documents({"flagged": True}),
     })
 
 
@@ -97,6 +98,8 @@ def list_all_messages():
     user_id = parse_object_id(request.args.get("user_id", ""))
 
     query = {"is_draft": {"$ne": True}}
+    if request.args.get("flagged") == "1":
+        query["flagged"] = True
     if user_id:
         query["$or"] = [{"sender_id": user_id}, {"recipient_ids": user_id}]
     if q:
@@ -126,6 +129,8 @@ def list_all_messages():
             "attachments": [{"filename": a["filename"], "size": a["size"]} for a in files],
             "has_attachments": bool(files),
             "external": bool(m.get("external_recipients")),
+            "flagged": bool(m.get("flagged")),
+            "flag_words": m.get("flag_words", []),
         })
     return jsonify({"messages": rows, "page": page, "total_pages": total_pages, "total": total})
 

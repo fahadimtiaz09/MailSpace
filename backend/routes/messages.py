@@ -13,6 +13,7 @@ from config import Config
 from database import addresses, attachment_files, domains, mailboxes, messages, users
 from routes.domains import allowed_from_addresses
 from email_service import ExternalSendError, external_sending_ready, send_external
+from safety import check_message
 from security import is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
@@ -421,6 +422,7 @@ def send_message():
     # 2) Save the message and give every MailSpace user their own copy
     now = now_utc()
     try:
+        flagged_words = check_message(subject, body)
         message_id = messages.insert_one({
             "sender_id": me["_id"], "sender_email": from_email,
             "to_emails": to_emails, "recipient_ids": [u["_id"] for u in recipients],
@@ -429,6 +431,8 @@ def send_message():
             "external_id": external_id,
             "subject": subject, "body": body, "attachments": attachments,
             "is_draft": False, "created_at": now,
+            "flagged": bool(flagged_words),
+            "flag_words": flagged_words,
         }).inserted_id
 
         shared = {

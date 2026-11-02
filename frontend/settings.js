@@ -85,7 +85,73 @@ navLinks.forEach((a) => a.addEventListener("click", (event) => {
   const target = document.querySelector(a.getAttribute("href"));
   target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }));
+// ---------- Change password ----------
+document.getElementById("change-pw-btn").addEventListener("click", () => {
+  const box = el("div", "modal");
 
+  const head = el("div", "modal-head");
+  const headText = el("div");
+  headText.append(el("h2", null, "Change password"), el("p", null, "Enter your current password, then choose a new one."));
+  head.append(headText);
+
+  const body = el("div", "modal-body");
+  const msg = el("div", "alert alert-error hidden");
+  msg.setAttribute("role", "alert");
+  body.append(msg);
+
+  function pwField(labelText, autodata) {
+    const field = el("div", "field");
+    const label = el("label", null, labelText);
+    const group = el("div", "input-group");
+    const input = el("input", "input");
+    input.type = "password";
+    input.autocomplete = autodata;
+    const toggle = iconButton("eye", "Show password", "icon-btn icon-btn-sm pw-toggle");
+    toggle.addEventListener("click", () => {
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      toggle.querySelector("use").setAttribute("href", "/icons.svg#" + (show ? "eye-off" : "eye"));
+    });
+    group.append(input, toggle);
+    field.append(label, group);
+    return { field, input };
+  }
+  const cur = pwField("Current password", "current-password");
+  const nw = pwField("New password", "new-password");
+  const cf = pwField("Confirm new password", "new-password");
+  nw.field.style.marginBottom = "16px";
+  body.append(cur.field, nw.field, cf.field);
+
+  const foot = el("div", "modal-foot");
+  const cancel = el("button", "btn", "Cancel");
+  const save = el("button", "btn btn-primary", "Update password");
+  cancel.type = save.type = "button";
+  foot.append(cancel, save);
+
+  box.append(head, body, foot);
+
+  function showErr(text) { msg.textContent = text; msg.classList.remove("hidden"); }
+
+  const close = openModal(box);
+  cancel.addEventListener("click", close);
+  save.addEventListener("click", async () => {
+    msg.classList.add("hidden");
+    if (nw.input.value.length < 8) return showErr("New password must be at least 8 characters.");
+    if (nw.input.value !== cf.input.value) return showErr("The new passwords don't match.");
+    setBusy(save, true, "Saving…");
+    try {
+      await api("/api/auth/change-password", {
+        method: "POST",
+        body: { current_password: cur.input.value, new_password: nw.input.value },
+      });
+      close();
+      toast("Password updated.", "success");
+    } catch (err) {
+      setBusy(save, false);
+      showErr(err.message);
+    }
+  });
+});
 document.getElementById("logout-here").addEventListener("click", async () => {
   try {
     await api("/api/auth/logout", { method: "POST" });
