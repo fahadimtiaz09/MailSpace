@@ -74,6 +74,8 @@ def csrf_protect():
     token = session.setdefault("csrf_token", secrets.token_urlsafe(32))
     if request.method in SAFE_METHODS or not request.path.startswith("/api/"):
         return None
+    if request.path.startswith("/api/inbound/"):
+        return None  # Resend webhook: server-to-server, no CSRF cookie
     sent = request.headers.get("X-CSRFToken", "")
     if not secrets.compare_digest(sent.encode(), token.encode()):
         return jsonify({"error": "Security check failed. Refresh the page and try again."}), 400

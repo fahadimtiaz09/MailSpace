@@ -8,6 +8,7 @@ from database import init_indexes, ping
 from routes.auth import auth_bp
 from routes.domains import domains_bp
 from routes.admin import admin_bp
+from routes.inbound import inbound_bp
 from routes.messages import messages_bp
 from security import csrf_protect, set_csrf_cookie
 
@@ -35,6 +36,7 @@ def create_app():
     app.register_blueprint(messages_bp)
     app.register_blueprint(domains_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(inbound_bp)
 
     @app.route("/")
     def home():
