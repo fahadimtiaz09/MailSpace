@@ -93,6 +93,24 @@
           </div>
         </fieldset>
         
+              <details class="recovery-details">
+          <summary>Account recovery <span class="small">(optional, but recommended)</span></summary>
+          <p class="hint" style="margin:8px 0 14px">If you forget your password, these help you get back in. You can add them later in Settings.</p>
+
+          <div class="field">
+            <label for="recovery_email">Recovery email</label>
+            <input id="recovery_email" name="recovery_email" class="input" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@gmail.com">
+          </div>
+          <div class="field">
+            <label for="security_question">Security question</label>
+            <input id="security_question" name="security_question" class="input" type="text" maxlength="120" placeholder="e.g. What was your first school?">
+          </div>
+          <div class="field">
+            <label for="security_answer">Answer</label>
+            <input id="security_answer" name="security_answer" class="input" type="text" autocomplete="off" placeholder="Something only you know">
+          </div>
+        </details>
+
       <p class="hint notice">To keep MailSpace safe, messages and attachments may be
       reviewed by administrators for illegal or harmful content. By creating an account
       you agree to this.</p>

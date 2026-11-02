@@ -125,7 +125,12 @@ if (signupForm) {
     try {
       await api("/api/auth/signup", {
         method: "POST",
-        body: { username, password, account_type: accountType },
+          body: {
+          username, password, account_type: accountType,
+          recovery_email: (signupForm.elements.recovery_email?.value || "").trim(),
+          security_question: (signupForm.elements.security_question?.value || "").trim(),
+          security_answer: (signupForm.elements.security_answer?.value || "").trim(),
+        },
       });
       showMessage("Account created. Opening your inbox…", "success");
       setTimeout(() => (window.location.href = "/inbox"), 700);

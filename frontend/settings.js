@@ -152,6 +152,122 @@ document.getElementById("change-pw-btn").addEventListener("click", () => {
     }
   });
 });
+// ---------- Recovery email & security question ----------
+function recoveryModal({ title, intro, fields, onSave }) {
+  const box = el("div", "modal");
+  const head = el("div", "modal-head");
+  const headText = el("div");
+  headText.append(el("h2", null, title), el("p", null, intro));
+  head.append(headText);
+
+  const body = el("div", "modal-body");
+  const msg = el("div", "alert alert-error hidden");
+  msg.setAttribute("role", "alert");
+  body.append(msg);
+
+  const inputs = {};
+  fields.forEach((f) => {
+    const field = el("div", "field");
+    field.append(el("label", null, f.label));
+    const input = el("input", "input");
+    input.type = f.type || "text";
+    if (f.placeholder) input.placeholder = f.placeholder;
+    if (f.value) input.value = f.value;
+    field.append(input);
+    body.append(field);
+    inputs[f.key] = input;
+  });
+
+  const foot = el("div", "modal-foot");
+  const cancel = el("button", "btn", "Cancel");
+  const save = el("button", "btn btn-primary", "Save");
+  cancel.type = save.type = "button";
+  foot.append(cancel, save);
+  box.append(head, body, foot);
+
+  function showErr(t) { msg.textContent = t; msg.classList.remove("hidden"); }
+  const close = openModal(box);
+  cancel.addEventListener("click", close);
+  save.addEventListener("click", async () => {
+    msg.classList.add("hidden");
+    setBusy(save, true, "Saving…");
+    try {
+      await onSave(inputs);
+      close();
+      toast("Saved.", "success");
+      Shell.userReady; // refresh note text
+      refreshRecoveryNotes();
+    } catch (err) {
+      setBusy(save, false);
+      showErr(err.message);
+    }
+  });
+}
+
+async function refreshRecoveryNotes() {
+  try {
+    const data = await api("/api/auth/me");
+    const u = data.user;
+    const emailNote = document.getElementById("recovery-email-note");
+    const emailBtn = document.getElementById("recovery-email-btn");
+    if (u.recovery_email) {
+      emailNote.textContent = "Reset codes go to " + u.recovery_email;
+      emailBtn.lastChild.textContent = "Change";
+    } else {
+      emailNote.textContent = "Where we can send a reset code if you forget your password.";
+      emailBtn.lastChild.textContent = "Set up";
+    }
+    const qNote = document.getElementById("security-q-note");
+    const qBtn = document.getElementById("security-q-btn");
+    if (u.security_question) {
+      qNote.textContent = "Question: " + u.security_question;
+      qBtn.lastChild.textContent = "Change";
+    } else {
+      qNote.textContent = "A question only you can answer, as a backup way to reset.";
+      qBtn.lastChild.textContent = "Set up";
+    }
+  } catch { /* ignore */ }
+}
+
+document.getElementById("recovery-email-btn").addEventListener("click", () => {
+  recoveryModal({
+    title: "Recovery email",
+    intro: "A reset code can be emailed here if you forget your password. Confirm your current password to save.",
+    fields: [
+      { key: "email", label: "Recovery email", type: "email", placeholder: "you@gmail.com" },
+      { key: "current", label: "Current password", type: "password" },
+    ],
+    onSave: (inputs) => api("/api/auth/recovery", {
+      method: "POST",
+      body: { recovery_email: inputs.email.value.trim(), current_password: inputs.current.value },
+    }),
+  });
+});
+
+document.getElementById("security-q-btn").addEventListener("click", () => {
+  recoveryModal({
+    title: "Security question",
+    intro: "Pick a question only you can answer. Confirm your current password to save.",
+    fields: [
+      { key: "q", label: "Question", placeholder: "e.g. What was your first school?" },
+      { key: "a", label: "Answer", placeholder: "Something only you know" },
+      { key: "current", label: "Current password", type: "password" },
+    ],
+    onSave: (inputs) => {
+      if (!inputs.q.value.trim() || inputs.a.value.trim().length < 2) {
+        return Promise.reject(new Error("Fill in both the question and an answer."));
+      }
+      return api("/api/auth/recovery", {
+        method: "POST",
+        body: {
+          security_question: inputs.q.value.trim(),
+          security_answer: inputs.a.value.trim(),
+          current_password: inputs.current.value,
+        },
+      });
+    },
+  });
+});
 document.getElementById("logout-here").addEventListener("click", async () => {
   try {
     await api("/api/auth/logout", { method: "POST" });
@@ -164,5 +280,6 @@ document.getElementById("logout-here").addEventListener("click", async () => {
 Shell.userReady.then((u) => {
   renderProfile(u);
   renderFromAddresses();
+  refreshRecoveryNotes();
   highlightSection();
 }).catch(() => {});
