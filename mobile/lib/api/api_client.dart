@@ -16,7 +16,20 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/message.dart';
 import '../models/user.dart';
+
+/// One page of a folder: the messages plus page numbers (20 per page).
+class MessagePage {
+  final List<Message> messages;
+  final int page;
+  final int totalPages;
+  final int total;
+
+  MessagePage({required this.messages, required this.page, required this.totalPages, required this.total});
+
+  bool get hasMore => page < totalPages;
+}
 
 /// Thrown when the server says no (wrong password, username taken, ...).
 /// [message] is the server's own text, ready to show on screen.
@@ -116,6 +129,9 @@ class ApiClient {
   Future<dynamic> _post(String path, [Object? body]) =>
       _send(() => _dio.post(path, data: body ?? {}));
 
+  Future<dynamic> _patch(String path, [Object? body]) =>
+      _send(() => _dio.patch(path, data: body ?? {}));
+
   /// Makes sure we have a csrf_token cookie before the first POST.
   /// Any GET gives us one; /auth/me is cheap.
   Future<void> _ensureCsrf() async {
@@ -185,5 +201,45 @@ class ApiClient {
       // Forget the cookies on the phone even if the server didn't answer.
       await _cookieJar?.deleteAll();
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Messages  (backend/routes/messages.py)
+  // ---------------------------------------------------------------------------
+
+  /// One page (20 messages) of a folder, newest first.
+  /// [folder]: inbox, sent, drafts, starred, spam, trash.  [q]: search text.
+  Future<MessagePage> getMessages({String folder = 'inbox', int page = 1, String? q}) async {
+    final data = await _get('/messages', query: {
+      'folder': folder,
+      'page': page,
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+    });
+    return MessagePage(
+      messages: (data['messages'] as List)
+          .map((m) => Message.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      page: (data['page'] as num).toInt(),
+      totalPages: (data['total_pages'] as num).toInt(),
+      total: (data['total'] as num).toInt(),
+    );
+  }
+
+  /// Numbers for the folder list: {'inbox': 3, 'drafts': 1, 'spam': 0}
+  /// (inbox and spam = unread only).
+  Future<Map<String, int>> getCounts() async {
+    final data = await _get('/messages/counts') as Map;
+    return data.map((key, value) => MapEntry(key.toString(), (value as num).toInt()));
+  }
+
+  /// Opens one message (with body and attachments). Also marks it read.
+  Future<Message> getMessage(String id) async {
+    final data = await _get('/messages/$id');
+    return Message.fromJson(data['message'] as Map<String, dynamic>);
+  }
+
+  /// [action]: star, unstar, read, unread, trash, restore, spam, not_spam, delete_forever
+  Future<void> updateMessage(String id, String action) async {
+    await _patch('/messages/$id', {'action': action});
   }
 }

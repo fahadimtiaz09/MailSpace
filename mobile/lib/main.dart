@@ -1,20 +1,23 @@
 // main.dart — app start + list of screens (routes).
 //
 // When the app opens it asks the server "who is logged in?" (GET /api/auth/me):
-//   logged in      → '/home'  (Inbox — temporary page for now)
-//   not logged in  → '/'      (A1 Welcome)
+//   logged in      → HomeShell (Mail / Domains / Settings tabs)
+//   not logged in  → A1 Welcome
 //
 // Routes:
-//   '/'        → A1 Welcome          ✓
-//   '/login'   → A3 Log in           ✓
-//   '/signup'  → A2 Sign up          ✓
-//   '/forgot'  → A4 Forgot password  (later)
-//   '/home'    → A5 Inbox            (later — temporary page for now)
+//   '/welcome'  → A1 Welcome          ✓
+//   '/login'    → A3 Log in           ✓
+//   '/signup'   → A2 Sign up          ✓
+//   '/home'     → A5 Inbox + tabs     ✓
+//   '/read'     → A7 Read message     (next step)
+//   '/compose'  → A8 Compose          (later)
+//   '/forgot'   → A4 Forgot password  (later)
 
 import 'package:flutter/material.dart';
 
 import 'api/api_client.dart';
 import 'models/user.dart';
+import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -40,8 +43,10 @@ class MailSpaceApp extends StatelessWidget {
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
+        '/home': (context) => const HomeShell(),
+        '/read': (context) => const _ComingSoon(title: 'Message'),
+        '/compose': (context) => const _ComingSoon(title: 'New message'),
         '/forgot': (context) => const _ComingSoon(title: 'Reset password'),
-        '/home': (context) => const _LoggedInPage(),
       },
     );
   }
@@ -86,71 +91,8 @@ class _StartScreenState extends State<StartScreen> {
             ),
           );
         }
-        return snapshot.data != null ? const _LoggedInPage() : const WelcomeScreen();
+        return snapshot.data != null ? const HomeShell() : const WelcomeScreen();
       },
-    );
-  }
-}
-
-/// TEMPORARY page after login, until the real Inbox (A5) is built.
-/// Shows who is logged in and has a Log out button, so we can test.
-class _LoggedInPage extends StatefulWidget {
-  const _LoggedInPage();
-
-  @override
-  State<_LoggedInPage> createState() => _LoggedInPageState();
-}
-
-class _LoggedInPageState extends State<_LoggedInPage> {
-  late final Future<User?> _user = ApiClient.instance.me();
-
-  Future<void> _logout() async {
-    try {
-      await ApiClient.instance.logout();
-    } catch (_) {
-      // even if the server didn't answer, cookies were cleared on the phone
-    }
-    if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Inbox (coming soon)')),
-      body: Center(
-        child: FutureBuilder<User?>(
-          future: _user,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const CircularProgressIndicator(color: AppColors.ink);
-            }
-            final user = snapshot.data;
-            return Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.check_circle_outline, size: 56, color: AppColors.ink),
-                  const SizedBox(height: 12),
-                  Text(
-                    user == null ? 'Not logged in' : 'Logged in as\n${user.email}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  if (user != null && user.isTemporary) ...[
-                    const SizedBox(height: 6),
-                    Text('Temporary account · ${user.daysLeft} days left',
-                        style: const TextStyle(color: AppColors.muted)),
-                  ],
-                  const SizedBox(height: 24),
-                  OutlinedButton(onPressed: _logout, child: const Text('Log out')),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
     );
   }
 }

@@ -48,6 +48,23 @@ class Message {
     this.attachments = const [],
   });
 
+  /// A copy with a few fields changed — used when the user stars a message
+  /// or opens it, so the list updates straight away.
+  Message copyWith({bool? isRead, bool? isStarred}) => Message(
+        id: id,
+        folder: folder,
+        from: from,
+        to: to,
+        subject: subject,
+        snippet: snippet,
+        createdAt: createdAt,
+        isRead: isRead ?? this.isRead,
+        isStarred: isStarred ?? this.isStarred,
+        hasAttachments: hasAttachments,
+        body: body,
+        attachments: attachments,
+      );
+
   factory Message.fromJson(Map<String, dynamic> json) {
     final rawTo = json['to'];
     return Message(
