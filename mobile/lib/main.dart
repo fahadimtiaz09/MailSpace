@@ -17,11 +17,13 @@
 //   A10 My domains        screens/domains_screen.dart   (Domains tab)
 //   A11 Add / manage domain  screens/domain_detail_screen.dart
 //   A12 Settings          screens/settings_screen.dart  (Settings tab)
+//   Admin console         screens/admin_screen.dart     route '/admin' (admins only)
 
 import 'package:flutter/material.dart';
 
 import 'api/api_client.dart';
 import 'models/user.dart';
+import 'screens/admin_screen.dart';
 import 'screens/compose_screen.dart';
 import 'screens/forgot_screen.dart';
 import 'screens/home_shell.dart';
@@ -99,6 +101,7 @@ class _MailSpaceAppState extends State<MailSpaceApp> with WidgetsBindingObserver
         '/home': (context) => const HomeShell(),
         '/read': (context) => const ReadScreen(),
         '/compose': (context) => const ComposeScreen(),
+        '/admin': (context) => const AdminScreen(),
       },
     );
   }

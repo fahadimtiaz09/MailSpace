@@ -435,6 +435,16 @@ class _FoldersDrawer extends StatelessWidget {
             ),
             _DrawerItem(icon: Icons.language, label: 'My domains', onTap: onDomains),
             _DrawerItem(icon: Icons.settings_outlined, label: 'Settings', onTap: onSettings),
+            // Admin console — only admins see this (same as the website sidebar)
+            if (user.isAdmin)
+              _DrawerItem(
+                icon: Icons.admin_panel_settings_outlined,
+                label: 'Admin',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/admin');
+                },
+              ),
 
             // ④ countdown card for temporary accounts
             if (user.isTemporary) ...[

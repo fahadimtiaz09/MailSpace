@@ -211,6 +211,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
+            // Admin console (admins only)
+            if (u.isAdmin) ...[
+              const _Section('Admin'),
+              ListTile(
+                leading: Icon(Icons.admin_panel_settings_outlined, color: AppColors.primary),
+                title: const Text('Admin console'),
+                subtitle: const Text('Users, all mail, flagged messages, audit log'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pushNamed(context, '/admin'),
+              ),
+            ],
+
             // ⑥ log out
             const SizedBox(height: 16),
             ListTile(

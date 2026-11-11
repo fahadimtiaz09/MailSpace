@@ -16,6 +16,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/admin.dart';
 import '../models/domain.dart';
 import '../models/message.dart';
 import '../models/user.dart';
@@ -418,5 +419,75 @@ class ApiClient {
       if (code != null) 'code': code,
       if (answer != null) 'answer': answer,
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Admin console  (backend/routes/admin.py — admins only)
+  // ---------------------------------------------------------------------------
+
+  Future<AdminStats> getAdminStats() async {
+    final data = await _get('/admin/stats');
+    return AdminStats.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<AdminPage<AdminUser>> getAdminUsers({int page = 1, String? q}) async {
+    final data = await _get('/admin/users', query: {
+      'page': page,
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+    });
+    return AdminPage(
+      items: (data['users'] as List).map((u) => AdminUser.fromJson(u as Map<String, dynamic>)).toList(),
+      page: (data['page'] as num).toInt(),
+      totalPages: (data['total_pages'] as num).toInt(),
+      total: (data['total'] as num).toInt(),
+    );
+  }
+
+  /// All mail (subject / from / to only — no message text).
+  /// [userId] = only one user's mail ("View mail"). [flaggedOnly] = flagged by the safety check.
+  Future<AdminPage<AdminMessage>> getAdminMessages({
+    int page = 1,
+    String? q,
+    String? userId,
+    bool flaggedOnly = false,
+  }) async {
+    final data = await _get('/admin/messages', query: {
+      'page': page,
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+      if (userId != null) 'user_id': userId,
+      if (flaggedOnly) 'flagged': '1',
+    });
+    return AdminPage(
+      items: (data['messages'] as List).map((m) => AdminMessage.fromJson(m as Map<String, dynamic>)).toList(),
+      page: (data['page'] as num).toInt(),
+      totalPages: (data['total_pages'] as num).toInt(),
+      total: (data['total'] as num).toInt(),
+    );
+  }
+
+  /// Opens a message's text. The server writes this to the audit log
+  /// together with [reason] (at least 3 characters).
+  Future<AdminMessage> adminOpenMessage(String messageId, String reason) async {
+    final data = await _post('/admin/messages/$messageId/view', {'reason': reason});
+    return AdminMessage.fromJson(data['message'] as Map<String, dynamic>);
+  }
+
+  /// Downloads an attachment as admin (also written to the audit log).
+  Future<String> adminDownloadAttachment(AdminAttachment a) async {
+    final dir = await getTemporaryDirectory();
+    final safeName = a.filename.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final path = '${dir.path}/admin_${a.id}_$safeName';
+    await _send(() => _dio.download('/admin/attachments/${a.id}', path));
+    return path;
+  }
+
+  Future<AdminPage<AuditEntry>> getAuditLog({int page = 1}) async {
+    final data = await _get('/admin/audit', query: {'page': page});
+    return AdminPage(
+      items: (data['logs'] as List).map((r) => AuditEntry.fromJson(r as Map<String, dynamic>)).toList(),
+      page: (data['page'] as num).toInt(),
+      totalPages: (data['total_pages'] as num).toInt(),
+      total: (data['total'] as num).toInt(),
+    );
   }
 }
