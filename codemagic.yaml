@@ -1,0 +1,46 @@
+workflows:
+  ios-unsigned:
+    name: MailSpace iOS (unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: mobile
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Build iOS app (no signing)
+        script: flutter build ios --release --no-codesign
+      - name: Make unsigned IPA
+        script: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa && zip -qr MailSpace-unsigned.ipa Payload
+      - name: Build for iOS simulator
+        script: flutter build ios --simulator --debug
+      - name: Zip simulator app
+        script: |
+          cd build/ios/iphonesimulator && zip -qr ../MailSpace-simulator.zip Runner.app
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - mobile/build/ios/*.zip
+      - build/ios/ipa/*.ipa
+      - build/ios/*.zip
+
+  android-apk:
+    name: MailSpace Android APK
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: mobile
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Build APK
+        script: flutter build apk --release
+    artifacts:
+      - mobile/build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/*.apk
