@@ -430,6 +430,19 @@
   color: var(--text);
 }
 .read-body:empty::before { content: "This message has no text."; color: var(--text-3); font-style: italic; }
+.read-html { white-space: normal; padding: 16px 0; }
+.read-html:empty::before { content: none; }
+.mail-html {
+  display: block; width: 100%; min-height: 60px; height: 200px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: #fff; color-scheme: light;
+}
+.images-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 12px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface-2); color: var(--text-2); font-size: .88rem;
+}
 .attachments-title { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: .86rem; font-weight: 600; color: var(--text-2); }
 .attachment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .attachment {

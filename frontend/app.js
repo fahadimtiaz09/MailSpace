@@ -471,6 +471,72 @@ window.addEventListener("popstate", () => {
   }
 });
 
+// ---- Email design (HTML) ----
+// The server has already cleaned the HTML (no scripts, no forms...). On top of
+// that it is shown inside a sandboxed iframe: no scripts can run, links open in
+// a new tab, and a Content-Security-Policy decides which images may load.
+// Pictures from other websites can tell the sender you opened the email, so
+// they stay hidden until the user clicks "Show images" (like Gmail).
+function hasRemoteImages(html) {
+  return /<img[^>]+src="https?:/i.test(html);
+}
+
+function htmlBody(html) {
+  const wrap = el("div", "read-body read-html");
+  const remote = hasRemoteImages(html);
+
+  const frame = document.createElement("iframe");
+  frame.className = "mail-html";
+  frame.title = "Message";
+  frame.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
+  frame.setAttribute("referrerpolicy", "no-referrer");
+
+  const fit = () => {
+    try {
+      const doc = frame.contentDocument;
+      if (doc && doc.documentElement) {
+        frame.style.height = Math.max(doc.documentElement.scrollHeight, 60) + "px";
+      }
+    } catch (_) { /* ignore */ }
+  };
+  frame.addEventListener("load", () => {
+    fit();
+    try {
+      frame.contentDocument.querySelectorAll("img").forEach((img) => {
+        if (!img.complete) img.addEventListener("load", fit);
+      });
+    } catch (_) { /* ignore */ }
+    setTimeout(fit, 400);
+  });
+
+  const show = (allowRemote) => {
+    const imgSrc = allowRemote ? "data: https: http:" : "data:";
+    frame.srcdoc =
+      '<!doctype html><html><head><meta charset="utf-8">' +
+      '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src ' + imgSrc +
+      '; style-src \'unsafe-inline\'; font-src data:">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+      '<base target="_blank">' +
+      "<style>html,body{margin:0;padding:0;background:#fff;color:#202124}" +
+      "body{padding:16px;font:14px/1.5 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}" +
+      "img{max-width:100%;height:auto}table{max-width:100%}a{color:#1a73e8}</style>" +
+      "</head><body>" + html + "</body></html>";
+  };
+
+  if (remote) {
+    const bar = el("div", "images-bar");
+    bar.append(el("span", null, "Images are hidden to protect your privacy."));
+    const btn = el("button", "btn btn-ghost btn-sm", "Show images");
+    btn.type = "button";
+    btn.addEventListener("click", () => { show(true); bar.remove(); });
+    bar.append(btn);
+    wrap.append(bar);
+  }
+  wrap.append(frame);
+  show(false);
+  return wrap;
+}
+
 function renderReader(m) {
   const article = $("read-article");
   const outgoing = isOutgoing(m);
@@ -489,8 +555,9 @@ function renderReader(m) {
   date.dateTime = m.created_at;
   from.append(avatar(m.from, "lg"), text, date);
 
-  // Shown as plain text only — never as HTML
-  const body = el("div", "read-body", m.body || "");
+  // Email design (Gmail templates: logos, header, footer) is shown in a locked
+  // frame; otherwise the plain text is shown.
+  const body = m.body_html ? htmlBody(m.body_html) : el("div", "read-body", m.body || "");
 
   article.replaceChildren(subject, tags, from, body);
 

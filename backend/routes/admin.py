@@ -166,6 +166,7 @@ def view_message(message_id):
         "to": m.get("to_emails", []),
         "subject": m.get("subject", ""),
         "body": m.get("body", ""),
+        "body_html": m.get("body_html"),
         "created_at": to_iso(m["created_at"]),
         "attachments": [
             {"id": a["id"], "filename": a["filename"], "size": a["size"]}

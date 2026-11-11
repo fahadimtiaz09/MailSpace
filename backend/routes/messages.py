@@ -241,6 +241,7 @@ def get_message(entry_id):
 
     item = list_item(entry)
     item["body"] = message["body"]
+    item["body_html"] = message.get("body_html")  # email design (already cleaned), or None
     item["attachments"] = [
         {"id": a["id"], "filename": a["filename"], "size": a["size"]}
         for a in message.get("attachments", [])

@@ -9,12 +9,16 @@
 //
 //   ① top: back · trash · spam · mark unread · star   (in Trash: restore · delete forever)
 //   ② subject, sender, time
-//   ③ plain-text body
+//   ③ body — the email's design (HTML) if it has one, otherwise plain text
 //   ④ attachments → tap to open
 //   ⑤ Reply · Reply all · Forward → A8 Compose (later)
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../models/message.dart';
@@ -246,11 +250,14 @@ class _ReadScreenState extends State<ReadScreen> {
         ),
         const SizedBox(height: 20),
 
-        // ③ body — plain text only (same safety rule as the website)
-        SelectableText(
-          (m.body ?? '').isEmpty ? '(This message has no text.)' : m.body!,
-          style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.ink),
-        ),
+        // ③ body — the email's design (Gmail templates) or plain text
+        if ((m.bodyHtml ?? '').isNotEmpty)
+          MailHtmlBody(html: m.bodyHtml!)
+        else
+          SelectableText(
+            (m.body ?? '').isEmpty ? '(This message has no text.)' : m.body!,
+            style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.ink),
+          ),
 
         // ④ attachments
         if (m.attachments.isNotEmpty) ...[
@@ -354,6 +361,134 @@ class _ReplyButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
+    );
+  }
+}
+
+
+// ---------------- Email design (HTML) ----------------
+//
+// The server already cleaned this HTML (no scripts, no forms...). Here:
+//   • logos sent inside the email (data:image/...) are shown straight away
+//   • pictures from other websites stay hidden until "Show images"
+//     (they can tell the sender you opened the email — same as the website)
+//   • links open in the phone's browser
+// It sits on a white card, because email designs are made for a white page.
+
+class MailHtmlBody extends StatefulWidget {
+  final String html;
+  const MailHtmlBody({super.key, required this.html});
+
+  @override
+  State<MailHtmlBody> createState() => _MailHtmlBodyState();
+}
+
+class _MailHtmlBodyState extends State<MailHtmlBody> {
+  bool _showRemote = false;
+
+  bool get _hasRemoteImages => RegExp(r'<img[^>]+src="https?:', caseSensitive: false).hasMatch(widget.html);
+
+  Future<bool> _openLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https' || uri.scheme == 'mailto')) {
+      return true; // anything else is ignored
+    }
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the link.')));
+    }
+    return true;
+  }
+
+  double? _size(String? v) => double.tryParse((v ?? '').replaceAll('px', '').trim());
+
+  /// Draws every <img> ourselves so we decide what loads.
+  Widget? _image(dynamic element) {
+    if (element.localName != 'img') return null;
+    final String src = (element.attributes['src'] ?? '').toString();
+    final w = _size(element.attributes['width']);
+    final h = _size(element.attributes['height']);
+    Widget child;
+
+    if (src.startsWith('data:image/')) {
+      try {
+        final bytes = base64Decode(src.substring(src.indexOf(',') + 1).replaceAll(RegExp(r'\s'), ''));
+        child = Image.memory(bytes, width: w, height: h, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink());
+      } catch (_) {
+        return InlineCustomWidget(child: const SizedBox.shrink());
+      }
+    } else if (src.startsWith('http://') || src.startsWith('https://')) {
+      if (!_showRemote) {
+        child = Container(
+          width: w ?? 24,
+          height: h ?? 24,
+          color: const Color(0xFFF1F3F4),
+          child: const Icon(Icons.image_outlined, size: 16, color: Color(0xFF9AA0A6)),
+        );
+      } else {
+        child = Image.network(src, width: w, height: h, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink());
+      }
+    } else {
+      return InlineCustomWidget(child: const SizedBox.shrink());
+    }
+    return InlineCustomWidget(
+      child: LayoutBuilder(
+        builder: (context, box) => ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: box.maxWidth.isFinite ? box.maxWidth : 600),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_hasRemoteImages && !_showRemote)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.image_not_supported_outlined, size: 18, color: AppColors.muted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Images are hidden to protect your privacy.',
+                      style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _showRemote = true),
+                  child: const Text('Show images'),
+                ),
+              ],
+            ),
+          ),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white, // email designs expect a white page (Gmail does the same)
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: HtmlWidget(
+            widget.html,
+            key: ValueKey(_showRemote), // redraw after "Show images"
+            textStyle: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF202124)),
+            customWidgetBuilder: _image,
+            onTapUrl: _openLink,
+          ),
+        ),
+      ],
     );
   }
 }

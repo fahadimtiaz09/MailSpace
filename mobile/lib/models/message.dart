@@ -31,6 +31,7 @@ class Message {
 
   // Only filled when a single message is opened:
   final String? body;
+  final String? bodyHtml;       // email design (logos, header, footer) — already cleaned by the server
   final List<Attachment> attachments;
 
   Message({
@@ -45,6 +46,7 @@ class Message {
     required this.isStarred,
     required this.hasAttachments,
     this.body,
+    this.bodyHtml,
     this.attachments = const [],
   });
 
@@ -62,6 +64,7 @@ class Message {
         isStarred: isStarred ?? this.isStarred,
         hasAttachments: hasAttachments,
         body: body,
+        bodyHtml: bodyHtml,
         attachments: attachments,
       );
 
@@ -79,6 +82,7 @@ class Message {
       isStarred: json['is_starred'] as bool? ?? false,
       hasAttachments: json['has_attachments'] as bool? ?? false,
       body: json['body'] as String?,
+      bodyHtml: json['body_html'] as String?,
       attachments: (json['attachments'] as List? ?? [])
           .map((a) => Attachment.fromJson(a as Map<String, dynamic>))
           .toList(),
