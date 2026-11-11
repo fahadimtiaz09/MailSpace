@@ -7,7 +7,7 @@
 // Routes:
 //   '/'        → A1 Welcome          ✓
 //   '/login'   → A3 Log in           ✓
-//   '/signup'  → A2 Sign up          (next step)
+//   '/signup'  → A2 Sign up          ✓
 //   '/forgot'  → A4 Forgot password  (later)
 //   '/home'    → A5 Inbox            (later — temporary page for now)
 
@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'api/api_client.dart';
 import 'models/user.dart';
 import 'screens/login_screen.dart';
+import 'screens/signup_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'theme.dart';
 
@@ -38,7 +39,7 @@ class MailSpaceApp extends StatelessWidget {
       routes: {
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const _ComingSoon(title: 'Create account'),
+        '/signup': (context) => const SignupScreen(),
         '/forgot': (context) => const _ComingSoon(title: 'Reset password'),
         '/home': (context) => const _LoggedInPage(),
       },
