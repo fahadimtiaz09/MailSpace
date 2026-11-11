@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../theme.dart';
+import '../widgets/theme_button.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -58,6 +59,9 @@ class _SignupScreenState extends State<SignupScreen> {
     }
     return null;
   }
+
+  /// Weak = red, ok = amber, strong = green (like the website).
+  Color _barColor(int bars) => bars <= 1 ? AppColors.error : bars == 2 ? AppColors.warning : AppColors.success;
 
   /// 0–4 bars.
   int _strength(String p) {
@@ -125,6 +129,7 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        actions: const [ThemeButton(), SizedBox(width: 12)],
       ),
       body: SafeArea(
         child: ListView(
@@ -135,11 +140,11 @@ class _SignupScreenState extends State<SignupScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFDF1F0),
+                  color: AppColors.errorSoft,
                   border: Border.all(color: AppColors.error, width: 1.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 14)),
+                child: Text(_error!, style: TextStyle(color: AppColors.error, fontSize: 14)),
               ),
               const SizedBox(height: 14),
             ],
@@ -151,15 +156,15 @@ class _SignupScreenState extends State<SignupScreen> {
               autocorrect: false,
               enableSuggestions: false,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(hintText: 'nimra'),
+              decoration: const InputDecoration(hintText: 'username'),
             ),
             const SizedBox(height: 6),
             Text.rich(
               TextSpan(children: [
                 const TextSpan(text: 'Your address: '),
-                TextSpan(text: preview, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
+                TextSpan(text: preview, style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
               ]),
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
             const SizedBox(height: 16),
 
@@ -185,7 +190,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     height: 4,
                     margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
                     decoration: BoxDecoration(
-                      color: i < bars ? AppColors.ink : const Color(0xFFDCDCD8),
+                      color: i < bars ? _barColor(bars) : AppColors.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -193,7 +198,7 @@ class _SignupScreenState extends State<SignupScreen> {
               }),
             ),
             const SizedBox(height: 4),
-            const Text('At least 8 characters. Longer is stronger.',
+            Text('At least 8 characters. Longer is stronger.',
                 style: TextStyle(fontSize: 12, color: AppColors.muted)),
             const SizedBox(height: 16),
 
@@ -246,7 +251,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Row(
                         children: [
                           const Text('Account recovery ', style: TextStyle(fontWeight: FontWeight.w700)),
-                          const Text('(optional)', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                          Text('(optional)', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                           const Spacer(),
                           Icon(_showRecovery ? Icons.expand_less : Icons.expand_more),
                         ],
@@ -259,7 +264,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'If you forget your password, these help you get back in. '
                             'You can add them later in Settings.',
                             style: TextStyle(fontSize: 12, color: AppColors.muted),
@@ -292,7 +297,7 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             const SizedBox(height: 14),
 
-            const Text(
+            Text(
               'To keep MailSpace safe, messages and attachments may be reviewed by administrators '
               'for illegal or harmful content. By creating an account you agree to this.',
               style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
@@ -356,14 +361,15 @@ class _AccountTypeOption extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            border: Border.all(color: isOn ? AppColors.ink : AppColors.border, width: isOn ? 2 : 1.5),
+            color: isOn ? AppColors.primarySofter : AppColors.surface,
+            border: Border.all(color: isOn ? AppColors.primary : AppColors.border, width: isOn ? 2 : 1.5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
               Icon(
                 isOn ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                color: isOn ? AppColors.ink : AppColors.muted,
+                color: isOn ? AppColors.primary : AppColors.muted,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -373,7 +379,7 @@ class _AccountTypeOption extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                      Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.muted)),
                     ],
                   ),
                 ),

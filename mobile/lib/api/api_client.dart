@@ -1,7 +1,7 @@
 // api_client.dart — the ONLY place in the app that talks to the MailSpace server.
 //
 // Screens never use Dio directly. They call functions here, for example:
-//   final user = await ApiClient.instance.login('nimra', 'password123');
+//   final user = await ApiClient.instance.login('username', 'password');
 //
 // How login works with our Flask backend:
 //   1. The server keeps the login in a cookie called "session".
@@ -16,8 +16,26 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/domain.dart';
 import '../models/message.dart';
 import '../models/user.dart';
+
+/// Step 1 of "Forgot password": which recovery methods the account has.
+class ForgotInfo {
+  final String login;             // the username
+  final String? recoveryEmail;    // masked, e.g. n•••@gmail.com (null = none)
+  final String? securityQuestion; // null = none
+
+  ForgotInfo({required this.login, this.recoveryEmail, this.securityQuestion});
+}
+
+/// A file chosen in Compose, ready to upload.
+class UploadFile {
+  final String path;
+  final String name;
+  final int size;
+  UploadFile({required this.path, required this.name, required this.size});
+}
 
 /// One page of a folder: the messages plus page numbers (20 per page).
 class MessagePage {
@@ -132,6 +150,8 @@ class ApiClient {
   Future<dynamic> _patch(String path, [Object? body]) =>
       _send(() => _dio.patch(path, data: body ?? {}));
 
+  Future<dynamic> _delete(String path) => _send(() => _dio.delete(path));
+
   /// Makes sure we have a csrf_token cookie before the first POST.
   /// Any GET gives us one; /auth/me is cheap.
   Future<void> _ensureCsrf() async {
@@ -161,8 +181,8 @@ class ApiClient {
     }
   }
 
-  /// [login] can be the username ("nimra") or the full address
-  /// ("nimra@fahadimtiaz.site"). The backend field is called "login".
+  /// [login] can be the username ("username") or the full address
+  /// ("username@fahadimtiaz.site"). The backend field is called "login".
   Future<User> login(String login, String password) async {
     await _ensureCsrf();
     final data = await _post('/auth/login', {
@@ -241,5 +261,162 @@ class ApiClient {
   /// [action]: star, unstar, read, unread, trash, restore, spam, not_spam, delete_forever
   Future<void> updateMessage(String id, String action) async {
     await _patch('/messages/$id', {'action': action});
+  }
+
+  /// Downloads an attachment into the phone's temporary folder and returns
+  /// the file path (then the screen opens it with the phone's own viewer).
+  /// The login cookie goes with the request, so only people in the
+  /// conversation can download it.
+  Future<String> downloadAttachment(Attachment a) async {
+    final dir = await getTemporaryDirectory();
+    final safeName = a.filename.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    final path = '${dir.path}/${a.id}_$safeName';
+    await _send(() => _dio.download('/attachments/${a.id}', path));
+    return path;
+  }
+
+  /// Sends an email. [to] is one or more addresses separated by commas.
+  /// Files go as multipart form data (like a website form with files).
+  /// Returns the server's message, e.g. "Message sent".
+  Future<String> sendMessage({
+    required String from,
+    required String to,
+    required String subject,
+    required String body,
+    List<UploadFile> files = const [],
+    String? draftId,
+  }) async {
+    final form = FormData.fromMap({
+      'from': from,
+      'to': to,
+      'subject': subject,
+      'body': body,
+      if (draftId != null) 'draft_id': draftId,
+    });
+    for (final f in files) {
+      form.files.add(MapEntry('attachments', await MultipartFile.fromFile(f.path, filename: f.name)));
+    }
+    final data = await _post('/messages/send', form);
+    return (data is Map && data['message'] is String) ? data['message'] as String : 'Message sent';
+  }
+
+  /// Saves (or updates) a draft. Attachments are not saved in drafts.
+  /// Returns the draft id — pass it back next time to update the same draft.
+  Future<String> saveDraft({
+    required String to,
+    required String subject,
+    required String body,
+    String? draftId,
+  }) async {
+    final data = await _post('/drafts', {
+      'to': to,
+      'subject': subject,
+      'body': body,
+      if (draftId != null) 'draft_id': draftId,
+    });
+    return data['draft_id'] as String;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Domains  (backend/routes/domains.py)
+  // ---------------------------------------------------------------------------
+
+  /// Addresses for the From box: main address + custom-domain addresses.
+  Future<List<String>> getFromAddresses() async {
+    final data = await _get('/domains/from-addresses');
+    return (data['addresses'] as List).map((e) => e.toString()).toList();
+  }
+
+  Future<List<Domain>> getDomains() async {
+    final data = await _get('/domains');
+    return (data['domains'] as List).map((d) => Domain.fromJson(d as Map<String, dynamic>)).toList();
+  }
+
+  Future<Domain> addDomain(String name) async {
+    final data = await _post('/domains', {'name': name.trim()});
+    return Domain.fromJson(data['domain'] as Map<String, dynamic>);
+  }
+
+  /// Asks the server to look up the TXT record. If it isn't there yet,
+  /// this throws ApiException with the server's explanation.
+  Future<Domain> verifyDomain(String domainId) async {
+    final data = await _post('/domains/$domainId/verify');
+    return Domain.fromJson(data['domain'] as Map<String, dynamic>);
+  }
+
+  Future<void> removeDomain(String domainId) async {
+    await _delete('/domains/$domainId');
+  }
+
+  /// [localPart] is the part before @, e.g. "info".
+  Future<DomainAddress> addAddress(String domainId, String localPart) async {
+    final data = await _post('/domains/$domainId/addresses', {'local_part': localPart.trim().toLowerCase()});
+    return DomainAddress.fromJson(data['address'] as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAddress(String domainId, String addressId) async {
+    await _delete('/domains/$domainId/addresses/$addressId');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Settings + Forgot password  (backend/routes/auth.py)
+  // ---------------------------------------------------------------------------
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    await _post('/auth/change-password', {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
+  /// Sets the recovery email and/or the security question.
+  /// Needs the current password. Leave a value null to keep it as it is.
+  Future<void> setRecovery({
+    required String currentPassword,
+    String? recoveryEmail,
+    String? securityQuestion,
+    String? securityAnswer,
+  }) async {
+    await _post('/auth/recovery', {
+      'current_password': currentPassword,
+      if (recoveryEmail != null) 'recovery_email': recoveryEmail,
+      if (securityQuestion != null) 'security_question': securityQuestion,
+      if (securityAnswer != null) 'security_answer': securityAnswer,
+    });
+  }
+
+  Future<ForgotInfo> forgotStart(String login) async {
+    await _ensureCsrf();
+    final data = await _post('/auth/forgot/start', {'login': login.trim()});
+    return ForgotInfo(
+      login: data['login'] as String,
+      recoveryEmail: data['recovery_email'] as String?,
+      securityQuestion: data['security_question'] as String?,
+    );
+  }
+
+  /// Emails a 6-digit code. Returns the masked address it was sent to.
+  Future<String> forgotSendCode(String login) async {
+    await _ensureCsrf();
+    final data = await _post('/auth/forgot/send-code', {'login': login});
+    return (data['sent_to'] as String?) ?? 'your recovery email';
+  }
+
+  /// [method] is 'email' (send [code]) or 'question' (send [answer]).
+  Future<void> forgotReset({
+    required String login,
+    required String method,
+    required String newPassword,
+    String? code,
+    String? answer,
+  }) async {
+    await _ensureCsrf();
+    await _post('/auth/forgot/reset', {
+      'login': login,
+      'method': method,
+      'new_password': newPassword,
+      if (code != null) 'code': code,
+      if (answer != null) 'answer': answer,
+    });
   }
 }

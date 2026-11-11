@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../theme.dart';
+import '../widgets/theme_button.dart';
+import '../widgets/brand.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -64,17 +66,21 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(), // just the back arrow, like the wireframe
+      appBar: AppBar(
+        actions: const [ThemeButton(), SizedBox(width: 12)], // 🌙 / ☀️ like the website
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
           children: [
-            const Text(
+            const Align(alignment: Alignment.centerLeft, child: BrandLockup(logoWidth: 40, fontSize: 22)),
+            const SizedBox(height: 28),
+            Text(
               'Welcome back',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.ink),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Log in to open your inbox.',
               style: TextStyle(fontSize: 15, color: AppColors.muted),
             ),
@@ -85,11 +91,11 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFDF1F0),
+                  color: AppColors.errorSoft,
                   border: Border.all(color: AppColors.error, width: 1.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 14)),
+                child: Text(_error!, style: TextStyle(color: AppColors.error, fontSize: 14)),
               ),
               const SizedBox(height: 16),
             ],
@@ -102,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
               autocorrect: false,
               enableSuggestions: false,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(hintText: 'nimra or nimra@fahadimtiaz.site'),
+              decoration: const InputDecoration(hintText: 'username or username@fahadimtiaz.site'),
             ),
             const SizedBox(height: 16),
 
@@ -145,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             if (_loading) ...[
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Connecting… the first login can take up to a minute if the server was asleep.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: AppColors.muted),

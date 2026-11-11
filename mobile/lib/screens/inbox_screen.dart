@@ -18,6 +18,9 @@ import '../api/api_client.dart';
 import '../models/message.dart';
 import '../models/user.dart';
 import '../theme.dart';
+import '../widgets/brand.dart';
+import '../widgets/message_row.dart';
+import 'search_screen.dart';
 
 /// The six folders, in the same order as the website sidebar.
 class Folder {
@@ -174,9 +177,25 @@ class _InboxScreenState extends State<InboxScreen> {
   }
 
   Future<void> _open(Message m) async {
-    // A7 Read screen comes next. When the user comes back, refresh
-    // so the message shows as read.
-    await Navigator.pushNamed(context, '/read', arguments: m.id);
+    // Drafts open in Compose so they can be finished; everything else in A7 Read.
+    final result = m.folder == 'drafts'
+        ? await Navigator.pushNamed(context, '/compose', arguments: {'mode': 'draft', 'message': m})
+        : await Navigator.pushNamed(context, '/read', arguments: m.id);
+    if (result is String) _toast(result); // e.g. "Message sent"
+    if (mounted) _load(); // refresh so read / moved messages update
+  }
+
+  Future<void> _compose() async {
+    final result = await Navigator.pushNamed(context, '/compose');
+    if (result is String) _toast(result);
+    if (mounted) _load();
+  }
+
+  Future<void> _search() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => SearchScreen(folder: _folder.id, folderName: _folder.name)),
+    );
     if (mounted) _load();
   }
 
@@ -215,26 +234,21 @@ class _InboxScreenState extends State<InboxScreen> {
           IconButton(
             tooltip: 'Search',
             icon: const Icon(Icons.search),
-            onPressed: () => _toast('Search is coming soon'),
+            onPressed: _search,
           ),
           Padding(
             padding: const EdgeInsets.only(right: 10, left: 2),
             child: InkWell(
               customBorder: const CircleBorder(),
               onTap: widget.onOpenSettings,
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.brandPanel,
-                child: Text(user.initials,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
+              child: Avatar(seed: user.email, text: user.initials, radius: 18),
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/compose'),
-        backgroundColor: AppColors.ink,
+        onPressed: _compose,
+        backgroundColor: AppColors.primaryBtn,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.edit_outlined),
         label: const Text('Compose', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -249,12 +263,12 @@ class _InboxScreenState extends State<InboxScreen> {
                 Expanded(
                   child: Text(
                     unread != null && unread > 0 ? '$unread unread · Newest first' : 'Newest first',
-                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ),
                 if (user.isTemporary)
                   Text('Temporary · ${user.daysLeft}d left',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                      style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ],
             ),
           ),
@@ -267,7 +281,7 @@ class _InboxScreenState extends State<InboxScreen> {
 
   Widget _buildList() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.ink));
+      return Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
     if (_error != null) {
       return Center(
@@ -276,7 +290,7 @@ class _InboxScreenState extends State<InboxScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.error)),
+              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: AppColors.error)),
               const SizedBox(height: 12),
               OutlinedButton(onPressed: _load, child: const Text('Try again')),
             ],
@@ -286,7 +300,7 @@ class _InboxScreenState extends State<InboxScreen> {
     }
 
     return RefreshIndicator(
-      color: AppColors.ink,
+      color: AppColors.primary,
       onRefresh: _load,
       child: _messages.isEmpty
           // Empty state (still inside a scroll view so pull-to-refresh works)
@@ -298,7 +312,7 @@ class _InboxScreenState extends State<InboxScreen> {
                 const SizedBox(height: 12),
                 Text(_folder.emptyText,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16, color: AppColors.muted)),
+                    style: TextStyle(fontSize: 16, color: AppColors.muted)),
               ],
             )
           : ListView.separated(
@@ -309,13 +323,13 @@ class _InboxScreenState extends State<InboxScreen> {
               separatorBuilder: (context, index) => const Divider(),
               itemBuilder: (context, i) {
                 if (i >= _messages.length) {
-                  return const Padding(
+                  return Padding(
                     padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator(color: AppColors.ink)),
+                    child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
                   );
                 }
                 final m = _messages[i];
-                final row = _MessageRow(
+                final row = MessageRow(
                   message: m,
                   showRecipient: _folder.id == 'sent' || _folder.id == 'drafts',
                   onTap: () => _open(m),
@@ -327,7 +341,7 @@ class _InboxScreenState extends State<InboxScreen> {
                   key: ValueKey(m.id),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    color: AppColors.brandPanel,
+                    color: AppColors.error,
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 24),
                     child: const Row(
@@ -345,123 +359,6 @@ class _InboxScreenState extends State<InboxScreen> {
               },
             ),
     );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// ③ One message row: avatar · sender · time · subject · preview · star
-// ---------------------------------------------------------------------------
-class _MessageRow extends StatelessWidget {
-  final Message message;
-  final bool showRecipient;
-  final VoidCallback onTap;
-  final VoidCallback onStar;
-
-  const _MessageRow({
-    required this.message,
-    required this.showRecipient,
-    required this.onTap,
-    required this.onStar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final m = message;
-    final unread = !m.isRead;
-    final who = showRecipient ? 'To: ${m.to.isEmpty ? '(no recipient)' : m.to.join(', ')}' : m.from;
-    final weight = unread ? FontWeight.w700 : FontWeight.w400;
-
-    return Material(
-      color: unread ? AppColors.soft : AppColors.surface, // unread rows are shaded
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: const Color(0xFFD6D6D2),
-                child: Text(_initials(showRecipient && m.to.isNotEmpty ? m.to.first : m.from),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(who,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 15, fontWeight: weight)),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(_time(m.createdAt),
-                            style: TextStyle(fontSize: 12, fontWeight: weight, color: AppColors.muted)),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(m.subject.isEmpty ? '(no subject)' : m.subject,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 14, fontWeight: weight)),
-                        ),
-                        if (m.hasAttachments)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 4),
-                            child: Icon(Icons.attach_file, size: 16, color: AppColors.muted),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(m.snippet,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13, color: AppColors.muted)),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: m.isStarred ? 'Unstar' : 'Star',
-                onPressed: onStar,
-                icon: Icon(m.isStarred ? Icons.star : Icons.star_border,
-                    color: m.isStarred ? AppColors.ink : AppColors.muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// "sarah@fahadimtiaz.site" → "SA"
-  static String _initials(String address) {
-    final name = address.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
-    if (name.isEmpty) return '?';
-    return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
-  }
-
-  /// today → 10:42 · yesterday → Yesterday · this week → Mon · older → 3 Nov
-  static String _time(DateTime? t) {
-    if (t == null) return '';
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(t.year, t.month, t.day);
-    final diff = today.difference(day).inDays;
-    if (diff == 0) {
-      return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-    }
-    if (diff == 1) return 'Yesterday';
-    if (diff < 7) return const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t.weekday - 1];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${t.day} ${months[t.month - 1]}';
   }
 }
 
@@ -493,17 +390,16 @@ class _FoldersDrawer extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(10, 12, 10, 16),
           children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(14, 4, 14, 14),
+              child: BrandLockup(logoWidth: 38, fontSize: 20),
+            ),
             // ① account header
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.brandPanel,
-                    child: Text(user.initials,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ),
+                  Avatar(seed: user.email, text: user.initials, radius: 22),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -512,7 +408,7 @@ class _FoldersDrawer extends StatelessWidget {
                         Text(user.username, style: const TextStyle(fontWeight: FontWeight.w700)),
                         Text(user.email,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                            style: TextStyle(fontSize: 12, color: AppColors.muted)),
                       ],
                     ),
                   ),
@@ -531,7 +427,7 @@ class _FoldersDrawer extends StatelessWidget {
               ),
 
             // ③ Manage
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(16, 18, 16, 6),
               child: Text('MANAGE',
                   style: TextStyle(
@@ -580,7 +476,7 @@ class _DrawerItem extends StatelessWidget {
             : null,
         selected: selected,
         selectedTileColor: AppColors.selected,
-        selectedColor: AppColors.ink,
+        selectedColor: AppColors.primary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         onTap: onTap,
       ),
@@ -616,8 +512,8 @@ class _TemporaryCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: usedFraction,
               minHeight: 6,
-              color: AppColors.ink,
-              backgroundColor: const Color(0xFFDCDCD8),
+              color: AppColors.primary,
+              backgroundColor: AppColors.border,
             ),
           ),
         ],

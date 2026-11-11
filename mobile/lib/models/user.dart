@@ -4,7 +4,7 @@
 class User {
   final String id;
   final String username;
-  final String email;            // e.g. nimra@fahadimtiaz.site
+  final String email;            // e.g. username@fahadimtiaz.site
   final String accountType;      // 'regular', 'temp15' or 'temp30'
   final String role;             // 'user' or 'admin'
   final DateTime? createdAt;
