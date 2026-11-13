@@ -857,7 +857,8 @@ function renderFileList() {
 }
 
 // ---------- "To" suggestions (people you emailed before) ----------
-// Type in the To box → a list of earlier addresses appears under it.
+// Click the To box → the addresses you emailed recently appear under it
+// (newest first, like Gmail). Typing narrows the list.
 // Click one (or use ↑ ↓ and Enter / Tab) to add it.
 let contactList = null;
 let suggestIndex = -1;
@@ -905,6 +906,9 @@ async function showSuggestions() {
   suggestBox.replaceChildren();
   suggestIndex = -1;
   if (!matches.length) { hideSuggestions(); return; }
+  const head = el("li", "to-suggest-head", token.text ? "Matching addresses" : "Recent");
+  head.setAttribute("role", "presentation");
+  suggestBox.append(head);
   matches.forEach((email, i) => {
     const item = el("li", "to-suggest-item");
     item.setAttribute("role", "option");
@@ -922,7 +926,7 @@ async function showSuggestions() {
 }
 
 function highlightSuggestion(i) {
-  const items = [...suggestBox.children];
+  const items = [...suggestBox.querySelectorAll(".to-suggest-item")];
   suggestIndex = items.length ? (i + items.length) % items.length : -1;
   items.forEach((item, n) => item.classList.toggle("active", n === suggestIndex));
 }
@@ -948,7 +952,7 @@ toInput.addEventListener("focus", showSuggestions);
 toInput.addEventListener("blur", () => setTimeout(hideSuggestions, 100));
 toInput.addEventListener("keydown", (event) => {
   if (suggestBox.classList.contains("hidden")) return;
-  const items = suggestBox.children;
+  const items = suggestBox.querySelectorAll(".to-suggest-item");
   if (event.key === "ArrowDown") { event.preventDefault(); highlightSuggestion(suggestIndex + 1); }
   else if (event.key === "ArrowUp") { event.preventDefault(); highlightSuggestion(suggestIndex - 1); }
   else if ((event.key === "Enter" || event.key === "Tab") && suggestIndex >= 0) {

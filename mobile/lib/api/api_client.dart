@@ -370,7 +370,7 @@ class ApiClient {
   // ---------------------------------------------------------------------------
 
   /// Addresses for the From box: main address + custom-domain addresses.
-  /// People you emailed / got email from (suggestions in the compose "To" box).
+  /// Addresses you sent email to, most recent first (suggestions in "To").
   Future<List<String>> getContacts() async {
     final data = await _get('/contacts');
     return (data['contacts'] as List).map((c) => (c as Map)['email'].toString()).toList();

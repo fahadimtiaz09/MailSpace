@@ -551,23 +551,18 @@ CONTACT_SKIP = re.compile(r"^(calls|alerts|no-?reply|mailer-daemon|postmaster)@"
 @messages_bp.get("/contacts")
 @login_required
 def recent_contacts():
-    """Addresses you emailed or got email from, most used / most recent first."""
+    """Addresses YOU sent email to — the one used most recently first (like Gmail)."""
     me = g.user
     mine = {a.lower() for a in allowed_from_addresses(me)}
-    found = {}  # email -> {"count", "last"}
-    entries = mailboxes.find({"user_id": me["_id"], "folder": {"$ne": "drafts"}}).sort("created_at", -1).limit(1000)
+    seen = {}  # email -> last time you emailed it (dict keeps the order: newest first)
+    entries = mailboxes.find({"user_id": me["_id"], "folder": "sent"}).sort("created_at", -1).limit(1000)
     for entry in entries:
-        if entry.get("folder") == "sent":
-            people = entry.get("to_emails") or []
-        else:
-            people = [entry.get("from_email") or ""]
-        for email in people:
+        for email in entry.get("to_emails") or []:
             email = (email or "").strip().lower()
-            if "@" not in email or email in mine or CONTACT_SKIP.match(email):
+            if "@" not in email or email in mine or CONTACT_SKIP.match(email) or email in seen:
                 continue
-            row = found.setdefault(email, {"email": email, "count": 0, "last": entry.get("created_at")})
-            row["count"] += 1
-    contacts = sorted(found.values(), key=lambda r: (-r["count"], -(r["last"].timestamp() if r["last"] else 0)))[:200]
-    for row in contacts:
-        row["last"] = to_iso(row["last"])
+            seen[email] = entry.get("created_at")
+            if len(seen) >= 200:
+                break
+    contacts = [{"email": e, "last": to_iso(t)} for e, t in seen.items()]
     return jsonify({"contacts": contacts})

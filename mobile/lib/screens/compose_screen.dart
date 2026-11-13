@@ -48,7 +48,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
   String? _from;
   final List<UploadFile> _files = [];
   bool _allowForward = true; // "Allow forwarding" switch
-  List<String> _contacts = []; // earlier addresses → suggestions under "To"
+  List<String> _contacts = []; // addresses you emailed, newest first → shown under "To"
+  String _typedTo = '';
   final _toFocus = FocusNode();
   String? _forwardOf;        // the email being forwarded (server checks the owner allowed it)
 
@@ -168,6 +169,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
     if (caret < 0 || caret > text.length) caret = text.length;
     final start = text.lastIndexOf(RegExp(r'[,;]'), caret > 0 ? caret - 1 : 0) + 1;
     final typed = text.substring(start, caret).trim().toLowerCase();
+    _typedTo = typed;
     final already = text.toLowerCase().split(RegExp(r'[,;\s]+')).where((e) => e.isNotEmpty).toSet();
 
     final before = text.substring(0, start).trimRight();
@@ -410,6 +412,14 @@ class _ComposeScreenState extends State<ComposeScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           shrinkWrap: true,
                           children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+                              child: Text(
+                                _toFocus.hasFocus && _typedTo.isNotEmpty ? 'MATCHING ADDRESSES' : 'RECENT',
+                                style: TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .5, color: AppColors.faint),
+                              ),
+                            ),
                             for (final o in options)
                               ListTile(
                                 dense: true,
