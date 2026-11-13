@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Inbox · MailSpace</title>
+  <meta name="theme-color" content="#F7F9FF">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/calls.css">
+</head>
+<body class="app-page" data-page="inbox">
+  <a class="skip-link" href="#message-list">Skip to messages</a>
+
+  <div class="app">
+    <header id="topbar"></header>
+    <aside id="sidebar"></aside>
+
+    <main id="main" class="main">
+      <div id="mail" class="mail surface">
+
+        <!-- ===== Message list ===== -->
+        <section class="list-pane" aria-labelledby="folder-title">
+          <div class="list-head">
+            <div style="flex:1; min-width:0">
+              <h1 id="folder-title" class="truncate">Inbox</h1>
+              <span id="folder-meta" class="folder-meta">&nbsp;</span>
+            </div>
+            <button id="refresh-btn" class="icon-btn" type="button" aria-label="Refresh" data-tip="Refresh">
+              <svg class="i" aria-hidden="true"><use href="/icons.svg#refresh"/></svg>
+            </button>
+          </div>
+
+          <div class="list-tools" id="list-tools" role="toolbar" aria-label="Selected messages">
+            <label class="pick-all" data-tip="Select all">
+              <input type="checkbox" id="pick-all" aria-label="Select all messages on this page">
+              <span class="box" aria-hidden="true"></span>
+            </label>
+            <div id="bulk" class="bulk hidden">
+              <button type="button" class="icon-btn icon-btn-sm" data-bulk="read" aria-label="Mark as read" data-tip="Mark as read"><svg class="i" aria-hidden="true"><use href="/icons.svg#mail-open"/></svg></button>
+              <button type="button" class="icon-btn icon-btn-sm" data-bulk="unread" aria-label="Mark as unread" data-tip="Mark as unread"><svg class="i" aria-hidden="true"><use href="/icons.svg#mail"/></svg></button>
+              <button type="button" class="icon-btn icon-btn-sm" data-bulk="star" aria-label="Star" data-tip="Star"><svg class="i" aria-hidden="true"><use href="/icons.svg#star"/></svg></button>
+              <button type="button" class="icon-btn icon-btn-sm" data-bulk="not_spam" aria-label="Not spam" data-tip="Not spam"><svg class="i" aria-hidden="true"><use href="/icons.svg#inbox"/></svg></button>
+              <button type="button" class="icon-btn icon-btn-sm" data-bulk="restore" aria-label="Restore" data-tip="Restore"><svg class="i" aria-hidden="true"><use href="/icons.svg#restore"/></svg></button>
+              <button type="button" class="icon-btn icon-btn-sm" data-bulk="trash" aria-label="Move to trash" data-tip="Move to trash"><svg class="i" aria-hidden="true"><use href="/icons.svg#trash"/></svg></button>
+              <button type="button" class="btn btn-sm btn-danger" data-bulk="delete_forever">Delete forever</button>
+            </div>
+            <span class="spacer"></span>
+            <span id="tools-label" class="tools-label">Newest first</span>
+          </div>
+
+          <ul id="message-list" class="message-list" tabindex="-1" aria-label="Messages"></ul>
+
+          <div id="pager" class="pager hidden">
+            <span id="page-info"></span>
+            <div>
+              <button id="prev-btn" class="icon-btn icon-btn-sm" type="button" aria-label="Newer messages">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#chevron-left"/></svg>
+              </button>
+              <button id="next-btn" class="icon-btn icon-btn-sm" type="button" aria-label="Older messages">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#chevron-right"/></svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div id="pane-resizer" class="pane-resizer" role="separator" aria-orientation="vertical"
+             aria-label="Resize message list" tabindex="0" title="Drag to resize, double-click to reset"></div>
+
+        <!-- ===== Reading pane ===== -->
+        <section id="read-pane" class="read-pane" aria-label="Message">
+          <div id="read-empty" class="read-empty">
+            <div class="empty">
+              <div class="empty-art"><svg class="i" aria-hidden="true"><use href="/icons.svg#mail-open"/></svg></div>
+              <h3>Select a message to read</h3>
+              <p>Pick any conversation from the list and it will open here.</p>
+            </div>
+          </div>
+
+          <div id="read-view" class="hidden" style="display:flex; flex-direction:column; flex:1; min-height:0">
+            <div class="read-toolbar" role="toolbar" aria-label="Message actions">
+              <button id="back-btn" class="icon-btn back-btn" type="button" aria-label="Back to list">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#arrow-left"/></svg>
+              </button>
+              <button id="trash-btn" class="icon-btn" type="button" aria-label="Move to trash" data-tip="Move to trash">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#trash"/></svg>
+              </button>
+              <button id="spam-btn" class="icon-btn" type="button" aria-label="Report spam" data-tip="Report spam">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#spam"/></svg>
+              </button>
+              <button id="restore-btn" class="btn btn-sm hidden" type="button">
+                <svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#restore"/></svg><span>Restore</span>
+              </button>
+              <button id="delete-forever-btn" class="btn btn-sm btn-danger hidden" type="button">Delete forever</button>
+              <span class="sep" aria-hidden="true"></span>
+              <button id="unread-btn" class="icon-btn" type="button" aria-label="Mark as unread" data-tip="Mark as unread">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#mail"/></svg>
+              </button>
+              <button id="star-btn" class="icon-btn" type="button" aria-label="Star" data-tip="Star" aria-pressed="false">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#star"/></svg>
+              </button>
+              <span class="spacer"></span>
+              <button id="call-btn" class="icon-btn dial-btn" type="button" aria-label="Voice call" data-tip="Voice call" disabled>
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#phone"/></svg><span class="dial-dot" aria-hidden="true"></span>
+              </button>
+              <button id="video-call-btn" class="icon-btn dial-btn" type="button" aria-label="Video call" data-tip="Video call" disabled>
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#video"/></svg><span class="dial-dot" aria-hidden="true"></span>
+              </button>
+              <span class="sep" aria-hidden="true"></span>
+              <button id="reply-btn-top" class="icon-btn" type="button" aria-label="Reply" data-tip="Reply">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#reply"/></svg>
+              </button>
+              <button id="reply-all-btn-top" class="icon-btn hidden" type="button" aria-label="Reply all" data-tip="Reply all">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#reply-all"/></svg>
+              </button>
+              <button id="forward-btn-top" class="icon-btn" type="button" aria-label="Forward" data-tip="Forward">
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#forward"/></svg>
+              </button>
+            </div>
+
+            <div id="read-scroll" class="read-scroll">
+              <article id="read-article" class="read-article"></article>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== Compose window ===== -->
+  <div id="compose" class="compose" role="dialog" aria-labelledby="compose-title" aria-hidden="true">
+    <div class="compose-head">
+      <h2 id="compose-title">New message</h2>
+      <button type="button" class="icon-btn minimize-btn" id="compose-min" aria-label="Minimize" data-tip="Minimize">
+        <svg class="i" aria-hidden="true"><use href="/icons.svg#minus"/></svg>
+      </button>
+      <button type="button" class="icon-btn expand-btn" id="compose-expand" aria-label="Expand" data-tip="Expand">
+        <svg class="i" aria-hidden="true"><use href="/icons.svg#expand"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="compose-close" aria-label="Close" data-tip="Close">
+        <svg class="i" aria-hidden="true"><use href="/icons.svg#x"/></svg>
+      </button>
+    </div>
+
+    <form id="compose-form" class="compose-form" novalidate>
+      <div id="compose-message" class="alert alert-error hidden" role="alert"></div>
+      <div class="compose-fields">
+        <div class="compose-row">
+          <label for="compose-from">From</label>
+          <select id="compose-from" name="from"></select>
+        </div>
+        <div class="compose-row">
+          <label for="compose-to">To</label>
+          <input id="compose-to" name="to" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="name@fahadimtiaz.site, friend@gmail.com">
+        </div>
+        <div class="compose-row">
+          <label for="compose-subject">Subject</label>
+          <input id="compose-subject" name="subject" type="text" maxlength="200">
+        </div>
+      </div>
+
+      <label for="compose-body" class="sr-only">Message</label>
+      <textarea id="compose-body" name="body" class="compose-body" placeholder="Write your message…"></textarea>
+
+      <ul id="file-list" class="file-list"></ul>
+
+      <div class="compose-foot">
+        <button type="submit" id="send-btn" class="btn btn-primary send-btn">
+          <svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#send"/></svg><span>Send</span>
+        </button>
+        <label class="icon-btn attach-btn" data-tip="Attach files" tabindex="0" role="button" aria-label="Attach files">
+          <svg class="i" aria-hidden="true"><use href="/icons.svg#paperclip"/></svg>
+          <input type="file" id="attachments" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
+        </label>
+        <label class="forward-toggle" data-tip="If off, people can't forward this email">
+          <input type="checkbox" id="compose-allow-forward" name="allow_forward" checked>
+          <span>Allow forwarding</span>
+        </label>
+        <span class="hint" id="compose-hint">Up to 5 files, 10 MB each</span>
+        <button type="button" id="save-draft-btn" class="btn btn-ghost btn-sm">Save draft</button>
+        <button type="button" id="discard-btn" class="icon-btn" aria-label="Discard" data-tip="Discard">
+          <svg class="i" aria-hidden="true"><use href="/icons.svg#trash"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script src="/api.js"></script>
+  <script src="/ui.js"></script>
+  <script src="/shell.js"></script>
+  <script src="/calls.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

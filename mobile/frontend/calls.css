@@ -1,0 +1,118 @@
+/* ============================================================
+   calls.css — call window (voice + video), dial buttons and
+   the mail-protection styles (watermark, blur, no printing).
+   ============================================================ */
+
+/* ---------- Call window ---------- */
+.call-overlay {
+  position: fixed; inset: 0; z-index: 400;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 56px 20px 40px;
+  background: radial-gradient(120% 90% at 50% 0%, #1E3A78 0%, #0B1220 70%);
+  color: #fff;
+  animation: call-in 220ms ease;
+}
+.call-overlay.leaving { animation: call-out 200ms ease forwards; }
+@keyframes call-in { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes call-out { to { opacity: 0; transform: scale(.98); } }
+body.in-call { overflow: hidden; }
+
+.call-info { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; margin-top: 4vh; }
+.avatar.avatar-xl { width: 112px; height: 112px; font-size: 2.3rem; margin-bottom: 14px; box-shadow: 0 0 0 8px rgba(255,255,255,.06), 0 0 0 16px rgba(255,255,255,.03); }
+.call-overlay.is-incoming .avatar-xl { animation: call-pulse 1.6s ease-in-out infinite; }
+@keyframes call-pulse {
+  0%, 100% { box-shadow: 0 0 0 8px rgba(91,145,255,.18), 0 0 0 16px rgba(91,145,255,.08); }
+  50% { box-shadow: 0 0 0 14px rgba(91,145,255,.10), 0 0 0 28px rgba(91,145,255,.04); }
+}
+.call-name { font-size: 1.6rem; font-weight: 700; letter-spacing: -.01em; }
+.call-address { font-size: .92rem; color: rgba(255,255,255,.65); }
+.call-status { margin-top: 10px; font-size: 1rem; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; min-height: 1.4em; }
+
+.call-controls { position: relative; z-index: 2; display: flex; gap: 28px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.call-btn-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.call-btn {
+  width: 62px; height: 62px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 0; cursor: pointer;
+  background: rgba(255,255,255,.14); color: #fff;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+.call-btn:hover { background: rgba(255,255,255,.22); transform: translateY(-1px); }
+.call-btn:focus-visible { outline: 3px solid #9DBBFF; outline-offset: 3px; }
+.call-btn .i { width: 26px; height: 26px; }
+.call-btn.is-off { background: #fff; color: #0B1220; }
+.call-btn.is-end { background: #E5484D; }
+.call-btn.is-end:hover { background: #D13438; }
+.call-btn.is-accept { background: #16A36A; animation: call-bounce 1.2s ease-in-out infinite; }
+.call-btn.is-accept:hover { background: #0E8155; }
+@keyframes call-bounce { 0%, 100% { transform: none; } 50% { transform: translateY(-4px); } }
+.call-btn-label { font-size: .8rem; color: rgba(255,255,255,.8); }
+
+/* Video */
+.call-remote-video, .call-local-video { display: none; background: #000; object-fit: cover; }
+.call-overlay.has-local-video .call-local-video {
+  display: block; position: absolute; z-index: 3;
+  right: 16px; top: 16px; width: min(28vw, 220px); aspect-ratio: 3 / 4;
+  border-radius: 14px; border: 2px solid rgba(255,255,255,.25);
+  transform: scaleX(-1); /* mirror, like a selfie camera */
+}
+.call-overlay.has-local-video .call-local-video.hidden { display: none; }
+.call-overlay.has-remote-video .call-remote-video { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+.call-overlay.has-remote-video .call-info { margin-top: 0; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.call-overlay.has-remote-video .call-info .avatar, .call-overlay.has-remote-video .call-address { display: none; }
+.call-overlay.has-remote-video .call-btn:not(.is-end):not(.is-off) { background: rgba(0,0,0,.45); backdrop-filter: blur(6px); }
+
+@media (max-width: 600px) {
+  .call-controls { gap: 20px; }
+  .call-btn { width: 56px; height: 56px; }
+  .call-overlay.has-local-video .call-local-video { width: 110px; }
+}
+
+/* ---------- Dial buttons in the message toolbar ---------- */
+.icon-btn.dial-btn { color: var(--success, #16A36A); }
+.icon-btn.dial-btn:disabled,
+.icon-btn.dial-btn[aria-disabled="true"] { color: var(--text-3, #94A3B8); opacity: .55; cursor: not-allowed; }
+.dial-dot { position: absolute; right: 6px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: #16A36A; box-shadow: 0 0 0 2px var(--surface, #fff); }
+.icon-btn.dial-btn { position: relative; }
+.icon-btn.dial-btn:disabled .dial-dot { display: none; }
+
+/* Forward switched off by the owner */
+.btn.is-locked, .icon-btn.is-locked { opacity: .5; cursor: not-allowed; }
+
+/* Compose: Allow forwarding switch */
+.forward-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--text-2); cursor: pointer; user-select: none; white-space: nowrap; }
+.forward-toggle input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+
+/* ---------- Mail protection (copy / screenshot) ---------- */
+.read-article { position: relative; }
+.mail-watermark {
+  position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden;
+  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 46px 60px; padding: 24px;
+  opacity: .085; user-select: none;
+}
+.mail-watermark span {
+  transform: rotate(-24deg); white-space: nowrap;
+  font-size: .82rem; font-weight: 700; color: var(--text);
+}
+:root[data-theme="dark"] .mail-watermark { opacity: .11; }
+
+/* Window lost focus (snipping tool, another app...) → hide the email */
+body.mail-guard-blur .read-article,
+body.mail-guard-blur .message-list,
+body.mail-guard-blur #message-list { filter: blur(14px); transition: filter 60ms; }
+.guard-notice {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 380;
+  display: none; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 14px;
+  background: var(--elevated, #fff); color: var(--text); border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg); font-weight: 600; font-size: .92rem;
+}
+body.mail-guard-blur .guard-notice { display: flex; }
+
+/* Printing emails is switched off */
+@media print {
+  body * { visibility: hidden !important; }
+  body::after {
+    content: "Printing emails is disabled on MailSpace.";
+    visibility: visible; position: fixed; top: 40px; left: 40px; font: 600 18px sans-serif; color: #000;
+  }
+}
