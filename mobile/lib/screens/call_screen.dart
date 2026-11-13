@@ -384,6 +384,7 @@ class _CallScreenState extends State<CallScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF0B1220),
         body: Stack(
+          fit: StackFit.expand, // fill the whole screen (not just the width of the text)
           children: [
             // background
             Positioned.fill(
@@ -391,16 +392,18 @@ class _CallScreenState extends State<CallScreen> {
                   ? RTCVideoView(_remoteView, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
                   : const DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: Alignment(0, -1),
-                          radius: 1.3,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
                           colors: [Color(0xFF1E3A78), Color(0xFF0B1220)],
                         ),
                       ),
                     ),
             ),
-            // plays the other person's voice on the web build
-            if (!showRemoteVideo) SizedBox(width: 1, height: 1, child: RTCVideoView(_remoteView)),
+            // Only the web build needs this to play the other person's voice
+            // (phones play call audio by themselves).
+            if (kIsWeb && !showRemoteVideo)
+              Positioned(left: 0, top: 0, width: 1, height: 1, child: RTCVideoView(_remoteView)),
 
             SafeArea(
               child: Column(
