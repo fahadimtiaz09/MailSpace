@@ -286,6 +286,8 @@ class ApiClient {
     required String body,
     List<UploadFile> files = const [],
     String? draftId,
+    bool allowForward = true, // "Allow forwarding" switch in compose
+    String? forwardOf,        // id of the email being forwarded (server checks the owner allowed it)
   }) async {
     final form = FormData.fromMap({
       'from': from,
@@ -293,12 +295,57 @@ class ApiClient {
       'subject': subject,
       'body': body,
       if (draftId != null) 'draft_id': draftId,
+      'allow_forward': allowForward ? '1' : '0',
+      if (forwardOf != null) 'forward_of': forwardOf,
     });
     for (final f in files) {
       form.files.add(MapEntry('attachments', await MultipartFile.fromFile(f.path, filename: f.name)));
     }
     final data = await _post('/messages/send', form);
     return (data is Map && data['message'] is String) ? data['message'] as String : 'Message sent';
+  }
+
+  /// Tell the person who wrote this email that we took a screenshot of it.
+  Future<void> reportScreenshot(String messageId, String method) async {
+    try {
+      await _post('/messages/$messageId/screenshot', {'method': method});
+    } catch (_) {/* not important enough to show an error */}
+  }
+
+  // ---------------- Calls (voice / video) ----------------
+
+  /// "I'm online." Returns an incoming call (Map) if someone is calling us.
+  Future<Map<String, dynamic>?> callHeartbeat({String? callId}) async {
+    final data = await _post('/calls/heartbeat', {'call_id': callId});
+    final incoming = (data is Map) ? data['incoming'] : null;
+    return incoming is Map ? Map<String, dynamic>.from(incoming) : null;
+  }
+
+  /// Can I call this address now? {can_call, online, reason}
+  Future<Map<String, dynamic>> callPresence(String email) async {
+    final data = await _get('/calls/presence', query: {'email': email});
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> startCall(String to, String kind, Map<String, String> offer) async {
+    final data = await _post('/calls', {'to': to, 'kind': kind, 'offer': offer});
+    return Map<String, dynamic>.from((data as Map)['call'] as Map);
+  }
+
+  Future<Map<String, dynamic>> getCall(String id) async {
+    final data = await _get('/calls/$id');
+    return Map<String, dynamic>.from((data as Map)['call'] as Map);
+  }
+
+  Future<Map<String, dynamic>> answerCall(String id, Map<String, String> answer) async {
+    final data = await _post('/calls/$id/answer', {'answer': answer});
+    return Map<String, dynamic>.from((data as Map)['call'] as Map);
+  }
+
+  Future<void> endCall(String id) async {
+    try {
+      await _post('/calls/$id/end', {});
+    } catch (_) {/* the call may already be over */}
   }
 
   /// Saves (or updates) a draft. Attachments are not saved in drafts.

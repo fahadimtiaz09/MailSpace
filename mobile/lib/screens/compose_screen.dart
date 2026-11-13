@@ -46,6 +46,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
   List<String> _fromAddresses = [];
   String? _from;
   final List<UploadFile> _files = [];
+  bool _allowForward = true; // "Allow forwarding" switch
+  String? _forwardOf;        // the email being forwarded (server checks the owner allowed it)
 
   bool _started = false;
   bool _sending = false;
@@ -106,7 +108,10 @@ class _ComposeScreenState extends State<ComposeScreen> {
 
     final mine = _fromAddresses.map((e) => e.toLowerCase()).toSet();
     final subject = full.subject;
-    final quoted = (full.body ?? '').split('\n').map((line) => '> $line').join('\n');
+    // Forwarding switched off by the owner → don't copy their text into a reply
+    final quoted = full.canForward
+        ? (full.body ?? '').split('\n').map((line) => '> $line').join('\n')
+        : '';
 
     setState(() {
       switch (_mode) {
@@ -128,6 +133,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
           _bodyCtrl.text = '\n\nOn ${MessageRow.fullTime(full.createdAt)}, ${full.from} wrote:\n$quoted';
           break;
         case 'forward':
+          _forwardOf = full.id;
           _subjectCtrl.text = _prefix('Fwd: ', subject);
           _bodyCtrl.text = '\n\n---------- Forwarded message ----------\n'
               'From: ${full.from}\n'
@@ -216,6 +222,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
         body: _bodyCtrl.text,
         files: _files,
         draftId: _draftId,
+        allowForward: _allowForward,
+        forwardOf: _forwardOf,
       );
       if (mounted) Navigator.pop(context, message); // e.g. "Message sent"
     } on ApiException catch (e) {
@@ -404,6 +412,28 @@ class _ComposeScreenState extends State<ComposeScreen> {
                     ],
                   ),
                 ),
+
+              // Allow forwarding switch
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border, width: 1.5))),
+                child: Row(
+                  children: [
+                    Icon(_allowForward ? Icons.forward : Icons.lock_outline, size: 18, color: AppColors.muted),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _allowForward ? 'Allow forwarding' : 'Forwarding off — people can\'t forward this email',
+                        style: TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                    ),
+                    Switch(
+                      value: _allowForward,
+                      onChanged: busy ? null : (v) => setState(() => _allowForward = v),
+                    ),
+                  ],
+                ),
+              ),
 
               // Bottom row: hint · Save draft · Discard
               Container(

@@ -614,7 +614,6 @@ function renderReader(m) {
   }
 
   updateToolbar(m);
-  protectMail(article, body);
   updateDialButtons(m);
 }
 
@@ -1124,11 +1123,9 @@ function dial(kind) {
 
 // ---------- Mail protection ----------
 // 1) Copying text from an email gives only stars (*****).
-// 2) A light watermark with your address + time is drawn over the email.
-// 3) Print Screen / screen-capture shortcuts are noticed: the email is blurred
+// 2) Print Screen / screen-capture shortcuts are noticed: the email is blurred
 //    and the person who wrote it gets a "screenshot alert" email.
-//    (Browsers can't detect every screenshot tool or a phone camera — the
-//    watermark shows who took a picture if it is ever shared.)
+//    (Browsers can't detect every screenshot tool or a phone camera.)
 function starsFor(text) {
   const n = Math.min(Math.max((text || "").length, 8), 2000);
   return "*".repeat(n);
@@ -1153,16 +1150,6 @@ function guardDocument(doc) {
   });
   doc.addEventListener("keyup", onCaptureKey);
   doc.addEventListener("keydown", onCaptureKeyDown);
-}
-
-function protectMail(article) {
-  const me = Shell.user && Shell.user.email;
-  if (!me) return;
-  const mark = el("div", "mail-watermark");
-  mark.setAttribute("aria-hidden", "true");
-  const stamp = me + " · " + new Date().toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  for (let i = 0; i < 40; i++) mark.append(el("span", null, stamp));
-  article.append(mark);
 }
 
 let captureKeyAt = 0;

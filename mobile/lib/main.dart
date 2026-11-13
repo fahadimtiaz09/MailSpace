@@ -31,12 +31,15 @@ import 'screens/login_screen.dart';
 import 'screens/read_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'services/call_service.dart';
+import 'services/screen_guard.dart';
 import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // needed before init() reads phone storage
   await ApiClient.instance.init();
   await themeController.load(); // Light / Dark / System saved on the phone
+  ScreenGuard.init();            // screenshot alerts from the phone
   runApp(const MailSpaceApp());
 }
 
@@ -91,6 +94,8 @@ class _MailSpaceAppState extends State<MailSpaceApp> with WidgetsBindingObserver
     return MaterialApp(
       title: 'MailSpace',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,           // lets an incoming call open on any screen
+      scaffoldMessengerKey: messengerKey,
       theme: AppTheme.build(),
       home: const StartScreen(),
       routes: {

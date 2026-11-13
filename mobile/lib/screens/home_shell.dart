@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../models/user.dart';
+import '../services/call_service.dart';
 import '../theme.dart';
 import 'domains_screen.dart';
 import 'inbox_screen.dart';
@@ -25,6 +26,12 @@ class _HomeShellState extends State<HomeShell> {
   late final Future<User?> _user = ApiClient.instance.me();
 
   @override
+  void dispose() {
+    CallService.instance.stop(); // logged out → not "online" any more
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<User?>(
       future: _user,
@@ -40,6 +47,10 @@ class _HomeShellState extends State<HomeShell> {
           });
           return const Scaffold();
         }
+
+        // Tell the server we're online (dial buttons turn blue for others)
+        // and listen for incoming calls.
+        CallService.instance.start(user.email);
 
         return Scaffold(
           // IndexedStack keeps each tab alive, so the inbox doesn't reload

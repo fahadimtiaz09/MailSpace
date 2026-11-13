@@ -1,6 +1,6 @@
 /* ============================================================
    calls.css — call window (voice + video), dial buttons and
-   the mail-protection styles (watermark, blur, no printing).
+   the mail-protection styles (blur, no printing).
    ============================================================ */
 
 /* ---------- Call window ---------- */
@@ -85,16 +85,6 @@ body.in-call { overflow: hidden; }
 
 /* ---------- Mail protection (copy / screenshot) ---------- */
 .read-article { position: relative; }
-.mail-watermark {
-  position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden;
-  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 46px 60px; padding: 24px;
-  opacity: .085; user-select: none;
-}
-.mail-watermark span {
-  transform: rotate(-24deg); white-space: nowrap;
-  font-size: .82rem; font-weight: 700; color: var(--text);
-}
-:root[data-theme="dark"] .mail-watermark { opacity: .11; }
 
 /* Window lost focus (snipping tool, another app...) → hide the email */
 body.mail-guard-blur .read-article,

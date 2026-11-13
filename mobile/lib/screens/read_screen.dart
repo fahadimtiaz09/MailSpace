@@ -12,16 +12,27 @@
 //   ③ body — the email's design (HTML) if it has one, otherwise plain text
 //   ④ attachments → tap to open
 //   ⑤ Reply · Reply all · Forward → A8 Compose (later)
+//
+// Protection (same rules as the website):
+//   • 📞 / 🎥 call buttons — enabled only while the other person is online
+//   • Forward is locked if the person who wrote it switched forwarding off
+//   • copying text gives only stars (*****)
+//   • Android: screenshots are blocked while an email is open
+//     iPhone / Android 14+: a screenshot sends the writer an alert email
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../models/message.dart';
+import '../services/call_service.dart';
+import '../services/screen_guard.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
 
@@ -40,6 +51,86 @@ class _ReadScreenState extends State<ReadScreen> {
   bool _busy = false;            // while an action (trash, star…) is running
   String? _downloadingId;        // attachment being downloaded
 
+  // Calls: can we call the other person right now?
+  String? _callTarget;
+  bool _canCall = false;
+  String _callTip = 'Checking if they are online…';
+  Timer? _presenceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    ScreenGuard.secure(true);                 // Android: block screenshots of emails
+    ScreenGuard.onScreenshot = _onScreenshot; // iPhone / Android 14+: tell the sender
+  }
+
+  @override
+  void dispose() {
+    _presenceTimer?.cancel();
+    ScreenGuard.secure(false);
+    if (ScreenGuard.onScreenshot == _onScreenshot) ScreenGuard.onScreenshot = null;
+    super.dispose();
+  }
+
+  void _onScreenshot() {
+    final m = _message;
+    if (m == null) return;
+    _api.reportScreenshot(m.id, ScreenGuard.platformName);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Screenshot detected. The sender has been notified.')),
+      );
+    }
+  }
+
+  // ---------------- calls ----------------
+
+  static final _systemSender = RegExp(r'^(calls|alerts|no-?reply)@', caseSensitive: false);
+
+  String? _targetFor(Message m) {
+    final outgoing = m.folder == 'sent' || m.folder == 'drafts';
+    final email = outgoing ? (m.to.isNotEmpty ? m.to.first : null) : m.from;
+    if (email == null || email.isEmpty || _systemSender.hasMatch(email) || m.folder == 'trash') return null;
+    return email;
+  }
+
+  void _watchPresence(Message m) {
+    _callTarget = _targetFor(m);
+    _presenceTimer?.cancel();
+    if (_callTarget == null) return;
+    _checkPresence();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 8), (_) => _checkPresence());
+  }
+
+  Future<void> _checkPresence() async {
+    final email = _callTarget;
+    if (email == null) return;
+    try {
+      final p = await _api.callPresence(email);
+      if (!mounted || email != _callTarget) return;
+      setState(() {
+        _canCall = p['can_call'] == true;
+        _callTip = _canCall ? 'Call' : (p['reason'] as String? ?? '$email is offline');
+      });
+    } catch (_) {
+      if (mounted) setState(() => _canCall = false);
+    }
+  }
+
+  void _call(String kind) {
+    if (_callTarget != null) CallService.instance.call(_callTarget!, kind);
+  }
+
+  void _forward() {
+    if (_message?.canForward == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Forwarding has been disabled by the mail owner.')),
+      );
+      return;
+    }
+    _reply('forward');
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -51,6 +142,7 @@ class _ReadScreenState extends State<ReadScreen> {
     try {
       final m = await _api.getMessage(id);
       if (mounted) setState(() => _message = m);
+      if (mounted) _watchPresence(m);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
@@ -154,7 +246,12 @@ class _ReadScreenState extends State<ReadScreen> {
                         child: _ReplyButton(icon: Icons.reply_all, label: 'Reply all', onTap: () => _reply('reply_all'))),
                     const SizedBox(width: 8),
                     Expanded(
-                        child: _ReplyButton(icon: Icons.forward, label: 'Forward', onTap: () => _reply('forward'))),
+                        child: _ReplyButton(
+                      icon: m.canForward ? Icons.forward : Icons.lock_outline,
+                      label: 'Forward',
+                      onTap: _forward,
+                      locked: !m.canForward,
+                    )),
                   ],
                 ),
               ),
@@ -180,6 +277,18 @@ class _ReadScreenState extends State<ReadScreen> {
       ];
     }
     return [
+      if (_callTarget != null) ...[
+        IconButton(
+          tooltip: _canCall ? 'Voice call' : _callTip,
+          icon: Icon(Icons.call_outlined, color: _canCall ? AppColors.success : AppColors.faint),
+          onPressed: _canCall ? () => _call('audio') : null,
+        ),
+        IconButton(
+          tooltip: _canCall ? 'Video call' : _callTip,
+          icon: Icon(Icons.videocam_outlined, color: _canCall ? AppColors.success : AppColors.faint),
+          onPressed: _canCall ? () => _call('video') : null,
+        ),
+      ],
       IconButton(
         tooltip: 'Move to trash',
         icon: const Icon(Icons.delete_outline),
@@ -218,7 +327,7 @@ class _ReadScreenState extends State<ReadScreen> {
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
       children: [
         // ② subject
-        SelectableText(
+        GuardedText(
           m.subject.isEmpty ? '(no subject)' : m.subject,
           style: TextStyle(fontSize: 22, height: 1.3, fontWeight: FontWeight.w700, color: AppColors.ink),
         ),
@@ -254,7 +363,7 @@ class _ReadScreenState extends State<ReadScreen> {
         if ((m.bodyHtml ?? '').isNotEmpty)
           MailHtmlBody(html: m.bodyHtml!)
         else
-          SelectableText(
+          GuardedText(
             (m.body ?? '').isEmpty ? '(This message has no text.)' : m.body!,
             style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.ink),
           ),
@@ -347,7 +456,8 @@ class _ReplyButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _ReplyButton({required this.icon, required this.label, required this.onTap});
+  final bool locked; // forwarding switched off by the owner → looks grey
+  const _ReplyButton({required this.icon, required this.label, required this.onTap, this.locked = false});
 
   @override
   Widget build(BuildContext context) {
@@ -360,135 +470,77 @@ class _ReplyButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        foregroundColor: locked ? AppColors.faint : null,
       ),
     );
   }
 }
 
-
-// ---------------- Email design (HTML) ----------------
+// ---------------- Copy protection ----------------
 //
-// The server already cleaned this HTML (no scripts, no forms...). Here:
-//   • logos sent inside the email (data:image/...) are shown straight away
-//   • pictures from other websites stay hidden until "Show images"
-//     (they can tell the sender you opened the email — same as the website)
-//   • links open in the phone's browser
-// It sits on a white card, because email designs are made for a white page.
+// Text you can select, but "Copy" (menu or Ctrl+C) puts only stars (*****)
+// on the clipboard.
 
-class MailHtmlBody extends StatefulWidget {
-  final String html;
-  const MailHtmlBody({super.key, required this.html});
-
-  @override
-  State<MailHtmlBody> createState() => _MailHtmlBodyState();
+class _StarCopyIntent extends Intent {
+  const _StarCopyIntent();
 }
 
-class _MailHtmlBodyState extends State<MailHtmlBody> {
-  bool _showRemote = false;
+class GuardedText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  const GuardedText(this.text, {super.key, this.style});
 
-  bool get _hasRemoteImages => RegExp(r'<img[^>]+src="https?:', caseSensitive: false).hasMatch(widget.html);
+  static String starsFor(String selected) => '*' * selected.length.clamp(8, 2000).toInt();
 
-  Future<bool> _openLink(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https' || uri.scheme == 'mailto')) {
-      return true; // anything else is ignored
-    }
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the link.')));
-    }
-    return true;
-  }
-
-  double? _size(String? v) => double.tryParse((v ?? '').replaceAll('px', '').trim());
-
-  /// Draws every <img> ourselves so we decide what loads.
-  Widget? _image(dynamic element) {
-    if (element.localName != 'img') return null;
-    final String src = (element.attributes['src'] ?? '').toString();
-    final w = _size(element.attributes['width']);
-    final h = _size(element.attributes['height']);
-    Widget child;
-
-    if (src.startsWith('data:image/')) {
-      try {
-        final bytes = base64Decode(src.substring(src.indexOf(',') + 1).replaceAll(RegExp(r'\s'), ''));
-        child = Image.memory(bytes, width: w, height: h, fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink());
-      } catch (_) {
-        return InlineCustomWidget(child: const SizedBox.shrink());
-      }
-    } else if (src.startsWith('http://') || src.startsWith('https://')) {
-      if (!_showRemote) {
-        child = Container(
-          width: w ?? 24,
-          height: h ?? 24,
-          color: const Color(0xFFF1F3F4),
-          child: const Icon(Icons.image_outlined, size: 16, color: Color(0xFF9AA0A6)),
-        );
-      } else {
-        child = Image.network(src, width: w, height: h, fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink());
-      }
-    } else {
-      return InlineCustomWidget(child: const SizedBox.shrink());
-    }
-    return InlineCustomWidget(
-      child: LayoutBuilder(
-        builder: (context, box) => ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: box.maxWidth.isFinite ? box.maxWidth : 600),
-          child: child,
-        ),
-      ),
-    );
+  static void _copyStars(BuildContext context, String selected) {
+    Clipboard.setData(ClipboardData(text: starsFor(selected)));
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('Copying email text is not allowed.')));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_hasRemoteImages && !_showRemote)
-          Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.image_not_supported_outlined, size: 18, color: AppColors.muted),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Images are hidden to protect your privacy.',
-                      style: TextStyle(fontSize: 13, color: AppColors.muted)),
+    String selected = '';
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.keyC, control: true): _StarCopyIntent(),
+        SingleActivator(LogicalKeyboardKey.keyC, meta: true): _StarCopyIntent(),
+        SingleActivator(LogicalKeyboardKey.keyX, control: true): _StarCopyIntent(),
+      },
+      child: Actions(
+        actions: {
+          _StarCopyIntent: CallbackAction<_StarCopyIntent>(onInvoke: (_) {
+            _copyStars(context, selected);
+            return null;
+          }),
+        },
+        child: SelectableText(
+          text,
+          style: style,
+          onSelectionChanged: (selection, _) => selected = selection.textInside(text),
+          contextMenuBuilder: (menuContext, editable) {
+            final value = editable.textEditingValue;
+            final picked = value.selection.textInside(value.text);
+            return AdaptiveTextSelectionToolbar.buttonItems(
+              anchors: editable.contextMenuAnchors,
+              buttonItems: [
+                ContextMenuButtonItem(
+                  type: ContextMenuButtonType.copy,
+                  onPressed: () {
+                    _copyStars(context, picked);
+                    editable.hideToolbar();
+                  },
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _showRemote = true),
-                  child: const Text('Show images'),
+                ContextMenuButtonItem(
+                  type: ContextMenuButtonType.selectAll,
+                  onPressed: () => editable.selectAll(SelectionChangedCause.toolbar),
                 ),
               ],
-            ),
-          ),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white, // email designs expect a white page (Gmail does the same)
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: HtmlWidget(
-            widget.html,
-            key: ValueKey(_showRemote), // redraw after "Show images"
-            textStyle: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF202124)),
-            customWidgetBuilder: _image,
-            onTapUrl: _openLink,
-          ),
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 }

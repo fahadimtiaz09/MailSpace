@@ -32,6 +32,7 @@ class Message {
   // Only filled when a single message is opened:
   final String? body;
   final String? bodyHtml;       // email design (logos, header, footer) — already cleaned by the server
+  final bool canForward;        // false when the person who wrote it switched forwarding off
   final List<Attachment> attachments;
 
   Message({
@@ -47,6 +48,7 @@ class Message {
     required this.hasAttachments,
     this.body,
     this.bodyHtml,
+    this.canForward = true,
     this.attachments = const [],
   });
 
@@ -65,6 +67,7 @@ class Message {
         hasAttachments: hasAttachments,
         body: body,
         bodyHtml: bodyHtml,
+        canForward: canForward,
         attachments: attachments,
       );
 
@@ -83,6 +86,7 @@ class Message {
       hasAttachments: json['has_attachments'] as bool? ?? false,
       body: json['body'] as String?,
       bodyHtml: json['body_html'] as String?,
+      canForward: json['can_forward'] as bool? ?? true,
       attachments: (json['attachments'] as List? ?? [])
           .map((a) => Attachment.fromJson(a as Map<String, dynamic>))
           .toList(),
