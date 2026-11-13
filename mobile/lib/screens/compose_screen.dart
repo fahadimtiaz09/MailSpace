@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/message.dart';
 import '../theme.dart';
+import '../widgets/brand.dart';
 import '../widgets/message_row.dart';
 
 class ComposeScreen extends StatefulWidget {
@@ -47,6 +48,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
   String? _from;
   final List<UploadFile> _files = [];
   bool _allowForward = true; // "Allow forwarding" switch
+  List<String> _contacts = []; // earlier addresses → suggestions under "To"
+  final _toFocus = FocusNode();
   String? _forwardOf;        // the email being forwarded (server checks the owner allowed it)
 
   bool _started = false;
@@ -66,6 +69,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
   @override
   void dispose() {
     _toCtrl.dispose();
+    _toFocus.dispose();
     _subjectCtrl.dispose();
     _bodyCtrl.dispose();
     super.dispose();
@@ -80,6 +84,11 @@ class _ComposeScreenState extends State<ComposeScreen> {
       _mode = args['mode'] as String? ?? 'new';
       original = args['message'] as Message?;
     }
+
+    // "To" suggestions (not important if it fails)
+    _api.getContacts().then((list) {
+      if (mounted) setState(() => _contacts = list);
+    }).catchError((_) {});
 
     try {
       final from = await _api.getFromAddresses();
@@ -150,6 +159,23 @@ class _ComposeScreenState extends State<ComposeScreen> {
           break;
       }
     });
+  }
+
+  /// Suggestions for the address being typed (the part after the last comma).
+  Iterable<_ToSuggestion> _suggestionsFor(TextEditingValue value) {
+    final text = value.text;
+    var caret = value.selection.baseOffset;
+    if (caret < 0 || caret > text.length) caret = text.length;
+    final start = text.lastIndexOf(RegExp(r'[,;]'), caret > 0 ? caret - 1 : 0) + 1;
+    final typed = text.substring(start, caret).trim().toLowerCase();
+    final already = text.toLowerCase().split(RegExp(r'[,;\s]+')).where((e) => e.isNotEmpty).toSet();
+
+    final before = text.substring(0, start).trimRight();
+    final rest = text.substring(caret).replaceFirst(RegExp(r'^[^,;]*[,;]?\s*'), '');
+    return _contacts
+        .where((e) => !already.contains(e) && e != typed && (typed.isEmpty || e.contains(typed)))
+        .take(6)
+        .map((e) => _ToSuggestion(e, '${before.isEmpty ? '' : '$before '}$e, $rest'));
   }
 
   static String _prefix(String p, String subject) =>
@@ -360,11 +386,42 @@ class _ComposeScreenState extends State<ComposeScreen> {
               // To
               _FieldRow(
                 label: 'To',
-                child: TextField(
-                  controller: _toCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  decoration: _plain('name@gmail.com, friend@fahadimtiaz.site'),
+                child: RawAutocomplete<_ToSuggestion>(
+                  textEditingController: _toCtrl,
+                  focusNode: _toFocus,
+                  optionsBuilder: _suggestionsFor,
+                  displayStringForOption: (o) => o.fullText,
+                  fieldViewBuilder: (context, controller, focusNode, onSubmitted) => TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    decoration: _plain('name@gmail.com, friend@fahadimtiaz.site'),
+                  ),
+                  optionsViewBuilder: (context, onSelected, options) => Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      color: AppColors.elevated,
+                      elevation: 6,
+                      borderRadius: BorderRadius.circular(12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 260, maxWidth: 340),
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          shrinkWrap: true,
+                          children: [
+                            for (final o in options)
+                              ListTile(
+                                dense: true,
+                                leading: Avatar(seed: o.email, text: MessageRow.initialsOf(o.email), radius: 14),
+                                title: Text(o.email, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                onTap: () => onSelected(o),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               // Subject
@@ -508,4 +565,12 @@ class _FieldRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One address in the "To" suggestions. [fullText] is what the To box will
+/// contain after picking it (earlier addresses are kept).
+class _ToSuggestion {
+  final String email;
+  final String fullText;
+  const _ToSuggestion(this.email, this.fullText);
 }

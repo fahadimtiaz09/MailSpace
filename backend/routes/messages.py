@@ -542,3 +542,32 @@ def report_screenshot(entry_id):
         "has_attachments": False, "created_at": now,
     })
     return jsonify({"ok": True, "sent": True})
+
+
+# ---------- Recent contacts (suggestions in the compose "To" box) ----------
+CONTACT_SKIP = re.compile(r"^(calls|alerts|no-?reply|mailer-daemon|postmaster)@", re.I)
+
+
+@messages_bp.get("/contacts")
+@login_required
+def recent_contacts():
+    """Addresses you emailed or got email from, most used / most recent first."""
+    me = g.user
+    mine = {a.lower() for a in allowed_from_addresses(me)}
+    found = {}  # email -> {"count", "last"}
+    entries = mailboxes.find({"user_id": me["_id"], "folder": {"$ne": "drafts"}}).sort("created_at", -1).limit(1000)
+    for entry in entries:
+        if entry.get("folder") == "sent":
+            people = entry.get("to_emails") or []
+        else:
+            people = [entry.get("from_email") or ""]
+        for email in people:
+            email = (email or "").strip().lower()
+            if "@" not in email or email in mine or CONTACT_SKIP.match(email):
+                continue
+            row = found.setdefault(email, {"email": email, "count": 0, "last": entry.get("created_at")})
+            row["count"] += 1
+    contacts = sorted(found.values(), key=lambda r: (-r["count"], -(r["last"].timestamp() if r["last"] else 0)))[:200]
+    for row in contacts:
+        row["last"] = to_iso(row["last"])
+    return jsonify({"contacts": contacts})

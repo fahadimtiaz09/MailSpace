@@ -747,6 +747,8 @@ function hideComposeMessage() {
 }
 
 function openCompose(prefill = {}) {
+  contactList = null; // reload "To" suggestions (new people since last time)
+  hideSuggestions();
   if (compose.classList.contains("open") && isComposeDirty()) {
     // Don't throw away what's being written: bring the window back instead
     compose.classList.remove("minimized");
@@ -853,6 +855,107 @@ function renderFileList() {
     ? state.files.length + " of " + MAX_FILES + " files · " + formatSize(total)
     : "Up to 5 files, 10 MB each";
 }
+
+// ---------- "To" suggestions (people you emailed before) ----------
+// Type in the To box → a list of earlier addresses appears under it.
+// Click one (or use ↑ ↓ and Enter / Tab) to add it.
+let contactList = null;
+let suggestIndex = -1;
+const toInput = composeForm.elements.to;
+const suggestBox = el("ul", "to-suggest hidden");
+suggestBox.setAttribute("role", "listbox");
+suggestBox.id = "to-suggest";
+toInput.setAttribute("aria-controls", "to-suggest");
+toInput.closest(".compose-row").append(suggestBox);
+
+async function loadContacts() {
+  if (contactList) return contactList;
+  try {
+    contactList = (await api("/api/contacts")).contacts.map((c) => c.email);
+  } catch (_) {
+    contactList = [];
+  }
+  return contactList;
+}
+
+function currentToken() {
+  const value = toInput.value;
+  const caret = toInput.selectionStart == null ? value.length : toInput.selectionStart;
+  const start = Math.max(value.lastIndexOf(",", caret - 1), value.lastIndexOf(";", caret - 1)) + 1;
+  return { start, end: caret, text: value.slice(start, caret).trim().toLowerCase() };
+}
+
+function hideSuggestions() {
+  suggestBox.classList.add("hidden");
+  suggestBox.replaceChildren();
+  suggestIndex = -1;
+  toInput.setAttribute("aria-expanded", "false");
+}
+
+async function showSuggestions() {
+  const list = await loadContacts();
+  if (document.activeElement !== toInput) return;
+  const token = currentToken();
+  const already = new Set(parseRecipients(toInput.value));
+  const matches = list
+    .filter((email) => !already.has(email) || email === token.text)
+    .filter((email) => !token.text || email.includes(token.text))
+    .filter((email) => email !== token.text)
+    .slice(0, 6);
+  suggestBox.replaceChildren();
+  suggestIndex = -1;
+  if (!matches.length) { hideSuggestions(); return; }
+  matches.forEach((email, i) => {
+    const item = el("li", "to-suggest-item");
+    item.setAttribute("role", "option");
+    item.dataset.email = email;
+    item.append(avatar(email, "sm"), el("span", "to-suggest-email", email));
+    item.addEventListener("mousedown", (event) => {
+      event.preventDefault(); // keep focus in the To box
+      pickSuggestion(email);
+    });
+    item.addEventListener("mousemove", () => highlightSuggestion(i));
+    suggestBox.append(item);
+  });
+  suggestBox.classList.remove("hidden");
+  toInput.setAttribute("aria-expanded", "true");
+}
+
+function highlightSuggestion(i) {
+  const items = [...suggestBox.children];
+  suggestIndex = items.length ? (i + items.length) % items.length : -1;
+  items.forEach((item, n) => item.classList.toggle("active", n === suggestIndex));
+}
+
+function pickSuggestion(email) {
+  const value = toInput.value;
+  const token = currentToken();
+  const before = value.slice(0, token.start).replace(/\s*$/, "");
+  const rest = value.slice(token.end).replace(/^[^,;]*[,;]?\s*/, "");
+  const text = (before ? before + " " : "") + email + ", " + rest;
+  toInput.value = text;
+  const caret = (before ? before.length + 1 : 0) + email.length + 2;
+  toInput.setSelectionRange(caret, caret);
+  hideSuggestions();
+  toInput.dispatchEvent(new Event("input", { bubbles: true }));
+  showSuggestions(); // offer the next person straight away
+}
+
+toInput.addEventListener("input", (event) => {
+  if (event.isTrusted) showSuggestions();
+});
+toInput.addEventListener("focus", showSuggestions);
+toInput.addEventListener("blur", () => setTimeout(hideSuggestions, 100));
+toInput.addEventListener("keydown", (event) => {
+  if (suggestBox.classList.contains("hidden")) return;
+  const items = suggestBox.children;
+  if (event.key === "ArrowDown") { event.preventDefault(); highlightSuggestion(suggestIndex + 1); }
+  else if (event.key === "ArrowUp") { event.preventDefault(); highlightSuggestion(suggestIndex - 1); }
+  else if ((event.key === "Enter" || event.key === "Tab") && suggestIndex >= 0) {
+    event.preventDefault();
+    pickSuggestion(items[suggestIndex].dataset.email);
+  } else if (event.key === "Escape") { event.stopPropagation(); hideSuggestions(); }
+});
 
 function parseRecipients(text) {
   return text.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
