@@ -453,6 +453,7 @@ function showReader() {
 }
 
 function closeReader({ fromHistory = false } = {}) {
+  clearInterval(dialTimer);
   const mail = $("mail");
   const wasReading = mail.classList.contains("reading");
   state.current = null;
@@ -501,6 +502,7 @@ function htmlBody(html) {
   };
   frame.addEventListener("load", () => {
     fit();
+    try { guardDocument(frame.contentDocument); } catch (_) { /* ignore */ }
     try {
       frame.contentDocument.querySelectorAll("img").forEach((img) => {
         if (!img.complete) img.addEventListener("load", fit);
@@ -593,6 +595,11 @@ function renderReader(m) {
     const forward = el("button", "btn");
     forward.type = "button";
     forward.append(icon("forward", "i-sm"), el("span", null, "Forward"));
+    if (m.can_forward === false) {
+      forward.classList.add("is-locked");
+      forward.setAttribute("aria-disabled", "true");
+      forward.title = "Forwarding has been disabled by the mail owner.";
+    }
     forward.addEventListener("click", () => forwardMessage(m));
     bar.append(reply);
     if (canReplyAll(m)) {
@@ -607,6 +614,8 @@ function renderReader(m) {
   }
 
   updateToolbar(m);
+  protectMail(article, body);
+  updateDialButtons(m);
 }
 
 function setIcon(button, name) {
@@ -632,6 +641,8 @@ function updateToolbar(m) {
   $("delete-forever-btn").classList.toggle("hidden", !inTrash);
   $("reply-btn-top").classList.toggle("hidden", inTrash);
   $("forward-btn-top").classList.toggle("hidden", inTrash);
+  $("forward-btn-top").classList.toggle("is-locked", m.can_forward === false);
+  $("forward-btn-top").dataset.tip = m.can_forward === false ? "Forwarding disabled by the owner" : "Forward";
   $("reply-all-btn-top").classList.toggle("hidden", !canReplyAll(m));
 }
 
@@ -652,6 +663,7 @@ async function toolbarAction(action, successText) {
 
 // ---------- Reply and forward (prefill compose; sending uses the normal send) ----------
 function quoteBody(m) {
+  if (m.can_forward === false) return "";
   const lines = (m.body || "").split("\n").map((line) => "> " + line).join("\n");
   return "\n\nOn " + formatFullDate(m.created_at) + ", " + m.from + " wrote:\n" + lines;
 }
@@ -696,6 +708,10 @@ function replyAll(m) {
 }
 
 function forwardMessage(m) {
+  if (m.can_forward === false) {
+    toast("Forwarding has been disabled by the mail owner.", "error");
+    return;
+  }
   const header = "\n\n---------- Forwarded message ----------\n" +
     "From: " + m.from + "\n" +
     "Date: " + formatFullDate(m.created_at) + "\n" +
@@ -706,6 +722,7 @@ function forwardMessage(m) {
     subject: withPrefix("Fwd", m.subject),
     body: header,
     title: "Forward",
+    forwardOf: m.id,
     notice: m.attachments && m.attachments.length
       ? "Attachments from the original message aren't included when forwarding. Attach them again if needed."
       : "",
@@ -748,6 +765,8 @@ function openCompose(prefill = {}) {
   composeForm.elements.to.value = (prefill.to || []).join(", ");
   composeForm.elements.subject.value = prefill.subject || "";
   composeForm.elements.body.value = prefill.body || "";
+  $("compose-allow-forward").checked = true;
+  state.forwardOf = prefill.forwardOf || null;
   $("compose-title").textContent = prefill.title || (state.draftId ? "Edit draft" : "New message");
   if (prefill.notice) showComposeMessage(prefill.notice, "info");
   else hideComposeMessage();
@@ -960,6 +979,8 @@ composeForm.addEventListener("submit", async (event) => {
   formData.append("subject", composeForm.elements.subject.value.trim());
   formData.append("body", composeForm.elements.body.value);
   if (state.draftId) formData.append("draft_id", state.draftId);
+  formData.append("allow_forward", $("compose-allow-forward").checked ? "1" : "0");
+  if (state.forwardOf) formData.append("forward_of", state.forwardOf);
   state.files.forEach((file) => formData.append("attachments", file));
 
   const sendButton = $("send-btn");
@@ -1056,6 +1077,153 @@ $("delete-forever-btn").addEventListener("click", async () => {
 $("reply-btn-top").addEventListener("click", () => state.current && replyTo(state.current));
 $("reply-all-btn-top").addEventListener("click", () => state.current && replyAll(state.current));
 $("forward-btn-top").addEventListener("click", () => state.current && forwardMessage(state.current));
+
+$("call-btn").addEventListener("click", () => dial("audio"));
+$("video-call-btn").addEventListener("click", () => dial("video"));
+
+// ---------- Calls: dial buttons (blue when the other person is online) ----------
+let dialTimer = null;
+const SYSTEM_SENDERS = /^(calls|alerts|no-?reply)@/i;
+
+function callTarget(m) {
+  if (!m) return null;
+  const email = isOutgoing(m) ? (m.to || [])[0] : m.from;
+  if (!email || SYSTEM_SENDERS.test(email)) return null;
+  return email;
+}
+
+function setDialState(canCall, tip) {
+  ["call-btn", "video-call-btn"].forEach((id) => {
+    const b = $(id);
+    b.disabled = !canCall;
+    b.dataset.tip = tip || (id === "call-btn" ? "Voice call" : "Video call");
+  });
+}
+
+function updateDialButtons(m) {
+  clearInterval(dialTimer);
+  const email = callTarget(m);
+  const show = !!email && m.folder !== "trash" && typeof Calls !== "undefined";
+  $("call-btn").classList.toggle("hidden", !show);
+  $("video-call-btn").classList.toggle("hidden", !show);
+  if (!show) return;
+  setDialState(false, "Checking if " + email + " is online…");
+  const check = async () => {
+    const p = await Calls.presence(email);
+    if (!state.current || callTarget(state.current) !== email) return;
+    setDialState(p.can_call, p.can_call ? null : (p.reason || email + " is offline"));
+  };
+  check();
+  dialTimer = setInterval(check, 8000);
+}
+
+function dial(kind) {
+  const email = callTarget(state.current);
+  if (email) Calls.start(email, kind);
+}
+
+// ---------- Mail protection ----------
+// 1) Copying text from an email gives only stars (*****).
+// 2) A light watermark with your address + time is drawn over the email.
+// 3) Print Screen / screen-capture shortcuts are noticed: the email is blurred
+//    and the person who wrote it gets a "screenshot alert" email.
+//    (Browsers can't detect every screenshot tool or a phone camera — the
+//    watermark shows who took a picture if it is ever shared.)
+function starsFor(text) {
+  const n = Math.min(Math.max((text || "").length, 8), 2000);
+  return "*".repeat(n);
+}
+
+function guardDocument(doc) {
+  if (!doc || doc.__mailGuard) return;
+  doc.__mailGuard = true;
+  const onCopy = (event) => {
+    const target = event.target;
+    if (target && target.closest && target.closest("input, textarea, [contenteditable='true']")) return; // your own typing
+    const sel = doc.getSelection ? doc.getSelection() : null;
+    const text = sel ? sel.toString() : "";
+    event.preventDefault();
+    if (event.clipboardData) event.clipboardData.setData("text/plain", starsFor(text));
+    if (text) toast("Copying email text is not allowed.");
+  };
+  doc.addEventListener("copy", onCopy);
+  doc.addEventListener("cut", onCopy);
+  doc.addEventListener("dragstart", (event) => {
+    if (!(event.target.closest && event.target.closest("input, textarea"))) event.preventDefault();
+  });
+  doc.addEventListener("keyup", onCaptureKey);
+  doc.addEventListener("keydown", onCaptureKeyDown);
+}
+
+function protectMail(article) {
+  const me = Shell.user && Shell.user.email;
+  if (!me) return;
+  const mark = el("div", "mail-watermark");
+  mark.setAttribute("aria-hidden", "true");
+  const stamp = me + " · " + new Date().toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  for (let i = 0; i < 40; i++) mark.append(el("span", null, stamp));
+  article.append(mark);
+}
+
+let captureKeyAt = 0;
+function reportScreenshot(method) {
+  const m = state.current;
+  blurMail(1800);
+  // Replace the picture in the clipboard (Print Screen copies the screen)
+  try { navigator.clipboard && navigator.clipboard.writeText("Screenshots of emails are not allowed on MailSpace."); } catch (_) { /* ignore */ }
+  if (!m) return;
+  toast("Screenshot detected. The sender has been notified.", "error");
+  api("/api/messages/" + m.id + "/screenshot", { method: "POST", body: { method } }).catch(() => {});
+}
+
+function onCaptureKey(event) {
+  if (event.key === "PrintScreen" || event.code === "PrintScreen") reportScreenshot("printscreen");
+}
+function onCaptureKeyDown(event) {
+  // Windows key / Win+Shift+S (Snipping Tool), Mac Cmd+Shift+3/4/5
+  if (event.key === "Meta" || event.key === "OS" || (event.metaKey && event.shiftKey)) {
+    captureKeyAt = Date.now();
+    blurMail(1500);
+  }
+  if (event.metaKey && event.shiftKey && ["3", "4", "5", "s", "S"].includes(event.key)) {
+    reportScreenshot("web-capture");
+  }
+  if ((event.ctrlKey || event.metaKey) && (event.key === "p" || event.key === "P")) {
+    event.preventDefault();
+    toast("Printing emails is not allowed.");
+  }
+}
+
+let blurTimer = null;
+function blurMail(ms) {
+  document.body.classList.add("mail-guard-blur");
+  clearTimeout(blurTimer);
+  if (ms) blurTimer = setTimeout(() => { if (document.hasFocus()) document.body.classList.remove("mail-guard-blur"); }, ms);
+}
+
+(function setUpMailGuard() {
+  const notice = el("div", "guard-notice");
+  notice.append(icon("eye-off", "i-sm"), el("span", null, "Email hidden — click here to show it again"));
+  document.body.append(notice);
+  guardDocument(document);
+  // Leaving the window (snipping tool, another app) hides the email
+  window.addEventListener("blur", () => {
+    // Clicking inside an email's design (iframe) also "blurs" the window — that's fine
+    setTimeout(() => {
+      if (document.activeElement && document.activeElement.tagName === "IFRAME" && document.hasFocus()) return;
+      blurMail(0);
+      // A capture shortcut was pressed just before → most likely a screenshot tool
+      if (Date.now() - captureKeyAt < 2500 && state.current) reportScreenshot("web-capture");
+    }, 0);
+  });
+  window.addEventListener("focus", () => document.body.classList.remove("mail-guard-blur"));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) blurMail(0);
+  });
+  document.addEventListener("contextmenu", (event) => {
+    if (event.target.closest && event.target.closest(".read-article, .message-list")) event.preventDefault();
+  });
+})();
 
 // ---------- Search, refresh, pages ----------
 function setSearch(q) {

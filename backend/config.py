@@ -20,6 +20,7 @@ class Config:
     MAIL_DOMAIN = os.getenv("MAIL_DOMAIN", "mailspace.local").lower()
     RESEND_API_KEY = os.getenv("RESEND_API_KEY")            # for emails to Gmail, Outlook, ...
     INBOUND_SECRET = os.getenv("INBOUND_SECRET")            # protects the inbound webhook URL
+    CALL_TIMEZONE = os.getenv("CALL_TIMEZONE", "Asia/Karachi")  # times shown in call emails
     MAX_EXTERNAL_ATTACHMENTS = 25 * 1024 * 1024             # 25 MB total, like Gmail
 
     FRONTEND_DIR = BASE_DIR / "frontend"

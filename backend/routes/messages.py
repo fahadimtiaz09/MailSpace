@@ -242,6 +242,9 @@ def get_message(entry_id):
     item = list_item(entry)
     item["body"] = message["body"]
     item["body_html"] = message.get("body_html")  # email design (already cleaned), or None
+    # Forwarding: the person who wrote the email decides (compose switch)
+    item["allow_forward"] = message.get("allow_forward", True)
+    item["can_forward"] = item["allow_forward"] or message.get("sender_id") == g.user["_id"]
     item["attachments"] = [
         {"id": a["id"], "filename": a["filename"], "size": a["size"]}
         for a in message.get("attachments", [])
@@ -384,6 +387,17 @@ def send_message():
     if invalid:
         return error(f'"{invalid[0]}" is not a valid email address.')
 
+    # "Allow forwarding" switch in compose (on unless the sender turned it off)
+    allow_forward = request.form.get("allow_forward", "1") not in ("0", "false", "off")
+
+    # Forwarding someone else's email: only if its owner allowed it
+    forward_of = request.form.get("forward_of")
+    if forward_of:
+        original_entry = find_entry(forward_of)
+        original = messages.find_one({"_id": original_entry["message_id"]}) if original_entry else None
+        if original and original.get("allow_forward", True) is False and original.get("sender_id") != me["_id"]:
+            return error("Forwarding has been disabled by the mail owner.", 403)
+
     found, external, problem = resolve_recipients(to_emails)
     if problem:
         return error(problem)
@@ -432,6 +446,7 @@ def send_message():
             "external_id": external_id,
             "subject": subject, "body": body, "attachments": attachments,
             "is_draft": False, "created_at": now,
+            "allow_forward": allow_forward,
             "flagged": bool(flagged_words),
             "flag_words": flagged_words,
         }).inserted_id
@@ -460,3 +475,70 @@ def send_message():
     if external:
         return jsonify({"message": "Message sent. The email provider accepted it for delivery."}), 201
     return jsonify({"message": "Message sent"}), 201
+
+# ---------- Screenshot alert ----------
+SCREENSHOT_HOW = {
+    "printscreen": "pressed the Print Screen key on the website",
+    "web-capture": "may have used a screen-capture tool on the website",
+    "android": "took a screenshot in the Android app",
+    "ios": "took a screenshot in the iPhone app",
+}
+
+
+@messages_bp.post("/messages/<entry_id>/screenshot")
+@login_required
+def report_screenshot(entry_id):
+    """The website / app noticed a screenshot -> email the person who wrote it."""
+    me = g.user
+    entry = find_entry(entry_id)
+    message = messages.find_one({"_id": entry["message_id"]}) if entry else None
+    if message is None:
+        return error("Message not found.", 404)
+
+    owner_id = message.get("sender_id")
+    if owner_id is None or owner_id == me["_id"]:
+        return jsonify({"ok": True, "sent": False})  # outside sender, or my own email
+
+    now = now_utc()
+    last = entry.get("screenshot_alert_at")
+    if last and (now - last).total_seconds() < 60:
+        return jsonify({"ok": True, "sent": False})  # one alert per minute is enough
+    mailboxes.update_one({"_id": entry["_id"]}, {"$set": {"screenshot_alert_at": now}})
+
+    data = request.get_json(silent=True) or {}
+    how = SCREENSHOT_HOW.get(str(data.get("method", "")), "took a screenshot")
+    try:
+        from routes.calls import local_time
+        when = local_time(now)
+    except Exception:
+        when = now.isoformat()
+
+    original_subject = message.get("subject") or "(no subject)"
+    subject = f"Screenshot alert: {me['email']} captured \u201c{original_subject}\u201d"[:200]
+    body = "\n".join([
+        "Someone took a screenshot of your email.",
+        "",
+        f"Who:      {me['email']}",
+        f"Email:    {original_subject}",
+        f"When:     {when}",
+        f"How:      {how}",
+        "",
+        "This email was created automatically by MailSpace.",
+    ])
+    alert_from = f"alerts@{Config.MAIL_DOMAIN}"
+    alert_id = messages.insert_one({
+        "sender_id": None, "sender_email": alert_from,
+        "to_emails": [message.get("sender_email", "")], "recipient_ids": [owner_id],
+        "subject": subject, "body": body, "attachments": [],
+        "is_draft": False, "created_at": now, "screenshot_of": message["_id"],
+        "flagged": False, "flag_words": [],
+    }).inserted_id
+    mailboxes.insert_one({
+        "user_id": owner_id, "message_id": alert_id, "folder": "inbox",
+        "is_read": False, "is_starred": False,
+        "from_email": alert_from, "to_emails": [message.get("sender_email", "")],
+        "subject": subject, "snippet": make_snippet(body),
+        "search_text": make_search_text(alert_from, [me["email"]], subject, body),
+        "has_attachments": False, "created_at": now,
+    })
+    return jsonify({"ok": True, "sent": True})
