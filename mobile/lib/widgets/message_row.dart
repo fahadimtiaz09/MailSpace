@@ -26,7 +26,9 @@ class MessageRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = message;
     final unread = !m.isRead;
-    final who = showRecipient ? 'To: ${m.to.isEmpty ? '(no recipient)' : m.to.join(', ')}' : m.from;
+    final who = showRecipient
+        ? 'To: ${m.to.isEmpty ? '(no recipient)' : m.to.join(', ')}'
+        : (m.fromName ?? m.from); // real name ("Fahad Imtiaz") when we know it
     final weight = unread ? FontWeight.w700 : FontWeight.w400;
 
     return Material(
@@ -50,7 +52,9 @@ class MessageRow extends StatelessWidget {
               ),
               Avatar(
                 seed: showRecipient && m.to.isNotEmpty ? m.to.first : m.from,
-                text: initialsOf(showRecipient && m.to.isNotEmpty ? m.to.first : m.from),
+                text: showRecipient || m.fromName == null
+                    ? initialsOf(showRecipient && m.to.isNotEmpty ? m.to.first : m.from)
+                    : initialsOfName(m.fromName!),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -109,6 +113,14 @@ class MessageRow extends StatelessWidget {
   }
 
   /// "sarah@domailit.com" → "SA"
+  /// "Fahad Imtiaz" → "FI"
+  static String initialsOfName(String name) {
+    final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return '?';
+    if (words.length == 1) return words[0].substring(0, words[0].length >= 2 ? 2 : 1).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+
   static String initialsOf(String address) {
     final name = address.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
     if (name.isEmpty) return '?';

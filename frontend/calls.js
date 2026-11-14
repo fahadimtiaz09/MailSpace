@@ -118,7 +118,7 @@ const Calls = (() => {
 
     const info = el("div", "call-info");
     const who = avatar(call.other, "xl");
-    const name = el("div", "call-name", nameFromEmail(call.other));
+    const name = el("div", "call-name", People.nameOf(call.other) || nameFromEmail(call.other));
     const address = el("div", "call-address", call.other);
     const status = el("div", "call-status", "");
     info.append(who, name, address, status);

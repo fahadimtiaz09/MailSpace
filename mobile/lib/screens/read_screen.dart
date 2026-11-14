@@ -35,6 +35,7 @@ import '../services/call_service.dart';
 import '../services/screen_guard.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
+import '../widgets/message_row.dart';
 
 class ReadScreen extends StatefulWidget {
   const ReadScreen({super.key});
@@ -336,16 +337,24 @@ class _ReadScreenState extends State<ReadScreen> {
         // sender row
         Row(
           children: [
-            Avatar(seed: m.from, text: _initials(m.from), radius: 21),
+            Avatar(
+                seed: m.from,
+                text: m.fromName == null ? _initials(m.from) : MessageRow.initialsOfName(m.fromName!),
+                radius: 21),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(m.from,
+                  Text(m.fromName ?? m.from,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  if (m.fromName != null)
+                    Text(m.from,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: AppColors.muted)),
                   Text('to ${m.to.join(', ')}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

@@ -51,6 +51,9 @@ def public_user(user):
         "expires_at": to_iso(user.get("expires_at")),
         "recovery_email": mask_email(user.get("recovery_email")),
         "security_question": user.get("security_question") or None,
+        "display_name": user.get("display_name") or None,
+        "avatar": (f"/api/avatar/{user['_id']}?v={user.get('avatar_version', 0)}"
+                   if user.get("avatar_file_id") else None),
     }
 
 

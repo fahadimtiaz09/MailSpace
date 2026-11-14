@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../services/people.dart';
 import '../theme.dart';
 
 /// The DoMailit logo: a blue "D" with a white envelope fold, and a navy "D"
@@ -98,21 +99,59 @@ class BrandLockup extends StatelessWidget {
       );
 }
 
-/// Round avatar with initials. Every address gets its own soft colour,
-/// exactly like the website.
-class Avatar extends StatelessWidget {
-  final String seed;   // email address (decides the colour)
+/// Round avatar: the person's profile picture if they are a DoMailit user
+/// with one, otherwise coloured initials (every address its own colour,
+/// exactly like the website). [seed] is the email address.
+class Avatar extends StatefulWidget {
+  final String seed;   // email address (decides the colour, finds the picture)
   final String text;   // initials
   final double radius;
   const Avatar({super.key, required this.seed, required this.text, this.radius = 20});
 
   @override
+  State<Avatar> createState() => _AvatarState();
+}
+
+class _AvatarState extends State<Avatar> {
+  @override
+  void initState() {
+    super.initState();
+    People.instance.addListener(_changed);
+    People.instance.want(widget.seed);
+  }
+
+  @override
+  void didUpdateWidget(Avatar old) {
+    super.didUpdateWidget(old);
+    if (old.seed != widget.seed) People.instance.want(widget.seed);
+  }
+
+  @override
+  void dispose() {
+    People.instance.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final (bg, fg) = AppColors.avatar(seed);
+    final photo = People.instance.photoOf(widget.seed);
+    if (photo != null) {
+      return CircleAvatar(
+        radius: widget.radius,
+        backgroundColor: AppColors.surface2,
+        backgroundImage: MemoryImage(photo),
+      );
+    }
+    final (bg, fg) = AppColors.avatar(widget.seed);
     return CircleAvatar(
-      radius: radius,
+      radius: widget.radius,
       backgroundColor: bg,
-      child: Text(text, style: TextStyle(color: fg, fontSize: radius * .62, fontWeight: FontWeight.w700)),
+      child: Text(widget.text,
+          style: TextStyle(color: fg, fontSize: widget.radius * .62, fontWeight: FontWeight.w700)),
     );
   }
 }

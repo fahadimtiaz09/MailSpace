@@ -209,7 +209,7 @@ def send_call_log(call):
         mailboxes.insert_one({
             "user_id": user_id, "message_id": message_id, "folder": "inbox",
             "is_read": False, "is_starred": False,
-            "from_email": system_from, "to_emails": [caller, callee],
+            "from_email": system_from, "from_name": "DoMailit Calls", "to_emails": [caller, callee],
             "subject": user_subject, "snippet": " ".join(body.split())[:120],
             "search_text": (system_from + " " + caller + " " + callee + " " + user_subject + " call").lower(),
             "has_attachments": False, "created_at": now,

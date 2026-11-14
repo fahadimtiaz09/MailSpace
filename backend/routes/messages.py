@@ -84,6 +84,7 @@ def list_item(entry):
         "is_read": entry["is_read"],
         "is_starred": entry["is_starred"],
         "has_attachments": entry["has_attachments"],
+        "from_name": entry.get("from_name"),   # "Fahad Imtiaz" (None = only the address is known)
     }
 
 
@@ -429,7 +430,7 @@ def send_message():
             files_for_provider = [
                 (a["filename"], attachment_files.get(a["file_id"]).read()) for a in attachments
             ]
-            external_id = send_external(from_email, me["username"], external, subject, body, files_for_provider)
+            external_id = send_external(from_email, me.get("display_name") or me["username"], external, subject, body, files_for_provider)
         except ExternalSendError as exc:
             delete_files(attachments)
             return error(f"Could not send to {', '.join(external)}: {exc}", 502)
@@ -453,6 +454,7 @@ def send_message():
 
         shared = {
             "message_id": message_id, "from_email": from_email, "to_emails": to_emails,
+            "from_name": me.get("display_name") or None,
             "subject": subject, "snippet": make_snippet(body),
             "search_text": make_search_text(from_email, to_emails, subject, body),
             "has_attachments": bool(attachments), "is_starred": False, "created_at": now,
@@ -536,7 +538,7 @@ def report_screenshot(entry_id):
     mailboxes.insert_one({
         "user_id": owner_id, "message_id": alert_id, "folder": "inbox",
         "is_read": False, "is_starred": False,
-        "from_email": alert_from, "to_emails": [message.get("sender_email", "")],
+        "from_email": alert_from, "from_name": "DoMailit Alerts", "to_emails": [message.get("sender_email", "")],
         "subject": subject, "snippet": make_snippet(body),
         "search_text": make_search_text(alert_from, [me["email"]], subject, body),
         "has_attachments": False, "created_at": now,

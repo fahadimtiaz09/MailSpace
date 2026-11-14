@@ -2,6 +2,8 @@
 Resend sends an 'email.received' webhook; we fetch the body and attachments and deliver it."""
 import base64
 import re
+from email.header import decode_header, make_header
+from email.utils import parseaddr
 import uuid
 
 from flask import Blueprint, jsonify, request
@@ -77,6 +79,30 @@ def store_inbound_attachments(email_id, html=""):
     return saved, inline_map
 
 
+def sender_of(full, data):
+    """(address, name) of the sender. Resend's "from" is only the address; the
+    name ("Fahad Imtiaz") is in the original From header: "Fahad Imtiaz <x@gmail.com>"."""
+    headers = full.get("headers") or {}
+    raw = ""
+    if isinstance(headers, dict):
+        raw = headers.get("from") or headers.get("From") or ""
+    elif isinstance(headers, list):  # [{"name": "From", "value": "..."}]
+        raw = next((h.get("value", "") for h in headers
+                    if isinstance(h, dict) and str(h.get("name", "")).lower() == "from"), "")
+    name, address = parseaddr(str(raw))
+    if not address:  # no header: use the plain field (may itself be "Name <x@y>")
+        name, address = parseaddr(str(full.get("from") or data.get("from") or ""))
+    address = address.strip().lower()
+    try:
+        name = str(make_header(decode_header(name)))  # =?UTF-8?...?= → normal text
+    except Exception:
+        pass
+    name = " ".join(name.replace('"', "").split())[:80]
+    if not name or name.lower() == address:
+        name = None
+    return address, name
+
+
 @inbound_bp.post("/<secret>")
 def receive(secret):
     # Only Resend knows this secret URL
@@ -93,7 +119,7 @@ def receive(secret):
         return jsonify({"ok": True})
 
     full = fetch_received_email(email_id) or {}
-    from_email = (full.get("from") or data.get("from") or "").strip().lower()
+    from_email, from_name = sender_of(full, data)
     to_list = [str(t).strip().lower() for t in (full.get("to") or data.get("to") or [])]
     subject = (full.get("subject") or data.get("subject") or "")[:200]
 
@@ -119,7 +145,7 @@ def receive(secret):
     now = now_utc()
     flag_words = check_message(subject, body)
     message_id = messages.insert_one({
-        "sender_id": None, "sender_email": from_email,
+        "sender_id": None, "sender_email": from_email, "sender_name": from_name,
         "to_emails": to_list, "recipient_ids": list(recipients.keys()),
         "subject": subject, "body": body, "body_html": body_html,
         "attachments": attachments,
@@ -128,7 +154,8 @@ def receive(secret):
     }).inserted_id
 
     shared = {
-        "message_id": message_id, "from_email": from_email, "to_emails": to_list,
+        "message_id": message_id, "from_email": from_email, "from_name": from_name,
+        "to_emails": to_list,
         "subject": subject, "snippet": make_snippet(body),
         "search_text": (from_email + " " + " ".join(to_list) + " " + subject + " " + body).lower()[:5000],
         "has_attachments": bool(attachments), "is_starred": False, "created_at": now,

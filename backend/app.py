@@ -9,6 +9,7 @@ from config import Config
 from database import init_indexes, ping
 from routes.auth import auth_bp
 from routes.calls import calls_bp
+from routes.profile import profile_bp
 from routes.domains import domains_bp
 from routes.admin import admin_bp
 from routes.inbound import inbound_bp
@@ -41,6 +42,7 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(inbound_bp)
     app.register_blueprint(calls_bp)
+    app.register_blueprint(profile_bp)
 
     @app.route("/")
     def home():

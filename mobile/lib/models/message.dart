@@ -21,6 +21,7 @@ class Message {
   final String id;
   final String folder;          // inbox, sent, drafts, starred, spam, trash
   final String from;
+  final String? fromName;        // "Fahad Imtiaz" (null = only the address is known)
   final List<String> to;
   final String subject;
   final String snippet;         // short preview for the list
@@ -39,6 +40,7 @@ class Message {
     required this.id,
     required this.folder,
     required this.from,
+    this.fromName,
     required this.to,
     required this.subject,
     required this.snippet,
@@ -58,6 +60,7 @@ class Message {
         id: id,
         folder: folder,
         from: from,
+        fromName: fromName,
         to: to,
         subject: subject,
         snippet: snippet,
@@ -77,6 +80,7 @@ class Message {
       id: json['id'] as String,
       folder: json['folder'] as String? ?? 'inbox',
       from: json['from'] as String? ?? '',
+      fromName: json['from_name'] as String?,
       to: rawTo is List ? rawTo.map((e) => e.toString()).toList() : [if (rawTo != null) rawTo.toString()],
       subject: json['subject'] as String? ?? '',
       snippet: json['snippet'] as String? ?? '',

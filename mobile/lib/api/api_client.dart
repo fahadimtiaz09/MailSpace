@@ -10,6 +10,8 @@
 //   3. A browser does this by itself. In the app we save cookies on the phone
 //      (PersistCookieJar) and add the header ourselves (the interceptor below).
 
+import 'dart:typed_data';
+
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
@@ -303,6 +305,40 @@ class ApiClient {
     }
     final data = await _post('/messages/send', form);
     return (data is Map && data['message'] is String) ? data['message'] as String : 'Message sent';
+  }
+
+  // ---------------- Profile: name + picture ----------------
+
+  Future<void> updateDisplayName(String name) async {
+    await _patch('/auth/profile', {'display_name': name});
+  }
+
+  /// [png] = an already shrunk square picture.
+  Future<void> uploadAvatar(Uint8List png) async {
+    final form = FormData.fromMap({'avatar': MultipartFile.fromBytes(png, filename: 'avatar.png')});
+    await _post('/auth/avatar', form);
+  }
+
+  Future<void> deleteAvatar() async {
+    await _delete('/auth/avatar');
+  }
+
+  /// Names + picture links for DoMailit addresses (outside addresses are left out).
+  Future<Map<String, Map<String, dynamic>>> people(List<String> emails) async {
+    final data = await _get('/people', query: {'emails': emails.join(',')});
+    final found = (data['people'] as Map?) ?? {};
+    return found.map((k, v) => MapEntry(k.toString(), Map<String, dynamic>.from(v as Map)));
+  }
+
+  /// Downloads a profile picture ("/api/avatar/…" from the server).
+  Future<Uint8List?> avatarBytes(String url) async {
+    final path = url.startsWith('/api/') ? url.substring(4) : url;
+    try {
+      final res = await _dio.get<List<int>>(path, options: Options(responseType: ResponseType.bytes));
+      return res.data == null ? null : Uint8List.fromList(res.data!);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Tell the person who wrote this email that we took a screenshot of it.

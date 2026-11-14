@@ -254,10 +254,12 @@ const Shell = (() => {
   }
 
     function fillUser(u) {
+    user = u;
+    People.remember(u.email, { name: u.display_name, avatar: u.avatar });
     const btn = document.querySelector(".account-btn");
     btn.replaceChildren(avatar(u.email, "sm"), icon("chevron-down", "i-sm"));
     const head = document.querySelector(".menu-head");
-    head.replaceChildren(el("strong", null, u.username), el("span", null, u.email));
+    head.replaceChildren(el("strong", null, u.display_name || u.username), el("span", null, u.email));
     if (u.role === "admin") {
       const link = document.getElementById("nav-admin");
       if (link) link.classList.remove("hidden");
@@ -381,5 +383,5 @@ const Shell = (() => {
   buildSidebar();
   userReady.then(refreshCounts).catch(() => {});
 
-  return { userReady, refreshCounts, setActiveFolder, showBanner, closeSidebar, get user() { return user; } };
+  return { userReady, refreshCounts, setActiveFolder, showBanner, closeSidebar, refreshUser: fillUser, get user() { return user; } };
 })();

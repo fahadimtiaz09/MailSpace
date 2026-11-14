@@ -171,7 +171,7 @@ function renderRow(m) {
   const outgoing = isOutgoing(m);
   const who = outgoing
     ? (m.to && m.to.length ? "To: " + m.to.join(", ") : "(no recipients)")
-    : nameFromEmail(m.from);
+    : (m.from_name || nameFromEmail(m.from));
   const avatarEmail = outgoing ? (m.to && m.to[0]) || "?" : m.from;
   li.setAttribute("aria-label",
     (m.is_read ? "" : "Unread, ") + (outgoing ? who : "From " + m.from) + ", " + (m.subject || "no subject"));
@@ -219,7 +219,7 @@ function renderRow(m) {
     li.classList.toggle("picked", pick.checked);
     updateBulk();
   });
-  av.append(avatar(avatarEmail), pick);
+  av.append(avatar(avatarEmail, "", outgoing ? null : m.from_name), pick);
   if (pick.checked) li.classList.add("picked");
 
   li.append(av, top, lines, actions);
@@ -550,12 +550,12 @@ function renderReader(m) {
 
   const from = el("div", "read-from");
   const text = el("div", "read-from-text");
-  const name = el("div", "read-from-name", nameFromEmail(m.from));
+  const name = el("div", "read-from-name", m.from_name || nameFromEmail(m.from));
   name.append(el("span", null, "<" + m.from + ">"));
   text.append(name, el("div", "read-to", "To: " + ((m.to || []).join(", ") || "(no recipients)")));
   const date = el("time", "read-date", formatFullDate(m.created_at));
   date.dateTime = m.created_at;
-  from.append(avatar(m.from, "lg"), text, date);
+  from.append(avatar(m.from, "lg", m.from_name), text, date);
 
   // Email design (Gmail templates: logos, header, footer) is shown in a locked
   // frame; otherwise the plain text is shown.
