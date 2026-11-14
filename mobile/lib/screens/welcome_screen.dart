@@ -62,7 +62,7 @@ class WelcomeScreen extends StatelessWidget {
                               ),
                             ),
                             alignment: Alignment.center,
-                            child: const DoMailitLogo(width: 64, onDark: true),
+                            child: const DoMailitLogo(width: 76, onDark: true),
                           ),
                         ),
                         const SizedBox(height: 16),

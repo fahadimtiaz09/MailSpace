@@ -8,7 +8,7 @@ import '../theme.dart';
 
 /// The DoMailit logo: a blue "D" with a white envelope fold, and a navy "D"
 /// behind it like a stack of mail. Drawn in code (no image file needed).
-/// [onDark] = lighter back "D" for dark backgrounds.
+/// [onDark] = put it on a white tile (for dark backgrounds).
 class DoMailitLogo extends StatelessWidget {
   final double width;
   final bool? onDark;
@@ -16,17 +16,31 @@ class DoMailitLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final dark = onDark ?? AppColors.dark;
+    final mark = SizedBox(
+      width: dark ? width * .62 : width,
+      height: (dark ? width * .62 : width) * 46 / 42,
+      child: CustomPaint(painter: _LogoPainter()),
+    );
+    if (!dark) return mark;
+    // On dark backgrounds the logo sits on a white tile (like the app icon),
+    // so the navy "D" behind stays visible.
+    return Container(
       width: width,
-      height: width * 46 / 42,
-      child: CustomPaint(painter: _LogoPainter(onDark ?? AppColors.dark)),
+      height: width,
+      alignment: Alignment.center,
+      padding: EdgeInsets.only(right: width * .04),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(width * .24),
+      ),
+      child: mark,
     );
   }
 }
 
 class _LogoPainter extends CustomPainter {
-  final bool onDark;
-  _LogoPainter(this.onDark);
+  _LogoPainter();
 
   static const blue = Color(0xFF2563EB);
   static const navy = Color(0xFF0B1F3A);
@@ -43,7 +57,7 @@ class _LogoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // The SVG is 42 × 46 — scale it to the widget size.
     canvas.scale(size.width / 42, size.height / 46);
-    canvas.drawPath(_d(4.5, 4), Paint()..color = onDark ? const Color(0xFFBFD3FF) : navy);
+    canvas.drawPath(_d(4.5, 4), Paint()..color = navy);
     canvas.drawPath(_d(0, 0), Paint()..color = blue);
     canvas.drawPath(
       Path()
@@ -59,7 +73,7 @@ class _LogoPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LogoPainter old) => old.onDark != onDark;
+  bool shouldRepaint(_LogoPainter old) => false;
 }
 
 /// "Do" in blue + "Mailit" in navy (light blue + white on dark backgrounds).

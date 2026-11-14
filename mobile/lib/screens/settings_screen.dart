@@ -119,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final List<PlatformFile>? picked = await FilePicker.pickFiles(type: FileType.image);
     if (picked == null || picked.isEmpty) return;
     final f = picked.first;
-    final Uint8List? bytes = f.bytes ?? (f.path != null ? await File(f.path!).readAsBytes() : null);
+   final Uint8List? bytes = f.path != null ? await File(f.path!).readAsBytes() : null;
     if (bytes == null) return;
     _snack('Uploading…');
     try {
