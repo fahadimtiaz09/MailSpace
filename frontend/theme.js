@@ -78,5 +78,5 @@
   document.addEventListener("themechange", syncToggleLabels);
   document.addEventListener("DOMContentLoaded", syncToggleLabels);
 
-  window.MailSpaceTheme = { get: readPreference, set: setPreference };
+  window.DoMailitTheme = { get: readPreference, set: setPreference };
 })();

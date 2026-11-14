@@ -341,7 +341,7 @@ def save_draft():
     return jsonify({"draft_id": str(entry_id)}), 201
 # ---------- Sending ----------
 def resolve_recipients(to_emails):
-    """Sort addresses into MailSpace mailboxes and outside addresses.
+    """Sort addresses into DoMailit mailboxes and outside addresses.
     Returns (internal {email: user}, external [emails], None)
     or (None, None, "error message")."""
     internal, external = {}, []
@@ -349,7 +349,7 @@ def resolve_recipients(to_emails):
         domain = email.rsplit("@", 1)[1]
 
         if domain == Config.MAIL_DOMAIN:
-            # A normal MailSpace address, like nimra@fahadimtiaz.site
+            # A normal DoMailit address, like nimra@domailit.com
             user = users.find_one({"email": email, "status": "active"})
         elif domains.find_one({"name": domain, "status": "verified"}):
             # A custom address on a verified customer domain, like info@nimranoor.site
@@ -361,7 +361,7 @@ def resolve_recipients(to_emails):
             continue
 
         if user is None or is_expired(user):
-            return None, None, f"No MailSpace mailbox found for {email}."
+            return None, None, f"No DoMailit mailbox found for {email}."
         internal[email] = user
     return internal, external, None
 
@@ -434,7 +434,7 @@ def send_message():
             delete_files(attachments)
             return error(f"Could not send to {', '.join(external)}: {exc}", 502)
 
-    # 2) Save the message and give every MailSpace user their own copy
+    # 2) Save the message and give every DoMailit user their own copy
     now = now_utc()
     try:
         flagged_words = check_message(subject, body)
@@ -523,7 +523,7 @@ def report_screenshot(entry_id):
         f"When:     {when}",
         f"How:      {how}",
         "",
-        "This email was created automatically by MailSpace.",
+        "This email was created automatically by DoMailit.",
     ])
     alert_from = f"alerts@{Config.MAIL_DOMAIN}"
     alert_id = messages.insert_one({

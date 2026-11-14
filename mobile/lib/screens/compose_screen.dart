@@ -398,7 +398,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
                     focusNode: focusNode,
                     keyboardType: TextInputType.emailAddress,
                     autocorrect: false,
-                    decoration: _plain('name@gmail.com, friend@fahadimtiaz.site'),
+                    decoration: _plain('name@gmail.com, friend@domailit.com'),
                   ),
                   optionsViewBuilder: (context, onSelected, options) => Align(
                     alignment: Alignment.topLeft,

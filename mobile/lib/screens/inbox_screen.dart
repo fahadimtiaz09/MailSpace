@@ -392,7 +392,7 @@ class _FoldersDrawer extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(14, 4, 14, 14),
-              child: BrandLockup(logoWidth: 38, fontSize: 20),
+              child: BrandLockup(logoWidth: 28, fontSize: 20),
             ),
             // ① account header
             Padding(

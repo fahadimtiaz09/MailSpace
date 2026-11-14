@@ -27,7 +27,7 @@ function renderProfile(u) {
 
   const rows = document.getElementById("profile-rows");
   rows.replaceChildren(
-    settingRow("MailSpace address", u.email, "Your main address. It can't be changed."),
+    settingRow("DoMailit address", u.email, "Your main address. It can't be changed."),
     settingRow("Account type", ACCOUNT_LABELS[u.account_type] || u.account_type),
     settingRow("Member since", new Date(u.created_at).toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" }))
   );
@@ -55,12 +55,12 @@ async function renderFromAddresses() {
 
 // Theme radios
 function syncThemeRadios() {
-  const pref = window.MailSpaceTheme.get();
+  const pref = window.DoMailitTheme.get();
   document.querySelectorAll('input[name="theme"]').forEach((r) => (r.checked = r.value === pref));
 }
 document.querySelectorAll('input[name="theme"]').forEach((radio) => {
   radio.addEventListener("change", () => {
-    window.MailSpaceTheme.set(radio.value);
+    window.DoMailitTheme.set(radio.value);
     toast("Theme set to " + radio.value, "success");
   });
 });

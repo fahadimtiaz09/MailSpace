@@ -13,7 +13,7 @@ function pageHead() {
   const head = el("div", "page-head");
   const left = el("div");
   left.append(el("h1", null, "Admin console"));
-  left.append(el("p", null, "You are viewing data across all of MailSpace. Opening a message is recorded in the audit log."));
+  left.append(el("p", null, "You are viewing data across all of DoMailit. Opening a message is recorded in the audit log."));
   head.append(left);
   return head;
 }

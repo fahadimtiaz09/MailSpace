@@ -41,25 +41,25 @@ class _DomainDetailScreenState extends State<DomainDetailScreen> {
     'Namecheap': [
       'Open Domain List and click Manage next to your domain.',
       'Go to Advanced DNS and click Add New Record.',
-      'Choose TXT Record. In Host type _mailspace and paste the value.',
+      'Choose TXT Record. In Host type _domailit and paste the value.',
       'Click the green check mark to save.',
     ],
     'Cloudflare': [
       'Open your domain and go to DNS → Records.',
       'Click Add record and choose type TXT.',
-      'In Name type _mailspace and paste the value in Content.',
+      'In Name type _domailit and paste the value in Content.',
       'Click Save.',
     ],
     'Netlify DNS': [
       'Open Domains and choose your domain.',
       'In DNS settings click Add new record.',
-      'Choose TXT, type _mailspace as Name and paste the value.',
+      'Choose TXT, type _domailit as Name and paste the value.',
       'Click Save.',
     ],
     'Other': [
       'Open the DNS settings of your domain provider.',
       'Add a new TXT record.',
-      'Host / Name: _mailspace (some providers want _mailspace.yourdomain).',
+      'Host / Name: _domailit (some providers want _domailit.yourdomain).',
       'Value: paste the value, then save.',
     ],
   };

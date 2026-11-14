@@ -1,10 +1,10 @@
-// user.dart — one MailSpace account, as the server sends it from
+// user.dart — one DoMailit account, as the server sends it from
 // /api/auth/me, /api/auth/login and /api/auth/signup  (public_user() in auth.py).
 
 class User {
   final String id;
   final String username;
-  final String email;            // e.g. username@fahadimtiaz.site
+  final String email;            // e.g. username@domailit.com
   final String accountType;      // 'regular', 'temp15' or 'temp30'
   final String role;             // 'user' or 'admin'
   final DateTime? createdAt;

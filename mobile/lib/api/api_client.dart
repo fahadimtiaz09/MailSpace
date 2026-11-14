@@ -1,4 +1,4 @@
-// api_client.dart — the ONLY place in the app that talks to the MailSpace server.
+// api_client.dart — the ONLY place in the app that talks to the DoMailit server.
 //
 // Screens never use Dio directly. They call functions here, for example:
 //   final user = await ApiClient.instance.login('username', 'password');
@@ -71,7 +71,7 @@ class ApiClient {
   /// Use this everywhere: ApiClient.instance.login(...)
   static final ApiClient instance = ApiClient._();
 
-  static const String baseUrl = 'https://mail.fahadimtiaz.site/api';
+  static const String baseUrl = 'https://domailit.com/api';
 
   late final Dio _dio;
   CookieJar? _cookieJar;
@@ -183,7 +183,7 @@ class ApiClient {
   }
 
   /// [login] can be the username ("username") or the full address
-  /// ("username@fahadimtiaz.site"). The backend field is called "login".
+  /// ("username@domailit.com"). The backend field is called "login".
   Future<User> login(String login, String password) async {
     await _ensureCsrf();
     final data = await _post('/auth/login', {

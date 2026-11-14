@@ -27,7 +27,7 @@ def make_snippet(body):
 
 
 def find_user_for(address):
-    """Which MailSpace user owns this address (main address or custom domain), or None."""
+    """Which DoMailit user owns this address (main address or custom domain), or None."""
     address = address.strip().lower()
     domain = address.rsplit("@", 1)[-1]
     if domain == Config.MAIL_DOMAIN:
@@ -104,7 +104,7 @@ def receive(secret):
         body = re.sub(r"<[^>]+>", " ", no_css)  # strip HTML tags, keep the words
     body = body.strip()[:20000]
 
-    # Find the MailSpace recipients, without duplicates
+    # Find the DoMailit recipients, without duplicates
     recipients = {}
     for addr in to_list:
         u = find_user_for(addr)

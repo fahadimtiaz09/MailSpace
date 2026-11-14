@@ -17,7 +17,7 @@ import UIKit
 
     // Screen guard (lib/services/screen_guard.dart): tell Flutter when the
     // user takes a screenshot, so the email's sender can be notified.
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MailSpaceScreenGuard") {
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DoMailitScreenGuard") {
       let channel = FlutterMethodChannel(name: "mailspace/screen_guard", binaryMessenger: registrar.messenger())
       channel.setMethodCallHandler { call, result in
         // iPhones can't block screenshots; "secure" is accepted and ignored.

@@ -253,12 +253,12 @@ def forgot_send_code():
 
     body = (
         f"Hi {user['username']},\n\n"
-        f"Your MailSpace password reset code is: {code}\n\n"
+        f"Your DoMailit password reset code is: {code}\n\n"
         "It expires in 15 minutes. If you didn't ask for this, you can ignore this email."
     )
     try:
-        send_external(f"security@{Config.MAIL_DOMAIN}", "MailSpace Security",
-                      [user["recovery_email"]], "Your MailSpace reset code", body)
+        send_external(f"security@{Config.MAIL_DOMAIN}", "DoMailit Security",
+                      [user["recovery_email"]], "Your DoMailit reset code", body)
     except ExternalSendError as exc:
         return error(f"Could not send the code: {exc}", 502)
 

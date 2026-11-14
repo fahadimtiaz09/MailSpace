@@ -18,7 +18,7 @@ def fetch_received_email(email_id):
     req = urllib.request.Request(
         RECEIVING_URL + email_id,
         method="GET",
-        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "MailSpace/1.0"},
+        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "DoMailit/1.0"},
     )
     try:
         with urllib.request.urlopen(req, timeout=20) as response:
@@ -34,7 +34,7 @@ def fetch_received_attachments(email_id):
     req = urllib.request.Request(
         ATTACH_LIST_URL.format(email_id),
         method="GET",
-        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "MailSpace/1.0"},
+        headers={"Authorization": f"Bearer {Config.RESEND_API_KEY}", "User-Agent": "DoMailit/1.0"},
     )
     try:
         with urllib.request.urlopen(req, timeout=20) as response:
@@ -48,7 +48,7 @@ def fetch_received_attachments(email_id):
 
 def download_bytes(url, max_bytes):
     """Download a file from a URL, up to max_bytes + 1. Returns bytes or None."""
-    req = urllib.request.Request(url, headers={"User-Agent": "MailSpace/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "DoMailit/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=30) as response:
             return response.read(max_bytes + 1)
@@ -85,7 +85,7 @@ def send_external(from_email, from_name, to_emails, subject, body, attachments=N
         headers={
             "Authorization": f"Bearer {Config.RESEND_API_KEY}",  # the secret key from .env
             "Content-Type": "application/json",
-            "User-Agent": "MailSpace/1.0",
+            "User-Agent": "DoMailit/1.0",
         },
     )
     try:

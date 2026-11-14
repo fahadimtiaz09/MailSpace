@@ -1,6 +1,6 @@
 // welcome_screen.dart — wireframe A1 · Welcome
 // Looks like the website's sign-in pages: a deep-blue brand panel with the
-// MailSpace logo on top, then the message and two buttons.
+// DoMailit logo on top, then the message and two buttons.
 //   Create account → A2 Sign up   (route '/signup')
 //   Log in         → A3 Log in    (route '/login')
 
@@ -41,7 +41,7 @@ class WelcomeScreen extends StatelessWidget {
                         // Logo on the left, 🌙 / ☀️ on the right (like the website header)
                         const Row(
                           children: [
-                            BrandLockup(logoWidth: 48, fontSize: 26, onDark: true),
+                            BrandLockup(logoWidth: 34, fontSize: 26, onDark: true),
                             Spacer(),
                             ThemeButton(onDark: true),
                           ],
@@ -62,7 +62,7 @@ class WelcomeScreen extends StatelessWidget {
                               ),
                             ),
                             alignment: Alignment.center,
-                            child: const MailSpaceLogo(width: 88, onDark: true),
+                            child: const DoMailitLogo(width: 64, onDark: true),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -87,7 +87,7 @@ class WelcomeScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
                     child: Text(
-                      'Your own @fahadimtiaz.site address in seconds. '
+                      'Your own @domailit.com address in seconds. '
                       'Connect a domain whenever you\'re ready.',
                       style: TextStyle(fontSize: 15, height: 1.5, color: AppColors.muted),
                     ),

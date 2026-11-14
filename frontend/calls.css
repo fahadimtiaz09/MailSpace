@@ -102,7 +102,7 @@ body.mail-guard-blur .guard-notice { display: flex; }
 @media print {
   body * { visibility: hidden !important; }
   body::after {
-    content: "Printing emails is disabled on MailSpace.";
+    content: "Printing emails is disabled on DoMailit.";
     visibility: visible; position: fixed; top: 40px; left: 40px; font: 600 18px sans-serif; color: #000;
   }
 }

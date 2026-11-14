@@ -108,7 +108,7 @@ class MessageRow extends StatelessWidget {
     );
   }
 
-  /// "sarah@fahadimtiaz.site" → "SA"
+  /// "sarah@domailit.com" → "SA"
   static String initialsOf(String address) {
     final name = address.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
     if (name.isEmpty) return '?';

@@ -40,17 +40,17 @@ Future<void> main() async {
   await ApiClient.instance.init();
   await themeController.load(); // Light / Dark / System saved on the phone
   ScreenGuard.init();            // screenshot alerts from the phone
-  runApp(const MailSpaceApp());
+  runApp(const DoMailitApp());
 }
 
-class MailSpaceApp extends StatefulWidget {
-  const MailSpaceApp({super.key});
+class DoMailitApp extends StatefulWidget {
+  const DoMailitApp({super.key});
 
   @override
-  State<MailSpaceApp> createState() => _MailSpaceAppState();
+  State<DoMailitApp> createState() => _DoMailitAppState();
 }
 
-class _MailSpaceAppState extends State<MailSpaceApp> with WidgetsBindingObserver {
+class _DoMailitAppState extends State<DoMailitApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -92,7 +92,7 @@ class _MailSpaceAppState extends State<MailSpaceApp> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MailSpace',
+      title: 'DoMailit',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,           // lets an incoming call open on any screen
       scaffoldMessengerKey: messengerKey,
@@ -145,7 +145,7 @@ class _StartScreenState extends State<StartScreen> {
                 children: [
                   CircularProgressIndicator(color: AppColors.ink),
                   SizedBox(height: 16),
-                  Text('Connecting to MailSpace…', style: TextStyle(color: AppColors.muted)),
+                  Text('Connecting to DoMailit…', style: TextStyle(color: AppColors.muted)),
                 ],
               ),
             ),

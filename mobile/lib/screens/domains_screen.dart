@@ -119,7 +119,7 @@ class _DomainsScreenState extends State<DomainsScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                     children: [
-                      Text('Use your own domain with MailSpace. Each account can connect up to 3 domains.',
+                      Text('Use your own domain with DoMailit. Each account can connect up to 3 domains.',
                           style: TextStyle(fontSize: 13, color: AppColors.muted)),
                       const SizedBox(height: 14),
                       if (list.isEmpty) _emptyState(),
@@ -137,7 +137,7 @@ class _DomainsScreenState extends State<DomainsScreen> {
                             Expanded(
                               child: Text(
                                 'Mail sent to an address on your domain arrives in this inbox. '
-                                'Mail to Gmail, Outlook and other providers is sent from your main MailSpace address.',
+                                'Mail to Gmail, Outlook and other providers is sent from your main DoMailit address.',
                                 style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.muted),
                               ),
                             ),

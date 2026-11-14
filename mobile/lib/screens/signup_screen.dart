@@ -21,7 +21,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  static const mailDomain = 'fahadimtiaz.site';
+  static const mailDomain = 'domailit.com';
 
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -298,7 +298,7 @@ class _SignupScreenState extends State<SignupScreen> {
             const SizedBox(height: 14),
 
             Text(
-              'To keep MailSpace safe, messages and attachments may be reviewed by administrators '
+              'To keep DoMailit safe, messages and attachments may be reviewed by administrators '
               'for illegal or harmful content. By creating an account you agree to this.',
               style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
             ),

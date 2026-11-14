@@ -1,4 +1,4 @@
-"""app.py — starts the MailSpace server (locally and online)."""
+"""app.py — starts the DoMailit server (locally and online)."""
 from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -57,7 +57,7 @@ def create_app():
             database = "connected"
         except Exception:
             database = "not connected"
-        return jsonify({"status": "ok", "message": "MailSpace backend is running", "database": database})
+        return jsonify({"status": "ok", "message": "DoMailit backend is running", "database": database})
 
     @app.errorhandler(HTTPException)
     def handle_http_error(exc):

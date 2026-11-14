@@ -1,5 +1,5 @@
 // ============================================================
-// calls.js — voice & video calls between MailSpace addresses.
+// calls.js — voice & video calls between DoMailit addresses.
 // Loaded on every signed-in page (Inbox, Domains, Settings, Admin).
 //
 //  • Every few seconds the page tells the server "I'm online"

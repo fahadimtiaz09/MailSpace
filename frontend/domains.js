@@ -107,7 +107,7 @@ function errorState(message) {
 
 // ---------- List ----------
 function renderList() {
-  document.title = "My domains · MailSpace";
+  document.title = "My domains · DoMailit";
   const wrap = el("div");
 
   const head = el("div", "page-head");
@@ -195,7 +195,7 @@ function emptyDomains() {
   b.addEventListener("click", openWizard);
   box.append(
     art,
-    el("h3", null, "Use your own domain with MailSpace"),
+    el("h3", null, "Use your own domain with DoMailit"),
     el("p", null, "It takes about five minutes: enter your domain, add one TXT record where you bought it, and we'll confirm it's yours."),
     b
   );
@@ -342,7 +342,7 @@ function openWizard() {
     const orb = el("span", "verify-orb checking");
     orb.append(icon("globe"));
     const t = el("div", "grow");
-    t.append(el("strong", null, "Checking DNS for " + domain.name + "…"), el("p", null, "Looking up _mailspace." + domain.name + " on public DNS servers."));
+    t.append(el("strong", null, "Checking DNS for " + domain.name + "…"), el("p", null, "Looking up _domailit." + domain.name + " on public DNS servers."));
     boxV.append(orb, t);
     pane.append(boxV);
     body.replaceChildren(pane);
@@ -418,10 +418,10 @@ function recordCard(d) {
 function providerHelp(d) {
   const wrap = el("div", "dns-help");
   const guides = [
-    ["Namecheap", ["Open Domain List and click Manage next to " + d.name + ".", "Go to Advanced DNS and click Add New Record.", "Choose TXT Record. In Host type _mailspace and paste the value.", "Click the green check mark to save."]],
-    ["Netlify DNS", ["Open Domains and select " + d.name + ".", "In DNS settings, click Add new record.", "Choose TXT. In Name type _mailspace and paste the value.", "Save the record."]],
-    ["Cloudflare", ["Select " + d.name + " and open DNS → Records.", "Click Add record and choose TXT.", "In Name type _mailspace and paste the value into Content.", "Save."]],
-    ["any other provider", ["Find the DNS settings for " + d.name + ".", "Add a new TXT record.", "Host / Name: _mailspace (some providers want the full name: _mailspace." + d.name + ").", "Value: paste the value exactly, then save."]],
+    ["Namecheap", ["Open Domain List and click Manage next to " + d.name + ".", "Go to Advanced DNS and click Add New Record.", "Choose TXT Record. In Host type _domailit and paste the value.", "Click the green check mark to save."]],
+    ["Netlify DNS", ["Open Domains and select " + d.name + ".", "In DNS settings, click Add new record.", "Choose TXT. In Name type _domailit and paste the value.", "Save the record."]],
+    ["Cloudflare", ["Select " + d.name + " and open DNS → Records.", "Click Add record and choose TXT.", "In Name type _domailit and paste the value into Content.", "Save."]],
+    ["any other provider", ["Find the DNS settings for " + d.name + ".", "Add a new TXT record.", "Host / Name: _domailit (some providers want the full name: _domailit." + d.name + ").", "Value: paste the value exactly, then save."]],
   ];
   guides.forEach(([name, steps]) => {
     const det = el("details");
@@ -437,7 +437,7 @@ function providerHelp(d) {
 
 // ---------- Details ----------
 function renderDetails(d) {
-  document.title = d.name + " · My domains · MailSpace";
+  document.title = d.name + " · My domains · DoMailit";
   const verified = d.status === "verified";
   const wrap = el("div");
 
@@ -499,7 +499,7 @@ function renderDetails(d) {
   if (!verified) own.box.append(providerHelp(d));
   main.append(own.box);
 
-  // Email authentication — honest status: MailSpace doesn't manage these yet
+  // Email authentication — honest status: DoMailit doesn't manage these yet
   const auth = panel("Email authentication", "SPF, DKIM and DMARC tell other mail servers that messages from " + d.name + " are genuine.");
   const rows = el("div", "auth-rows");
   [
@@ -518,8 +518,8 @@ function renderDetails(d) {
   const note = el("div", "alert alert-info");
   note.style.marginTop = "14px";
   note.append(icon("info", "i-sm"), el("span", null,
-    "MailSpace doesn't generate or check SPF, DKIM or DMARC records for custom domains yet, so there's nothing to add here. " +
-    "Addresses on " + d.name + " currently send and receive mail between MailSpace accounts."));
+    "DoMailit doesn't generate or check SPF, DKIM or DMARC records for custom domains yet, so there's nothing to add here. " +
+    "Addresses on " + d.name + " currently send and receive mail between DoMailit accounts."));
   auth.box.append(rows, note);
   main.append(auth.box);
 
@@ -547,9 +547,9 @@ function renderDetails(d) {
   const how = panel("How these addresses work");
   const list = el("ul", "list-plain");
   [
-    "Mail sent to an address on " + d.name + " from another MailSpace account arrives in your inbox.",
-    "You can choose these addresses in the From box when writing to MailSpace users.",
-    "Mail to Gmail, Outlook and other providers is sent from your main MailSpace address.",
+    "Mail sent to an address on " + d.name + " from another DoMailit account arrives in your inbox.",
+    "You can choose these addresses in the From box when writing to DoMailit users.",
+    "Mail to Gmail, Outlook and other providers is sent from your main DoMailit address.",
   ].forEach((t) => {
     const li = el("li");
     li.append(icon("info", "i-sm"), el("span", null, t));
@@ -732,4 +732,4 @@ async function removeDomain(d, button) {
 
 // ---------- Start ----------
 window.addEventListener("hashchange", render);
-Shell.userReady.then(render).catch(() => view.replaceChildren(errorState("Couldn't reach MailSpace. Check your connection and refresh.")));
+Shell.userReady.then(render).catch(() => view.replaceChildren(errorState("Couldn't reach DoMailit. Check your connection and refresh.")));

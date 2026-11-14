@@ -46,7 +46,7 @@ function updateHeading() {
   Shell.setActiveFolder(state.query ? null : state.folder);
   $("folder-title").textContent = state.query ? "Search results" : FOLDERS[state.folder].title;
   const titleBase = state.query ? "Search" : FOLDERS[state.folder].title;
-  document.title = titleBase + " · MailSpace";
+  document.title = titleBase + " · DoMailit";
 }
 
 function updateMeta() {
@@ -1264,7 +1264,7 @@ function reportScreenshot(method) {
   const m = state.current;
   blurMail(1800);
   // Replace the picture in the clipboard (Print Screen copies the screen)
-  try { navigator.clipboard && navigator.clipboard.writeText("Screenshots of emails are not allowed on MailSpace."); } catch (_) { /* ignore */ }
+  try { navigator.clipboard && navigator.clipboard.writeText("Screenshots of emails are not allowed on DoMailit."); } catch (_) { /* ignore */ }
   if (!m) return;
   toast("Screenshot detected. The sender has been notified.", "error");
   api("/api/messages/" + m.id + "/screenshot", { method: "POST", body: { method } }).catch(() => {});
@@ -1383,7 +1383,7 @@ setInterval(async () => {
     loadFromAddresses().then(() => {
       if (params.has("compose")) openCompose();
     });
-  }).catch(() => renderListError("Couldn't reach MailSpace. Check your connection and refresh."));
+  }).catch(() => renderListError("Couldn't reach DoMailit. Check your connection and refresh."));
 })();
 
 // ============================================================

@@ -3,7 +3,7 @@
 // ============================================================
 
 // Shown in the address preview. The backend decides the real address.
-const MAIL_DOMAIN = "fahadimtiaz.site";
+const MAIL_DOMAIN = "domailit.com";
 
 function showMessage(text, type = "error") {
   const box = document.getElementById("form-message");

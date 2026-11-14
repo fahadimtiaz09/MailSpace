@@ -1,8 +1,8 @@
-"""calls.py — voice and video calls between MailSpace addresses (VoIP over the internet).
+"""calls.py — voice and video calls between DoMailit addresses (VoIP over the internet).
 
 How it works
 ------------
-1. Online status: every open MailSpace page / app sends a "heartbeat" every
+1. Online status: every open DoMailit page / app sends a "heartbeat" every
    few seconds (POST /api/calls/heartbeat). A user whose last heartbeat is
    newer than ONLINE_SECONDS is "online" -> the dial button is enabled.
 2. Calling uses WebRTC (built into browsers, and flutter_webrtc in the app).
@@ -46,7 +46,7 @@ def error(message, status=400):
 
 # ---------- helpers ----------
 def find_user_by_address(email):
-    """The MailSpace user who owns this address (main or custom domain), or None."""
+    """The DoMailit user who owns this address (main or custom domain), or None."""
     email = (email or "").strip().lower()
     if "@" not in email:
         return None
@@ -57,7 +57,7 @@ def find_user_by_address(email):
         address = addresses.find_one({"email": email})
         user = users.find_one({"_id": address["user_id"], "status": "active"}) if address else None
     else:
-        return None  # Gmail, Outlook... cannot receive MailSpace calls
+        return None  # Gmail, Outlook... cannot receive DoMailit calls
     if user is None or is_expired(user):
         return None
     return user
@@ -179,7 +179,7 @@ def send_call_log(call):
         result = "Missed (not answered)"
 
     lines = [
-        f"MailSpace {kind.lower()}",
+        f"DoMailit {kind.lower()}",
         "",
         f"From (caller):  {caller}",
         f"To:             {callee}",
@@ -192,7 +192,7 @@ def send_call_log(call):
         lines.append(f"Ended at:       {local_time(call['ended_at'])}")
     if status == "ended":
         lines.append(f"Duration:       {format_duration(call.get('duration'))}")
-    lines += ["", "This email was created automatically by MailSpace."]
+    lines += ["", "This email was created automatically by DoMailit."]
     body = "\n".join(lines)
 
     system_from = f"calls@{Config.MAIL_DOMAIN}"
@@ -267,7 +267,7 @@ def check_presence():
     user = find_user_by_address(email)
     if user is None:
         return jsonify({"email": email, "can_call": False, "online": False,
-                        "reason": "Calls work only between MailSpace addresses."})
+                        "reason": "Calls work only between DoMailit addresses."})
     if user["_id"] == g.user["_id"]:
         return jsonify({"email": email, "can_call": False, "online": True,
                         "reason": "This is your own address."})
@@ -289,7 +289,7 @@ def start_call():
 
     callee = find_user_by_address(to_email)
     if callee is None:
-        return error("Calls work only between MailSpace addresses.")
+        return error("Calls work only between DoMailit addresses.")
     if callee["_id"] == me["_id"]:
         return error("You can't call yourself.")
     if not is_online(callee["_id"]):

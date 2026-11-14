@@ -6,17 +6,17 @@
 // ============================================================
 
 const Shell = (() => {
-  // MailSpace logo, inline so its gradients render in every browser
+  // DoMailit logo (blue "D" with an envelope fold, navy "D" behind), inline SVG
   let logoCount = 0;
   function makeLogo() {
     const id = "sh" + (++logoCount);
     const box = document.createElement("span");
-    box.innerHTML = `<svg class="logo" viewBox="0 0 48 40" aria-hidden="true" focusable="false"><defs><linearGradient id="lge${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEFF"/></linearGradient><linearGradient id="lgs${id}" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1FB6FF"/><stop offset=".55" stop-color="#2F6BFF"/><stop offset="1" stop-color="#2459D6"/></linearGradient><linearGradient id="lgp${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="lp-a"/><stop offset="1" class="lp-b"/></linearGradient></defs><rect class="l-env" x="10.5" y="7.5" width="25" height="19" rx="4.2" fill="url(#lge${id})" stroke-width=".8"/><path d="M13 26 21 19M33 26 25 19" stroke="#C6D2F6" stroke-width=".9" stroke-linecap="round"/><path d="M12.6 10.3 23 17.6l10.4-7.3" fill="none" stroke="#2459D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M41.5 17.2C35 24.6 22.6 30.8 12.4 31.4 5.6 31.8 4.2 28.2 8.6 24.6 7 28 9.3 29.6 13.2 29.4 22.5 28.9 33.5 23.8 41.5 17.2Z" fill="url(#lgs${id})"/><path d="M47 2.2 35.6 7.3 40 9.1 42 13.8Z" fill="url(#lgp${id})"/><path class="l-fold" d="M47 2.2 40 9.1 41.1 11.4Z" opacity=".55"/></svg>`;
+    box.innerHTML = `<svg class="logo" viewBox="0 0 42 46" aria-hidden="true" focusable="false"><path class="l-back" d="M7.5 7H22.5A17 19 0 0 1 22.5 45H7.5Z"/><path class="l-front" d="M3 3H18A17 19 0 0 1 18 41H3Z"/><path class="l-fold" d="M3.6 10.4 17.6 21.6 32.2 12.7" fill="none" stroke-width="2.7" stroke-linejoin="round"/></svg>`;
     return box.firstChild;
   }
   function makeWordmark() {
-    const word = el("span", "brand-text", "Mail");
-    word.append(el("span", "brand-space", "Space"));
+    const word = el("span", "brand-text", "Do");
+    word.append(el("span", "brand-space", "Mailit"));
     return word;
   }
 
