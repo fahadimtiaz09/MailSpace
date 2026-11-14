@@ -1,4 +1,6 @@
 """app.py — starts the DoMailit server (locally and online)."""
+import os
+
 from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -82,6 +84,16 @@ except Exception as exc:
     print("[ERROR] Could not connect to MongoDB:", exc)
     print("Check MONGODB_URI in your .env file and Network Access in Atlas.")
     raise SystemExit(1)
+
+# One-time move to a new main domain: set MIGRATE_FROM_DOMAIN on Render
+# (e.g. fahadimtiaz.site), then remove it. Safe to run again (nothing left to change),
+# and a problem here never stops the website.
+if os.getenv("MIGRATE_FROM_DOMAIN"):
+    try:
+        from migrate_domain import migrate
+        print(migrate(os.getenv("MIGRATE_FROM_DOMAIN")), flush=True)
+    except Exception as exc:
+        print("[MIGRATE] Failed:", exc, flush=True)
 
 app = create_app()
 
