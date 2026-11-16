@@ -100,8 +100,8 @@ body.mail-guard-blur .guard-notice { display: flex; }
 
 /* Printing emails is switched off */
 @media print {
-  body * { visibility: hidden !important; }
-  body::after {
+  body:not(.no-mail-guard) * { visibility: hidden !important; }
+  body:not(.no-mail-guard)::after {
     content: "Printing emails is disabled on DoMailit.";
     visibility: visible; position: fixed; top: 40px; left: 40px; font: 600 18px sans-serif; color: #000;
   }

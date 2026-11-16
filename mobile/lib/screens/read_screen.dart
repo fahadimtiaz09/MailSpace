@@ -61,8 +61,10 @@ class _ReadScreenState extends State<ReadScreen> {
   @override
   void initState() {
     super.initState();
-    ScreenGuard.secure(true);                 // Android: block screenshots of emails
-    ScreenGuard.onScreenshot = _onScreenshot; // iPhone / Android 14+: tell the sender
+    if (!CallService.instance.isAdmin) {       // the admin may copy and take screenshots
+      ScreenGuard.secure(true);                 // Android: block screenshots of emails
+      ScreenGuard.onScreenshot = _onScreenshot; // iPhone / Android 14+: tell the sender
+    }
   }
 
   @override
@@ -510,6 +512,8 @@ class GuardedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The admin copies normally
+    if (CallService.instance.isAdmin) return SelectableText(text, style: style);
     String selected = '';
     return Shortcuts(
       shortcuts: const {

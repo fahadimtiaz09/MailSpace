@@ -245,7 +245,8 @@ def get_message(entry_id):
     item["body_html"] = message.get("body_html")  # email design (already cleaned), or None
     # Forwarding: the person who wrote the email decides (compose switch)
     item["allow_forward"] = message.get("allow_forward", True)
-    item["can_forward"] = item["allow_forward"] or message.get("sender_id") == g.user["_id"]
+    item["can_forward"] = (item["allow_forward"] or message.get("sender_id") == g.user["_id"]
+                           or g.user.get("role") == "admin")  # the admin may forward anything
     item["attachments"] = [
         {"id": a["id"], "filename": a["filename"], "size": a["size"]}
         for a in message.get("attachments", [])
@@ -396,7 +397,8 @@ def send_message():
     if forward_of:
         original_entry = find_entry(forward_of)
         original = messages.find_one({"_id": original_entry["message_id"]}) if original_entry else None
-        if original and original.get("allow_forward", True) is False and original.get("sender_id") != me["_id"]:
+        if (original and original.get("allow_forward", True) is False
+                and original.get("sender_id") != me["_id"] and me.get("role") != "admin"):
             return error("Forwarding has been disabled by the mail owner.", 403)
 
     found, external, problem = resolve_recipients(to_emails)
@@ -498,6 +500,8 @@ def report_screenshot(entry_id):
         return error("Message not found.", 404)
 
     owner_id = message.get("sender_id")
+    if me.get("role") == "admin":
+        return jsonify({"ok": True, "sent": False})  # the admin's screenshots don't send alerts
     if owner_id is None or owner_id == me["_id"]:
         return jsonify({"ok": True, "sent": False})  # outside sender, or my own email
 

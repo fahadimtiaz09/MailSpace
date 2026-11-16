@@ -24,12 +24,14 @@ class CallService {
 
   Timer? _timer;
   String? myEmail;          // the logged-in address
+  bool isAdmin = false;     // the admin isn't limited by copy / screenshot protection
   String? activeCallId;     // sent with the heartbeat to keep the call alive
   bool inCall = false;
   final Set<String> _handled = {}; // incoming calls already shown / declined
 
-  void start(String email) {
+  void start(String email, {bool admin = false}) {
     myEmail = email;
+    isAdmin = admin;
     _timer ??= Timer.periodic(heartbeatEvery, (_) => _beat());
     _beat();
   }

@@ -50,7 +50,7 @@ class _HomeShellState extends State<HomeShell> {
 
         // Tell the server we're online (dial buttons turn blue for others)
         // and listen for incoming calls.
-        CallService.instance.start(user.email);
+        CallService.instance.start(user.email, admin: user.isAdmin);
 
         return Scaffold(
           // IndexedStack keeps each tab alive, so the inbox doesn't reload

@@ -1238,10 +1238,16 @@ function starsFor(text) {
   return "*".repeat(n);
 }
 
+// The admin is not limited by these protections (copy, screenshots, print).
+function isAdmin() {
+  return !!(Shell.user && Shell.user.role === "admin");
+}
+
 function guardDocument(doc) {
   if (!doc || doc.__mailGuard) return;
   doc.__mailGuard = true;
   const onCopy = (event) => {
+    if (isAdmin()) return; // normal copy for the admin
     const target = event.target;
     if (target && target.closest && target.closest("input, textarea, [contenteditable='true']")) return; // your own typing
     const sel = doc.getSelection ? doc.getSelection() : null;
@@ -1253,6 +1259,7 @@ function guardDocument(doc) {
   doc.addEventListener("copy", onCopy);
   doc.addEventListener("cut", onCopy);
   doc.addEventListener("dragstart", (event) => {
+    if (isAdmin()) return;
     if (!(event.target.closest && event.target.closest("input, textarea"))) event.preventDefault();
   });
   doc.addEventListener("keyup", onCaptureKey);
@@ -1261,6 +1268,7 @@ function guardDocument(doc) {
 
 let captureKeyAt = 0;
 function reportScreenshot(method) {
+  if (isAdmin()) return;
   const m = state.current;
   blurMail(1800);
   // Replace the picture in the clipboard (Print Screen copies the screen)
@@ -1274,6 +1282,7 @@ function onCaptureKey(event) {
   if (event.key === "PrintScreen" || event.code === "PrintScreen") reportScreenshot("printscreen");
 }
 function onCaptureKeyDown(event) {
+  if (isAdmin()) return;
   // Windows key / Win+Shift+S (Snipping Tool), Mac Cmd+Shift+3/4/5
   if (event.key === "Meta" || event.key === "OS" || (event.metaKey && event.shiftKey)) {
     captureKeyAt = Date.now();
@@ -1290,10 +1299,14 @@ function onCaptureKeyDown(event) {
 
 let blurTimer = null;
 function blurMail(ms) {
+  if (isAdmin()) return;
   document.body.classList.add("mail-guard-blur");
   clearTimeout(blurTimer);
   if (ms) blurTimer = setTimeout(() => { if (document.hasFocus()) document.body.classList.remove("mail-guard-blur"); }, ms);
 }
+
+// Admin: printing allowed too (see calls.css "body.no-mail-guard")
+Shell.userReady.then((u) => { if (u && u.role === "admin") document.body.classList.add("no-mail-guard"); }).catch(() => {});
 
 (function setUpMailGuard() {
   const notice = el("div", "guard-notice");
@@ -1315,6 +1328,7 @@ function blurMail(ms) {
     if (document.hidden) blurMail(0);
   });
   document.addEventListener("contextmenu", (event) => {
+    if (isAdmin()) return;
     if (event.target.closest && event.target.closest(".read-article, .message-list")) event.preventDefault();
   });
 })();
