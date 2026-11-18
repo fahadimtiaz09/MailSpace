@@ -14,6 +14,7 @@ from routes.domains import domains_bp
 from routes.admin import admin_bp
 from routes.inbound import inbound_bp
 from routes.messages import messages_bp
+from routes.push import init_push_indexes, push_bp
 from security import csrf_protect, set_csrf_cookie
 
 ERROR_TEXT = {
@@ -43,6 +44,7 @@ def create_app():
     app.register_blueprint(inbound_bp)
     app.register_blueprint(calls_bp)
     app.register_blueprint(profile_bp)
+    app.register_blueprint(push_bp)
 
     @app.route("/")
     def home():
@@ -81,6 +83,7 @@ def create_app():
 # This runs both for "python backend\app.py" and for the online server (gunicorn).
 try:
     init_indexes()
+    init_push_indexes()
     print("[OK] Connected to MongoDB. Indexes are ready.")
 except Exception as exc:
     print("[ERROR] Could not connect to MongoDB:", exc)

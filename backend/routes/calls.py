@@ -28,6 +28,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from config import Config
 from database import addresses, calls, domains, mailboxes, messages, presence, users
+from push import notify
 from security import is_expired, login_required, now_utc, parse_object_id, to_iso
 
 calls_bp = Blueprint("calls", __name__, url_prefix="/api/calls")
@@ -211,14 +212,19 @@ def send_call_log(call):
             "is_draft": False, "created_at": now,
             "call_id": call["_id"], "flagged": False, "flag_words": [],
         }).inserted_id
-        mailboxes.insert_one({
+        entry_id = mailboxes.insert_one({
             "user_id": user_id, "message_id": message_id, "folder": "inbox",
             "is_read": False, "is_starred": False,
             "from_email": system_from, "from_name": "DoMailit Calls", "to_emails": [caller, callee],
             "subject": user_subject, "snippet": " ".join(body.split())[:120],
             "search_text": (system_from + " " + caller + " " + callee + " " + user_subject + " call").lower(),
             "has_attachments": False, "created_at": now,
-        })
+        }).inserted_id
+        # A missed call shows up on the phone of the person who didn't answer
+        if call["status"] == "missed" and user_id == call["callee_id"]:
+            notify([user_id], "Missed call", f"{caller} tried to call you",
+                   url=f"/inbox?open={entry_id}", type_="missed", tag=f"call-{call['_id']}",
+                   entry_id=str(entry_id))
 
 
 def get_my_call(call_id):
@@ -312,6 +318,10 @@ def start_call():
         "created_at": now, "started_at": None, "ended_at": None, "duration": None,
         "caller_seen": now, "callee_seen": now, "log_sent": False,
     }).inserted_id
+    who = me.get("display_name") or me["email"]
+    notify([callee["_id"]], f"Incoming {'video' if kind == 'video' else 'voice'} call", f"{who} is calling you",
+           url="/inbox", type_="call", tag=f"call-{call_id}", urgent=True, ttl=RING_SECONDS,
+           call_id=str(call_id))
     return jsonify({"call": call_json(calls.find_one({"_id": call_id}), me["_id"])}), 201
 
 

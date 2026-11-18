@@ -372,6 +372,8 @@ const Shell = (() => {
 
   async function logOut() {
     try {
+      // Stop this browser's notifications first, so the next person here doesn't get yours
+      if (typeof Push !== "undefined") await Push.disable();
       await api("/api/auth/logout", { method: "POST" });
     } catch {
       // Even if this fails, go to the login page

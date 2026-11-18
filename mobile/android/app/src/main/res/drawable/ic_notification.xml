@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Small white DoMailit "D" for the status bar (Android tints it itself). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="46"
+    android:viewportHeight="48">
+    <group android:translateX="2" android:translateY="1">
+        <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.55"
+            android:pathData="M7.5,7H22.5A17,19 0,0 1,22.5 45H7.5Z"/>
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M3,3H18A17,19 0,0 1,18 41H3Z"/>
+    </group>
+</vector>

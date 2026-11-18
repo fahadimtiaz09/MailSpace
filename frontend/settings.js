@@ -369,11 +369,56 @@ document.getElementById("security-q-btn").addEventListener("click", () => {
 });
 document.getElementById("logout-here").addEventListener("click", async () => {
   try {
+    if (typeof Push !== "undefined") await Push.disable();
     await api("/api/auth/logout", { method: "POST" });
   } catch {
     // Even if this fails, go to the login page
   }
   window.location.href = "/login.html";
+});
+
+// ---------- Notifications on this browser ----------
+async function renderPush() {
+  const box = document.getElementById("push-switch");
+  const note = document.getElementById("push-note");
+  if (!Push.supported) {
+    note.textContent = "This browser can't show notifications. Use Chrome, Edge or Firefox, or the DoMailit Android app.";
+    return;
+  }
+  if (Push.permission() === "denied") {
+    note.textContent = "Notifications are blocked for DoMailit in this browser. Click the lock icon next to the address bar, allow Notifications, then reload this page.";
+  }
+  box.checked = await Push.isOn();
+  box.disabled = Push.permission() === "denied";
+}
+document.getElementById("push-switch").addEventListener("change", async (e) => {
+  const box = e.target;
+  const wanted = box.checked;
+  box.disabled = true;
+  try {
+    if (wanted) {
+      await Push.enable();
+      toast("Notifications are on for this browser.", "success");
+    } else {
+      await Push.disable();
+      toast("Notifications are off for this browser.", "success");
+    }
+  } catch (err) {
+    toast(err.message, "error");
+  }
+  await renderPush();
+});
+document.getElementById("push-test").addEventListener("click", async (e) => {
+  const button = e.currentTarget;
+  setBusy(button, true, "Sending…");
+  try {
+    await api("/api/push/test", { method: "POST" });
+    toast("Sent. It should pop up in a few seconds.", "success");
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    setBusy(button, false);
+  }
 });
 
 // ---------- Privacy: show when I'm online ----------
@@ -462,6 +507,7 @@ document.getElementById("delete-account-btn").addEventListener("click", () => {
 Shell.userReady.then((u) => {
   renderProfile(u);
   renderPrivacy(u);
+  renderPush();
   renderFromAddresses();
   refreshRecoveryNotes();
   highlightSection();

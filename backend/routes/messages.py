@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from config import Config
 from database import addresses, attachment_files, domains, mailboxes, messages, users
 from routes.domains import allowed_from_addresses
+from push import notify, notify_new_mail
 from email_service import ExternalSendError, external_sending_ready, send_external
 from safety import check_message
 from security import is_expired, login_required, now_utc, parse_object_id, to_iso
@@ -464,10 +465,15 @@ def send_message():
         entries = [{**shared, "user_id": me["_id"], "folder": "sent", "is_read": True}]
         for recipient in recipients:
             entries.append({**shared, "user_id": recipient["_id"], "folder": "inbox", "is_read": False})
-        mailboxes.insert_many(entries)
+        inserted = mailboxes.insert_many(entries).inserted_ids
     except Exception:
         delete_files(attachments)
         raise
+
+    # Phone / browser notifications for the people it was sent to
+    for entry, entry_id in zip(entries[1:], inserted[1:]):
+        if entry["user_id"] != me["_id"]:
+            notify_new_mail(entry["user_id"], entry_id, from_email, me.get("display_name"), subject)
 
     # If this was a draft, remove the draft now that it has been sent
     draft_id = request.form.get("draft_id")
@@ -539,14 +545,16 @@ def report_screenshot(entry_id):
         "is_draft": False, "created_at": now, "screenshot_of": message["_id"],
         "flagged": False, "flag_words": [],
     }).inserted_id
-    mailboxes.insert_one({
+    alert_entry = mailboxes.insert_one({
         "user_id": owner_id, "message_id": alert_id, "folder": "inbox",
         "is_read": False, "is_starred": False,
         "from_email": alert_from, "from_name": "DoMailit Alerts", "to_emails": [message.get("sender_email", "")],
         "subject": subject, "snippet": make_snippet(body),
         "search_text": make_search_text(alert_from, [me["email"]], subject, body),
         "has_attachments": False, "created_at": now,
-    })
+    }).inserted_id
+    notify([owner_id], "Screenshot alert", f"{me['email']} took a screenshot of \u201c{original_subject}\u201d",
+           url=f"/inbox?open={alert_entry}", type_="alert", tag=f"alert-{alert_entry}", entry_id=str(alert_entry))
     return jsonify({"ok": True, "sent": True})
 
 

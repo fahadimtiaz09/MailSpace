@@ -40,7 +40,7 @@ else
 fi
 python3 -m venv "$APP_DIR/venv"
 "$APP_DIR/venv/bin/pip" install --upgrade pip
-"$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
+"$APP_DIR/venv/bin/pip" install -r "$APP_DIR/backend/requirements.txt"
 chown -R domailit:domailit "$APP_DIR"
 
 step "3/6  Settings (copy each value from Render → your service → Environment)"

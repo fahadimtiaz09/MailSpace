@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/user.dart';
 import '../services/call_service.dart';
+import '../services/push_service.dart';
 import '../theme.dart';
 import 'domains_screen.dart';
 import 'inbox_screen.dart';
@@ -51,6 +52,7 @@ class _HomeShellState extends State<HomeShell> {
         // Tell the server we're online (dial buttons turn blue for others)
         // and listen for incoming calls.
         CallService.instance.start(user.email, admin: user.isAdmin);
+        PushService.instance.afterLogin(); // notifications for this phone
 
         return Scaffold(
           // IndexedStack keeps each tab alive, so the inbox doesn't reload

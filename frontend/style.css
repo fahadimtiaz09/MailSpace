@@ -835,3 +835,15 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
 .switch input:disabled + .switch-track { opacity: .55; }
 .panel-danger { border-color: color-mix(in srgb, var(--error) 35%, var(--border)); }
 .panel-danger h2 { color: var(--error-text); }
+
+/* "Turn on notifications" card in the inbox */
+.push-prompt { position: fixed; left: 50%; bottom: 20px; z-index: 300; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; width: min(560px, calc(100vw - 32px)); box-sizing: border-box; padding: 14px 16px; border-radius: 16px; background: var(--elevated, var(--surface)); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-lg); animation: push-in 240ms ease; }
+@keyframes push-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.push-prompt-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); }
+.push-prompt-text { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.push-prompt-text span { font-size: .86rem; color: var(--text-2); }
+.push-prompt-actions { display: flex; gap: 8px; flex: none; }
+@media (max-width: 560px) {
+  .push-prompt { flex-wrap: wrap; }
+  .push-prompt-actions { width: 100%; justify-content: flex-end; }
+}

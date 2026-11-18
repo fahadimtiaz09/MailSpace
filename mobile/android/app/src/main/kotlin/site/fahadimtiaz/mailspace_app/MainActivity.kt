@@ -1,7 +1,12 @@
 package site.fahadimtiaz.mailspace_app
 
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
+import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -18,6 +23,33 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= 34) Activity.ScreenCaptureCallback {
             channel?.invokeMethod("screenshot", null)
         } else null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        createNotificationChannels()
+    }
+
+    // Android 8+: notifications need "channels". High importance = pops up on screen,
+    // like WhatsApp. Calls ring with the phone's ringtone. (Names show in phone Settings.)
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT < 26) return
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        val mail = NotificationChannel("mail", "New email", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "New emails and alerts"
+        }
+        val calls = NotificationChannel("calls", "Calls", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Incoming and missed voice and video calls"
+            enableVibration(true)
+            setSound(
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE),
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+        }
+        manager.createNotificationChannels(listOf(mail, calls))
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

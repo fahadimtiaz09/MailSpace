@@ -36,6 +36,7 @@
             <a href="#profile" class="active">Profile</a>
             <a href="#appearance">Appearance</a>
             <a href="#addresses">Sending addresses</a>
+            <a href="#notifications">Notifications</a>
             <a href="#privacy">Privacy</a>
             <a href="#security">Security</a>
             <a href="#delete-account">Delete account</a>
@@ -98,6 +99,35 @@
                 <li><span class="skeleton" style="width:50%;height:14px"></span></li>
               </ul>
               <p class="hint" style="margin-top:14px">Mail to Gmail, Outlook and other providers can only be sent from your main DoMailit address.</p>
+            </section>
+
+            <!-- Notifications -->
+            <section id="notifications" class="panel surface" aria-labelledby="notifications-title">
+              <div class="panel-head">
+                <div>
+                  <h2 id="notifications-title">Notifications</h2>
+                  <p>Get a pop-up for new email and incoming calls, even when DoMailit isn't open.</p>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="grow">
+                  <strong id="push-label">Notifications on this browser</strong>
+                  <p id="push-note">Each browser and phone is switched on separately.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="push-switch" role="switch" aria-labelledby="push-label" aria-describedby="push-note" disabled>
+                  <span class="switch-track" aria-hidden="true"></span>
+                </label>
+              </div>
+              <div class="setting-row">
+                <div class="grow">
+                  <strong>Test</strong>
+                  <p>Send a notification to every browser and phone where you've switched them on.</p>
+                </div>
+                <button id="push-test" class="btn btn-sm" type="button">
+                  <svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#bell"/></svg>Send a test
+                </button>
+              </div>
             </section>
 
             <!-- Privacy -->
@@ -202,6 +232,7 @@
   <script src="/api.js"></script>
   <script src="/ui.js"></script>
   <script src="/shell.js"></script>
+  <script src="/push.js"></script>
   <script src="/calls.js"></script>
   <script src="/settings.js"></script>
 </body>

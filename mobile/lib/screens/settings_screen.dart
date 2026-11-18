@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/user.dart';
 import '../services/people.dart';
+import '../services/push_service.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/message_row.dart';
@@ -196,6 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (yes != true) return;
+    await PushService.instance.beforeLogout();
     try {
       await _api.logout();
     } catch (_) {
@@ -223,6 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _deleteAccount() async {
     final deleted = await Navigator.push<bool>(
         context, MaterialPageRoute(builder: (context) => const _DeleteAccountPage()));
+    if (deleted == true) await PushService.instance.forget();
     if (deleted == true && mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
     }
@@ -351,6 +354,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: Text('Mail to Gmail, Outlook and other providers can only be sent from your main address.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted)),
+            ),
+
+            // notifications
+            const _Section('Notifications'),
+            ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Send a test notification'),
+              subtitle: const Text('New emails and calls pop up on this phone, even when the app is closed.'),
+              onTap: () async {
+                try {
+                  await _api.pushTest();
+                  _snack('Sent — it should pop up in a few seconds');
+                } on ApiException catch (e) {
+                  _snack(e.message);
+                }
+              },
             ),
 
             // ④ privacy

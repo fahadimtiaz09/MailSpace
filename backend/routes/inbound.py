@@ -10,6 +10,7 @@ from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
 from config import Config
+from push import notify_new_mail
 from database import addresses, attachment_files, domains, mailboxes, messages, users
 from email_service import download_bytes, fetch_received_attachments, fetch_received_email
 from html_safety import clean_email_html
@@ -160,7 +161,10 @@ def receive(secret):
         "search_text": (from_email + " " + " ".join(to_list) + " " + subject + " " + body).lower()[:5000],
         "has_attachments": bool(attachments), "is_starred": False, "created_at": now,
     }
-    mailboxes.insert_many([
-        {**shared, "user_id": uid, "folder": "inbox", "is_read": False} for uid in recipients
-    ])
+    uids = list(recipients)
+    inserted = mailboxes.insert_many([
+        {**shared, "user_id": uid, "folder": "inbox", "is_read": False} for uid in uids
+    ]).inserted_ids
+    for uid, entry_id in zip(uids, inserted):
+        notify_new_mail(uid, entry_id, from_email, from_name, subject)
     return jsonify({"ok": True})

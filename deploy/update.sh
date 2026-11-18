@@ -5,7 +5,7 @@ set -euo pipefail
 APP_DIR="/opt/domailit"
 git -C "$APP_DIR" config --global --add safe.directory "$APP_DIR" || true
 git -C "$APP_DIR" pull --ff-only
-"$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
+"$APP_DIR/venv/bin/pip" install -r "$APP_DIR/backend/requirements.txt"
 chown -R domailit:domailit "$APP_DIR"
 systemctl restart domailit
 sleep 3

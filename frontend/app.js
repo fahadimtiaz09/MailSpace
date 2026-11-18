@@ -1384,16 +1384,24 @@ setInterval(async () => {
   }
 }, 60000);
 
+// A notification was clicked while the inbox is open
+document.addEventListener("push-open", (event) => {
+  loadMessages({ quiet: true });
+  openMessage(event.detail.id);
+});
+
 // ---------- Start ----------
 (function start() {
   const params = new URLSearchParams(location.search);
   state.folder = folderFromHash();
   state.query = (params.get("q") || "").trim();
-  if (params.has("q") || params.has("compose")) {
+  const openId = params.get("open"); // from a notification: /inbox?open=<id>
+  if (params.has("q") || params.has("compose") || openId) {
     history.replaceState(null, "", "/inbox" + location.hash);
   }
   Shell.userReady.then(() => {
     loadMessages();
+    if (openId) openMessage(openId);
     loadFromAddresses().then(() => {
       if (params.has("compose")) openCompose();
     });

@@ -313,6 +313,20 @@ class ApiClient {
     await _patch('/auth/profile', {'display_name': name});
   }
 
+  // ---------------- Notifications (backend/routes/push.py) ----------------
+
+  Future<void> pushSubscribe(String token) async {
+    await _post('/push/subscribe', {'kind': 'fcm', 'token': token, 'device': 'Android app'});
+  }
+
+  Future<void> pushUnsubscribe(String token) async {
+    await _post('/push/unsubscribe', {'kind': 'fcm', 'token': token});
+  }
+
+  Future<void> pushTest() async {
+    await _post('/push/test', {});
+  }
+
   /// Settings → Privacy → "Show when I'm online".
   Future<void> setShowOnline(bool show) async {
     await _patch('/auth/profile', {'show_online': show});
