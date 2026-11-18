@@ -63,8 +63,13 @@ def find_user_by_address(email):
     return user
 
 
-def is_online(user_id):
-    row = presence.find_one({"user_id": user_id})
+def is_online(user):
+    """Online = a recent heartbeat AND the user lets others see it
+    (Settings -> Privacy -> "Show when I'm online"). Hidden users look offline
+    to everyone, so nobody can call them; they can still call others."""
+    if not user.get("show_online", True):
+        return False
+    row = presence.find_one({"user_id": user["_id"]})
     return bool(row) and row["last_seen"] > now_utc() - timedelta(seconds=ONLINE_SECONDS)
 
 
@@ -271,7 +276,7 @@ def check_presence():
     if user["_id"] == g.user["_id"]:
         return jsonify({"email": email, "can_call": False, "online": True,
                         "reason": "This is your own address."})
-    online = is_online(user["_id"])
+    online = is_online(user)
     return jsonify({"email": email, "can_call": online, "online": online,
                     "reason": None if online else f"{email} is offline."})
 
@@ -292,7 +297,7 @@ def start_call():
         return error("Calls work only between DoMailit addresses.")
     if callee["_id"] == me["_id"]:
         return error("You can't call yourself.")
-    if not is_online(callee["_id"]):
+    if not is_online(callee):
         return error(f"{to_email} is offline right now.", 409)
     if open_call_for(me["_id"]):
         return error("You are already in a call.", 409)

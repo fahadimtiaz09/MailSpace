@@ -36,7 +36,9 @@
             <a href="#profile" class="active">Profile</a>
             <a href="#appearance">Appearance</a>
             <a href="#addresses">Sending addresses</a>
+            <a href="#privacy">Privacy</a>
             <a href="#security">Security</a>
+            <a href="#delete-account">Delete account</a>
           </nav>
 
           <div class="settings-sections">
@@ -98,6 +100,26 @@
               <p class="hint" style="margin-top:14px">Mail to Gmail, Outlook and other providers can only be sent from your main DoMailit address.</p>
             </section>
 
+            <!-- Privacy -->
+            <section id="privacy" class="panel surface" aria-labelledby="privacy-title">
+              <div class="panel-head">
+                <div>
+                  <h2 id="privacy-title">Privacy</h2>
+                  <p>Choose what other DoMailit users can see about you.</p>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="grow">
+                  <strong id="show-online-label">Show when I'm online</strong>
+                  <p id="show-online-note">When this is on, people can see you're online and call you from your email.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="show-online" role="switch" aria-labelledby="show-online-label" aria-describedby="show-online-note" disabled>
+                  <span class="switch-track" aria-hidden="true"></span>
+                </label>
+              </div>
+            </section>
+
             <!-- Security -->
             <section id="security" class="panel surface" aria-labelledby="security-title">
               <div class="panel-head">
@@ -151,6 +173,25 @@
                 <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Attachments are checked to make sure they really are the file type they claim to be, and only people in the conversation can download them.</span></li>
                 <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Formatted emails open in a locked frame, so scripts inside an email can't run and outside images stay hidden until you show them.</span></li>
               </ul>
+            </section>
+
+            <!-- Delete account -->
+            <section id="delete-account" class="panel surface panel-danger" aria-labelledby="delete-title">
+              <div class="panel-head">
+                <div>
+                  <h2 id="delete-title">Delete account</h2>
+                  <p>Permanently remove your DoMailit account.</p>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="grow">
+                  <strong>Delete my account</strong>
+                  <p>Your emails, attachments, domains, addresses and photo are deleted and can't be brought back. Your address can't be used again. People you've emailed keep their own copies.</p>
+                </div>
+                <button id="delete-account-btn" class="btn btn-sm btn-danger" type="button">
+                  <svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#trash"/></svg>Delete account
+                </button>
+              </div>
             </section>
           </div>
         </div>

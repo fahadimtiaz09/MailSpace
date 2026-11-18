@@ -4,9 +4,11 @@
 //                (GET /api/auth/me, PATCH /api/auth/profile, POST/DELETE /api/auth/avatar)
 //   ② Appearance: Light / Dark / System  (saved on the phone)
 //   ③ Sending addresses (From list)                          (GET /api/domains/from-addresses)
-//   ④ Security: change password, recovery email, security question
+//   ④ Privacy: show when I'm online                          (PATCH /api/auth/profile {show_online})
+//   ⑤ Security: change password, recovery email, security question
 //                                                            (POST /api/auth/change-password, /recovery)
 //   ⑥ Log out                                                (POST /api/auth/logout) → A1 Welcome
+//   ⑦ Delete account                                         (POST /api/auth/delete-account) → A1 Welcome
 
 import 'dart:io';
 import 'dart:math' as math;
@@ -203,6 +205,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
   }
 
+  bool? _savingOnline; // the value being saved, while the request runs
+
+  Future<void> _setShowOnline(bool show) async {
+    setState(() => _savingOnline = show);
+    try {
+      await _api.setShowOnline(show);
+      await _refresh();
+      _snack(show ? 'People can now see when you\'re online' : 'You now appear offline to everyone');
+    } on ApiException catch (e) {
+      _snack(e.message);
+    } finally {
+      if (mounted) setState(() => _savingOnline = null);
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final deleted = await Navigator.push<bool>(
+        context, MaterialPageRoute(builder: (context) => const _DeleteAccountPage()));
+    if (deleted == true && mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
+    }
+  }
+
   Future<void> _openForm(Widget page) async {
     final done = await Navigator.push<String>(context, MaterialPageRoute(builder: (context) => page));
     if (done != null) {
@@ -328,7 +353,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(fontSize: 12, color: AppColors.muted)),
             ),
 
-            // ④ security
+            // ④ privacy
+            const _Section('Privacy'),
+            SwitchListTile(
+              secondary: const Icon(Icons.circle_outlined),
+              title: const Text('Show when I\'m online'),
+              subtitle: const Text('When this is on, people can see you\'re online and call you from your email.'),
+              value: _savingOnline ?? u.showOnline,
+              onChanged: _savingOnline != null ? null : _setShowOnline,
+            ),
+
+            // ⑤ security
             const _Section('Security'),
             ListTile(
               leading: const Icon(Icons.lock_outline),
@@ -357,7 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text(
                 '• Your password is stored only as a secure hash.\n'
                 '• Repeated failed logins are slowed down automatically.\n'
-                '• Messages are shown as plain text, so scripts inside an email can\'t run.',
+                '• Formatted emails open in a locked view, so scripts inside an email can\'t run.',
                 style: TextStyle(fontSize: 12, height: 1.6, color: AppColors.muted),
               ),
             ),
@@ -380,6 +415,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               leading: Icon(Icons.logout, color: AppColors.error),
               title: Text('Log out', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
               onTap: _logout,
+            ),
+
+            // ⑦ delete account
+            const _Section('Delete account'),
+            ListTile(
+              leading: Icon(Icons.delete_forever_outlined, color: AppColors.error),
+              title: Text('Delete my account', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+              subtitle: const Text('Deletes your emails, domains and photo for good'),
+              onTap: _deleteAccount,
             ),
           ],
         ),
@@ -626,4 +670,95 @@ class _RecoveryPageState extends State<_RecoveryPage> {
           _field('Current password', _current, secret: true, hint: 'Needed to save this change'),
         ],
       );
+}
+
+
+/// Delete account: password + typing DELETE, then everything is removed for good.
+class _DeleteAccountPage extends StatefulWidget {
+  const _DeleteAccountPage();
+
+  @override
+  State<_DeleteAccountPage> createState() => _DeleteAccountPageState();
+}
+
+class _DeleteAccountPageState extends State<_DeleteAccountPage> {
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  bool get _ready => _password.text.isNotEmpty && _confirm.text.trim().toUpperCase() == 'DELETE';
+
+  @override
+  void initState() {
+    super.initState();
+    _password.addListener(() => setState(() {}));
+    _confirm.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _delete() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ApiClient.instance.deleteAccount(_password.text);
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Delete account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          children: [
+            Text(
+              'This can\'t be undone. All your emails, attachments, domains, addresses and your photo '
+              'will be deleted, and your address can\'t be used again. People you\'ve emailed keep their own copies.',
+              style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.muted),
+            ),
+            const SizedBox(height: 18),
+            if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.errorSoft,
+                  border: Border.all(color: AppColors.error, width: 1.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(_error!, style: TextStyle(color: AppColors.error, fontSize: 14)),
+              ),
+              const SizedBox(height: 16),
+            ],
+            _field('Your password', _password, secret: true),
+            _field('Type DELETE to confirm', _confirm, hint: 'DELETE'),
+            const SizedBox(height: 20),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+              onPressed: _busy || !_ready ? null : _delete,
+              child: _busy
+                  ? const SizedBox(
+                      width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : const Text('Delete account forever'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

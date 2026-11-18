@@ -11,11 +11,13 @@ import io
 import re
 
 from bson import ObjectId
-from flask import Blueprint, g, jsonify, request, send_file
+from flask import Blueprint, g, jsonify, request, send_file, session
+from werkzeug.security import check_password_hash
 
-from database import attachment_files, users
+from database import addresses, attachment_files, calls, domains, mailboxes, messages, presence, users
 from routes.calls import find_user_by_address
-from security import login_required, now_utc, parse_object_id
+from routes.messages import delete_files
+from security import login_required, now_utc, parse_object_id, rate_limited
 
 profile_bp = Blueprint("profile", __name__, url_prefix="/api")
 
@@ -64,12 +66,78 @@ def remove_avatar_file(user):
 @profile_bp.patch("/auth/profile")
 @login_required
 def update_profile():
+    """Change the name people see and/or whether others can see you online."""
     data = request.get_json(silent=True) or {}
-    if "display_name" not in data:
+    changes = {}
+    if "display_name" in data:
+        changes["display_name"] = clean_display_name(data.get("display_name")) or None
+    if "show_online" in data:
+        if not isinstance(data["show_online"], bool):
+            return error("show_online must be true or false.")
+        changes["show_online"] = data["show_online"]
+    if not changes:
         return error("Nothing to change.")
-    name = clean_display_name(data.get("display_name"))
-    users.update_one({"_id": g.user["_id"]}, {"$set": {"display_name": name or None}})
-    return jsonify({"display_name": name or None})
+    users.update_one({"_id": g.user["_id"]}, {"$set": changes})
+    user = users.find_one({"_id": g.user["_id"]})
+    return jsonify({"display_name": user.get("display_name") or None,
+                    "show_online": user.get("show_online", True)})
+
+
+# ---------- Delete account ----------
+def delete_account_data(user):
+    """Remove everything that belongs to this account.
+
+    - their copy of every email (an email is removed for good, with its
+      attachments, once nobody has a copy left; people they wrote to keep theirs)
+    - their domains and the addresses on them, their photo, calls and online status
+    - the account itself. A small record (username + address, nothing personal)
+      stays so the address can never be signed up again and receive their mail.
+    """
+    uid = user["_id"]
+    message_ids = mailboxes.distinct("message_id", {"user_id": uid})
+    mailboxes.delete_many({"user_id": uid})
+    for message_id in message_ids:
+        if mailboxes.count_documents({"message_id": message_id}, limit=1) == 0:
+            message = messages.find_one_and_delete({"_id": message_id})
+            if message:
+                delete_files(message.get("attachments", []))
+
+    domain_ids = [d["_id"] for d in domains.find({"owner_id": uid}, {"_id": 1})]
+    addresses.delete_many({"$or": [{"user_id": uid}, {"domain_id": {"$in": domain_ids}}]})
+    domains.delete_many({"owner_id": uid})
+
+    calls.delete_many({"$or": [{"caller_id": uid}, {"callee_id": uid}]})
+    presence.delete_many({"user_id": uid})
+    remove_avatar_file(user)
+
+    users.replace_one({"_id": uid}, {
+        "username": user["username"],
+        "email": user["email"],
+        "account_type": user.get("account_type", "regular"),
+        "created_at": user.get("created_at"),
+        "status": "deleted",
+        "deleted_at": now_utc(),
+    })
+
+
+@profile_bp.post("/auth/delete-account")
+@login_required
+def delete_account():
+    if rate_limited("delete:" + str(g.user["_id"]), 5, 600):
+        return error("Too many attempts. Please wait a few minutes.", 429)
+    data = request.get_json(silent=True) or {}
+    password = str(data.get("password", ""))
+    if str(data.get("confirm", "")).strip().upper() != "DELETE":
+        return error('Type DELETE to confirm.')
+    if not g.user.get("password_hash") or not check_password_hash(g.user["password_hash"], password):
+        return error("Your password is wrong.", 403)
+    if g.user.get("role") == "admin" and \
+            users.count_documents({"role": "admin", "status": "active"}) <= 1:
+        return error("You are the only admin. Make someone else an admin before deleting this account.", 409)
+
+    delete_account_data(g.user)
+    session.clear()
+    return jsonify({"ok": True})
 
 
 @profile_bp.post("/auth/avatar")

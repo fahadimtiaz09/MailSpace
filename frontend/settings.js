@@ -376,8 +376,92 @@ document.getElementById("logout-here").addEventListener("click", async () => {
   window.location.href = "/login.html";
 });
 
+// ---------- Privacy: show when I'm online ----------
+function renderPrivacy(u) {
+  const box = document.getElementById("show-online");
+  box.checked = u.show_online !== false;
+  box.disabled = false;
+}
+document.getElementById("show-online").addEventListener("change", async (e) => {
+  const box = e.target;
+  const wanted = box.checked;
+  box.disabled = true;
+  try {
+    await api("/api/auth/profile", { method: "PATCH", body: { show_online: wanted } });
+    toast(wanted ? "People can now see when you're online." : "You now appear offline to everyone.", "success");
+  } catch (err) {
+    box.checked = !wanted;
+    toast(err.message, "error");
+  } finally {
+    box.disabled = false;
+  }
+});
+
+// ---------- Delete account ----------
+document.getElementById("delete-account-btn").addEventListener("click", () => {
+  const box = el("div", "modal");
+  const head = el("div", "modal-head");
+  const headText = el("div");
+  headText.append(el("h2", null, "Delete your account?"),
+    el("p", null, "This can't be undone. All your emails, attachments, domains, addresses and your photo will be deleted, and your address can't be used again."));
+  head.append(headText);
+
+  const body = el("div", "modal-body");
+  const msg = el("div", "alert alert-error hidden");
+  msg.setAttribute("role", "alert");
+  body.append(msg);
+
+  const pwField = el("div", "field");
+  const pwLabel = el("label", null, "Your password");
+  const pw = el("input", "input");
+  pw.type = "password";
+  pw.autocomplete = "current-password";
+  pw.id = "delete-pw";
+  pwLabel.htmlFor = "delete-pw";
+  pwField.append(pwLabel, pw);
+
+  const cfField = el("div", "field");
+  const cfLabel = el("label", null, "Type DELETE to confirm");
+  const cf = el("input", "input");
+  cf.id = "delete-confirm";
+  cf.autocomplete = "off";
+  cf.spellcheck = false;
+  cfLabel.htmlFor = "delete-confirm";
+  cfField.append(cfLabel, cf);
+  body.append(pwField, cfField);
+
+  const foot = el("div", "modal-foot");
+  const cancel = el("button", "btn", "Cancel");
+  const confirm = el("button", "btn btn-danger-solid", "Delete account forever");
+  cancel.type = confirm.type = "button";
+  confirm.disabled = true;
+  foot.append(cancel, confirm);
+  box.append(head, body, foot);
+
+  const ready = () => { confirm.disabled = !(pw.value && cf.value.trim().toUpperCase() === "DELETE"); };
+  pw.addEventListener("input", ready);
+  cf.addEventListener("input", ready);
+
+  const close = openModal(box);
+  cancel.addEventListener("click", close);
+  confirm.addEventListener("click", async () => {
+    msg.classList.add("hidden");
+    setBusy(confirm, true, "Deleting…");
+    try {
+      await api("/api/auth/delete-account", { method: "POST", body: { password: pw.value, confirm: cf.value } });
+      window.location.href = "/?deleted=1";
+    } catch (err) {
+      setBusy(confirm, false);
+      ready();
+      msg.textContent = err.message;
+      msg.classList.remove("hidden");
+    }
+  });
+});
+
 Shell.userReady.then((u) => {
   renderProfile(u);
+  renderPrivacy(u);
   renderFromAddresses();
   refreshRecoveryNotes();
   highlightSection();

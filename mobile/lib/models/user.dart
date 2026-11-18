@@ -13,6 +13,7 @@ class User {
   final String? securityQuestion;
   final String? displayName;     // "Nimra Noor" — shown to people you email
   final String? avatar;          // /api/avatar/<id>?v=… (null = no picture)
+  final bool showOnline;         // false = appear offline to everyone (no one can call you)
 
   User({
     required this.id,
@@ -26,6 +27,7 @@ class User {
     this.securityQuestion,
     this.displayName,
     this.avatar,
+    this.showOnline = true,
   });
 
   bool get isTemporary => accountType != 'regular';
@@ -62,6 +64,7 @@ class User {
       securityQuestion: json['security_question'] as String?,
       displayName: json['display_name'] as String?,
       avatar: json['avatar'] as String?,
+      showOnline: json['show_online'] as bool? ?? true,
     );
   }
 }

@@ -52,6 +52,7 @@ def public_user(user):
         "recovery_email": mask_email(user.get("recovery_email")),
         "security_question": user.get("security_question") or None,
         "display_name": user.get("display_name") or None,
+        "show_online": user.get("show_online", True),
         "avatar": (f"/api/avatar/{user['_id']}?v={user.get('avatar_version', 0)}"
                    if user.get("avatar_file_id") else None),
     }
@@ -134,7 +135,8 @@ def login():
     user = users.find_one({field: login_value})
 
     # Same message for "no such user" and "wrong password", so attackers learn nothing
-    if user is None or not check_password_hash(user["password_hash"], password):
+    if user is None or not user.get("password_hash") \
+            or not check_password_hash(user["password_hash"], password):
         return error("Wrong username/email or password.", 401)
     if user.get("status") != "active" or is_expired(user):
         return error("This account has expired and can no longer be used.", 403)

@@ -313,6 +313,17 @@ class ApiClient {
     await _patch('/auth/profile', {'display_name': name});
   }
 
+  /// Settings → Privacy → "Show when I'm online".
+  Future<void> setShowOnline(bool show) async {
+    await _patch('/auth/profile', {'show_online': show});
+  }
+
+  /// Deletes the account for good (backend/routes/profile.py → delete_account).
+  Future<void> deleteAccount(String password) async {
+    await _post('/auth/delete-account', {'password': password, 'confirm': 'DELETE'});
+    await _cookieJar?.deleteAll();
+  }
+
   /// [png] = an already shrunk square picture.
   Future<void> uploadAvatar(Uint8List png) async {
     final form = FormData.fromMap({'avatar': MultipartFile.fromBytes(png, filename: 'avatar.png')});
