@@ -749,3 +749,42 @@
 .pv-call-btn { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.14); }
 .pv-call-btn.end { background: #E5484D; }
 @media (max-width: 760px) { .pv-call-card { display: none; } }
+
+/* Anchors land below the fixed nav */
+html { scroll-padding-top: 88px; }
+
+/* How it works: optional tag */
+.step-opt { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: .72rem; font-weight: 600; vertical-align: middle; }
+
+/* Features: one row per feature, each its own anchor */
+.features-show { padding: 110px 0 60px; }
+.feat-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; padding: 48px 0; }
+.feat-row.flip .feat-text { order: 2; }
+.feat-icon { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--primary-soft); color: var(--primary); }
+.feat-text h3 { margin: 18px 0 12px; font-size: clamp(1.45rem, 2.4vw, 1.9rem); letter-spacing: -.02em; line-height: 1.2; }
+.feat-text > p { color: var(--text-2); font-size: 1.04rem; }
+.feat-list { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
+.feat-list li { display: flex; align-items: flex-start; gap: 10px; }
+.feat-list .i { flex: none; margin-top: 2px; width: 18px; height: 18px; padding: 3px; border-radius: 50%; background: var(--success-soft); color: var(--success-text); box-sizing: content-box; }
+.feat-text .feat-note { margin-top: 16px; font-size: .9rem; color: var(--text-3); }
+.feat-visual { display: grid; gap: 12px; padding: 26px; border-radius: 22px; background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--border); box-shadow: var(--shadow-lg); }
+.fv-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border); }
+.fv-card > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.fv-card strong { font-weight: 600; }
+.fv-card small { color: var(--text-2); font-size: .86rem; }
+.fv-card small.fv-ok { color: var(--success-text); font-weight: 600; }
+.fv-card small.fv-stars { font-weight: 800; letter-spacing: .18em; color: var(--text); }
+.fv-btn { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 50%; background: var(--success-soft); color: var(--success-text); }
+.fv-ico { display: grid; place-items: center; width: 38px; height: 38px; flex: none; border-radius: 12px; background: var(--primary-soft); color: var(--primary); }
+.fv-ico.warn { background: var(--error-soft); color: var(--error-text); }
+.fv-toggle { position: relative; flex: none; width: 46px; height: 26px; border-radius: 13px; background: var(--border-strong); }
+.fv-toggle::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.fv-card.fv-col { flex-direction: column; align-items: stretch; }
+.fv-label { font-size: .78rem !important; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3) !important; }
+.fv-card > .fv-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.fv-chip { padding: 6px 12px; border-radius: 999px; background: var(--primary-softer, var(--primary-soft)); border: 1px solid var(--border); font-size: .86rem; }
+.feat-visual .pv-av.lg { width: 40px; height: 40px; font-size: 12px; }
+@media (max-width: 920px) {
+  .feat-row { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 32px 0; }
+  .feat-row.flip .feat-text { order: 0; }
+}

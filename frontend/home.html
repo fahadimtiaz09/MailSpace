@@ -34,9 +34,9 @@
           </button>
           <div class="nav-drop-menu" id="features-menu">
             <a href="#domains"><span class="dm-icon"><svg class="i"><use href="/icons.svg#globe"/></svg></span><span><strong>Your own domain</strong><small>Addresses on a domain you own</small></span></a>
-            <a href="#security"><span class="dm-icon"><svg class="i"><use href="/icons.svg#video"/></svg></span><span><strong>Voice and video calls</strong><small>Call someone right from their email</small></span></a>
-            <a href="#security"><span class="dm-icon"><svg class="i"><use href="/icons.svg#lock"/></svg></span><span><strong>Privacy controls</strong><small>Forward switch, copy and screenshot protection</small></span></a>
-            <a href="#inbox"><span class="dm-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span><span><strong>More productivity</strong><small>Search, drafts, attachments, recent addresses</small></span></a>
+            <a href="#calls"><span class="dm-icon"><svg class="i"><use href="/icons.svg#video"/></svg></span><span><strong>Voice and video calls</strong><small>Call someone right from their email</small></span></a>
+            <a href="#privacy"><span class="dm-icon"><svg class="i"><use href="/icons.svg#lock"/></svg></span><span><strong>Privacy controls</strong><small>Forward switch, copy and screenshot protection</small></span></a>
+            <a href="#productivity"><span class="dm-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span><span><strong>More productivity</strong><small>Search, drafts, attachments, recent addresses</small></span></a>
           </div>
         </div>
         <a href="#how">How it works</a>
@@ -177,22 +177,22 @@
         </ul>
 
         <!-- Four feature cards -->
-        <div id="features" class="mini-features">
+        <div class="mini-features">
           <a href="#domains" class="mini reveal">
             <span class="mini-icon"><svg class="i"><use href="/icons.svg#globe"/></svg></span>
             <span><strong>Your domain</strong><small>Use your own domain and email addresses.</small></span>
           </a>
-          <a href="#security" class="mini reveal">
+          <a href="#calls" class="mini reveal">
             <span class="mini-icon"><svg class="i"><use href="/icons.svg#video"/></svg></span>
             <span><strong>Voice and video calls</strong><small>Call straight from an email.</small></span>
           </a>
-          <a href="#security" class="mini reveal">
-            <span class="mini-icon"><svg class="i"><use href="/icons.svg#forward"/></svg></span>
-            <span><strong>Forward control</strong><small>You decide if your email can be forwarded.</small></span>
+          <a href="#privacy" class="mini reveal">
+            <span class="mini-icon"><svg class="i"><use href="/icons.svg#lock"/></svg></span>
+            <span><strong>Privacy controls</strong><small>Forward switch, copy and screenshot guard.</small></span>
           </a>
-          <a href="#security" class="mini reveal">
-            <span class="mini-icon"><svg class="i"><use href="/icons.svg#eye-off"/></svg></span>
-            <span><strong>Copy and screenshot guard</strong><small>Copied text pastes as stars.</small></span>
+          <a href="#productivity" class="mini reveal">
+            <span class="mini-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span>
+            <span><strong>More productivity</strong><small>Search, drafts and recent addresses.</small></span>
           </a>
         </div>
       </div>
@@ -298,6 +298,71 @@
       </div>
     </section>
 
+    <!-- ================= Features ================= -->
+    <section id="features" class="features-show" aria-labelledby="features-title">
+      <div class="container">
+        <div class="section-head center reveal">
+          <p class="pill small-pill"><span class="pill-dot"></span>Features</p>
+          <h2 id="features-title">More than an inbox</h2>
+          <p>Talk, protect what you send and get through your mail faster, all in one place.</p>
+        </div>
+
+        <div id="calls" class="feat-row reveal">
+          <div class="feat-text">
+            <span class="feat-icon"><svg class="i"><use href="/icons.svg#video"/></svg></span>
+            <h3>Voice and video calls, right from an email</h3>
+            <p>When another DoMailit user is online, the call buttons on their email light up. One tap and you're talking: no phone number, no extra app.</p>
+            <ul class="feat-list">
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Voice or video, over the internet</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>See who's online before you call</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>An email after every call with how long it lasted</li>
+            </ul>
+          </div>
+          <div class="feat-visual" aria-hidden="true">
+            <div class="fv-card"><span class="pv-av lg pv-online" style="--h:215">SJ</span><div><strong>Sarah Johnson</strong><small class="fv-ok">Online</small></div><span class="fv-btn"><svg class="i i-sm"><use href="/icons.svg#phone"/></svg></span><span class="fv-btn"><svg class="i i-sm"><use href="/icons.svg#video"/></svg></span></div>
+            <div class="fv-card"><span class="fv-ico"><svg class="i i-sm"><use href="/icons.svg#mail"/></svg></span><div><strong>Call summary</strong><small>Video call with Sarah Johnson · 4 min 12 s</small></div></div>
+          </div>
+        </div>
+
+        <div id="privacy" class="feat-row flip reveal">
+          <div class="feat-text">
+            <span class="feat-icon"><svg class="i"><use href="/icons.svg#lock"/></svg></span>
+            <h3>You decide what happens to your email</h3>
+            <p>Some messages are meant for one person only. DoMailit gives you simple switches to keep them that way.</p>
+            <ul class="feat-list">
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Turn off forwarding while you write</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Copied text pastes as ***** instead of your words</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Screenshots blocked in the Android app, alerts on the website</li>
+            </ul>
+            <p class="feat-note">No app can stop a photo taken with another phone, so think before you send.</p>
+          </div>
+          <div class="feat-visual" aria-hidden="true">
+            <div class="fv-card"><div><strong>Allow forwarding</strong><small>Off for this email</small></div><span class="fv-toggle"></span></div>
+            <div class="fv-card"><span class="fv-ico"><svg class="i i-sm"><use href="/icons.svg#copy"/></svg></span><div><strong>Pasted text</strong><small class="fv-stars">*****</small></div></div>
+            <div class="fv-card"><span class="fv-ico warn"><svg class="i i-sm"><use href="/icons.svg#alert"/></svg></span><div><strong>Screenshot alert</strong><small>Someone took a screenshot of your email.</small></div></div>
+          </div>
+        </div>
+
+        <div id="productivity" class="feat-row reveal">
+          <div class="feat-text">
+            <span class="feat-icon"><svg class="i"><use href="/icons.svg#zap"/></svg></span>
+            <h3>Get through your mail faster</h3>
+            <p>The everyday things are quick: find any email, pick up where you left off, and write to people you mail often in a couple of taps.</p>
+            <ul class="feat-list">
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Search across all your mail</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Recent addresses appear as soon as you click To</li>
+              <li><svg class="i i-sm"><use href="/icons.svg#check"/></svg>Drafts, stars and up to 5 attachments per email</li>
+            </ul>
+          </div>
+          <div class="feat-visual" aria-hidden="true">
+            <div class="fv-card"><span class="fv-ico"><svg class="i i-sm"><use href="/icons.svg#search"/></svg></span><div><small>Search emails…</small></div></div>
+            <div class="fv-card fv-col"><small class="fv-label">To · Recent</small><div class="fv-chip-row"><span class="fv-chip">sarah@domailit.com</span><span class="fv-chip">alex@gmail.com</span><span class="fv-chip">team@domailit.com</span></div></div>
+            <div class="fv-card"><span class="fv-ico"><svg class="i i-sm"><use href="/icons.svg#paperclip"/></svg></span><div><strong>project-plan.pdf</strong><small>PDF · 184 KB</small></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ================= Domain management ================= -->
     <section id="domains" class="domains-show" aria-labelledby="domains-title">
       <div class="domains-bg sec-bg band" aria-hidden="true"><svg class="sec-waves sec-waves-top" viewBox="0 0 1440 120" preserveAspectRatio="none"><path class="wave sw1" d="M0 70C220 20 420 110 700 70S1120 10 1440 60V0H0Z"/><path class="wave sw2" d="M0 45C260 90 480 10 760 45S1180 95 1440 35V0H0Z"/></svg><svg class="sec-waves sec-waves-bottom" viewBox="0 0 1440 120" preserveAspectRatio="none"><path class="wave sw1" d="M0 70C220 20 420 110 700 70S1120 10 1440 60V0H0Z"/><path class="wave sw2" d="M0 45C260 90 480 10 760 45S1180 95 1440 35V0H0Z"/></svg><div class="glow glow-d"></div><div class="glow sg-right"></div><div class="dot-field df-tl"></div><div class="dot-field df-br"></div><div class="particles"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
@@ -379,23 +444,23 @@
         <div class="section-head center reveal">
           <p class="pill small-pill"><span class="pill-dot"></span>How it works</p>
           <h2 id="how-title">Up and running in three steps</h2>
-          <p>No servers to configure and no technical setup to learn.</p>
+          <p>Start with a free address. Bring your own domain only if you want one.</p>
         </div>
         <ol class="steps">
           <li class="step reveal">
             <span class="step-num">1</span>
             <h3>Create your account</h3>
-            <p>Choose a username and get your DoMailit address straight away.</p>
+            <p>Pick a username and your @domailit.com address is ready straight away.</p>
           </li>
           <li class="step reveal">
             <span class="step-num">2</span>
-            <h3>Add your domain</h3>
-            <p>Enter your domain, copy one TXT record to your DNS, and click Check now.</p>
+            <h3>Send, receive and call</h3>
+            <p>Email anyone, including Gmail and Outlook, and call other DoMailit users right from their email.</p>
           </li>
           <li class="step reveal">
             <span class="step-num">3</span>
-            <h3>Start using DoMailit</h3>
-            <p>Create addresses on your domain and manage everything from one inbox.</p>
+            <h3>Add your domain <span class="step-opt">optional</span></h3>
+            <p>Want name@yourcompany.com? Add your domain any time with one TXT record.</p>
           </li>
         </ol>
       </div>
