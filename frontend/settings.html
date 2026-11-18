@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Settings · MailSpace</title>
+  <title>Settings · DoMailit</title>
   <meta name="theme-color" content="#F7F9FF">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -13,6 +13,7 @@
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/calls.css">
 </head>
 <body class="app-page" data-page="settings">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -26,7 +27,7 @@
         <div class="page-head">
           <div>
             <h1>Settings</h1>
-            <p>Your account, how MailSpace looks, and how your account is protected.</p>
+            <p>Your account, how DoMailit looks, and how your account is protected.</p>
           </div>
         </div>
 
@@ -94,7 +95,7 @@
               <ul id="from-list" class="list-plain from-list">
                 <li><span class="skeleton" style="width:50%;height:14px"></span></li>
               </ul>
-              <p class="hint" style="margin-top:14px">Mail to Gmail, Outlook and other providers can only be sent from your main MailSpace address.</p>
+              <p class="hint" style="margin-top:14px">Mail to Gmail, Outlook and other providers can only be sent from your main DoMailit address.</p>
             </section>
 
             <!-- Security -->
@@ -148,7 +149,7 @@
                 <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Your login cookie can't be read by scripts, and every change you make is protected against cross-site requests.</span></li>
                 <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Repeated failed logins are slowed down automatically.</span></li>
                 <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Attachments are checked to make sure they really are the file type they claim to be, and only people in the conversation can download them.</span></li>
-                <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Messages are shown as plain text, so scripts or tracking code inside an email can't run.</span></li>
+                <li><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#check"/></svg><span>Formatted emails open in a locked frame, so scripts inside an email can't run and outside images stay hidden until you show them.</span></li>
               </ul>
             </section>
           </div>
@@ -160,6 +161,7 @@
   <script src="/api.js"></script>
   <script src="/ui.js"></script>
   <script src="/shell.js"></script>
+  <script src="/calls.js"></script>
   <script src="/settings.js"></script>
 </body>
 </html>
