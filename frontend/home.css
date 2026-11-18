@@ -732,3 +732,20 @@
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
   .footer-brand { grid-column: 1 / -1; }
 }
+
+/* Showcase: calls + forward lock */
+.pv-call { display: inline-grid; place-items: center; position: relative; color: var(--success-text); }
+.pv-call::after { content: ""; position: absolute; right: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--surface); }
+.pv-online { position: relative; }
+.pv-online::after { content: ""; position: absolute; right: 0; bottom: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--surface); }
+.pv-read-head small .pv-online-text { color: var(--success-text); font-weight: 600; }
+.pv-reply span.pv-locked { opacity: .5; }
+.pv-note { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 11px; color: var(--text-2); }
+.pv-window { position: relative; }
+.pv-call-card { position: absolute; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #0B1220; color: #fff; box-shadow: 0 18px 40px rgba(2, 8, 23, .35); border: 1px solid rgba(255,255,255,.08); }
+.pv-call-card > div { display: grid; }
+.pv-call-card strong { font-size: 12px; font-weight: 600; }
+.pv-call-card small { font-size: 10.5px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+.pv-call-btn { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.pv-call-btn.end { background: #E5484D; }
+@media (max-width: 760px) { .pv-call-card { display: none; } }

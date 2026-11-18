@@ -205,7 +205,7 @@
         <div class="section-head center reveal">
           <p class="pill small-pill"><span class="pill-dot"></span>The inbox</p>
           <h2 id="showcase-title">An inbox that stays out of your way</h2>
-          <p>Folders on the left, your messages in the middle, and the one you're reading on the right.</p>
+          <p>Folders on the left, your messages in the middle, and the one you're reading on the right. Call the sender in one tap, and decide who can forward what you send.</p>
         </div>
 
         <div class="showcase-frame reveal" aria-hidden="true">
@@ -267,11 +267,11 @@
               <div class="pv-read">
                 <div class="pv-read-title big">
                   <h4>Project update</h4>
-                  <span class="pv-tools"><svg class="i i-sm"><use href="/icons.svg#star"/></svg><svg class="i i-sm"><use href="/icons.svg#reply"/></svg><svg class="i i-sm"><use href="/icons.svg#more"/></svg></span>
+                  <span class="pv-tools"><span class="pv-call"><svg class="i i-sm"><use href="/icons.svg#phone"/></svg></span><span class="pv-call"><svg class="i i-sm"><use href="/icons.svg#video"/></svg></span><svg class="i i-sm"><use href="/icons.svg#star"/></svg><svg class="i i-sm"><use href="/icons.svg#reply"/></svg><svg class="i i-sm"><use href="/icons.svg#more"/></svg></span>
                 </div>
                 <div class="pv-read-head">
-                  <span class="pv-av lg" style="--h:215">SJ</span>
-                  <div><strong>Sarah Johnson <span>&lt;sarah@domailit.com&gt;</span></strong><small>to me</small></div>
+                  <span class="pv-av lg pv-online" style="--h:215">SJ</span>
+                  <div><strong>Sarah Johnson <span>&lt;sarah@domailit.com&gt;</span></strong><small>to me · <span class="pv-online-text">Online</span></small></div>
                   <time>10:42 AM</time>
                 </div>
                 <div class="pv-body">
@@ -283,8 +283,15 @@
                 <div class="pv-attachments">
                   <div class="pv-file"><span class="pdf"><svg class="i i-sm"><use href="/icons.svg#file"/></svg></span><div><strong>project-plan.pdf</strong><small>PDF · 184 KB</small></div></div>
                 </div>
-                <div class="pv-reply"><span><svg class="i i-sm"><use href="/icons.svg#reply"/></svg>Reply</span><span><svg class="i i-sm"><use href="/icons.svg#reply-all"/></svg>Reply all</span><span><svg class="i i-sm"><use href="/icons.svg#forward"/></svg>Forward</span></div>
+                <div class="pv-reply"><span><svg class="i i-sm"><use href="/icons.svg#reply"/></svg>Reply</span><span><svg class="i i-sm"><use href="/icons.svg#reply-all"/></svg>Reply all</span><span class="pv-locked"><svg class="i i-sm"><use href="/icons.svg#lock"/></svg>Forward</span></div>
+                <div class="pv-note"><svg class="i i-sm"><use href="/icons.svg#lock"/></svg>Forwarding was turned off by the sender.</div>
               </div>
+            </div>
+            <div class="pv-call-card">
+              <span class="pv-av lg" style="--h:215">SJ</span>
+              <div><strong>Sarah Johnson</strong><small>Video call · 04:12</small></div>
+              <span class="pv-call-btn mute"><svg class="i i-sm"><use href="/icons.svg#mic"/></svg></span>
+              <span class="pv-call-btn end"><svg class="i i-sm"><use href="/icons.svg#phone-off"/></svg></span>
             </div>
           </div>
         </div>
