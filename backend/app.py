@@ -1,4 +1,6 @@
-"""app.py — starts the MailSpace server (locally and online)."""
+"""app.py — starts the DoMailit server (locally and online)."""
+import os
+
 from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -6,6 +8,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from config import Config
 from database import init_indexes, ping
 from routes.auth import auth_bp
+from routes.calls import calls_bp
+from routes.profile import profile_bp
 from routes.domains import domains_bp
 from routes.admin import admin_bp
 from routes.inbound import inbound_bp
@@ -37,6 +41,8 @@ def create_app():
     app.register_blueprint(domains_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(inbound_bp)
+    app.register_blueprint(calls_bp)
+    app.register_blueprint(profile_bp)
 
     @app.route("/")
     def home():
@@ -55,7 +61,7 @@ def create_app():
             database = "connected"
         except Exception:
             database = "not connected"
-        return jsonify({"status": "ok", "message": "MailSpace backend is running", "database": database})
+        return jsonify({"status": "ok", "message": "DoMailit backend is running", "database": database})
 
     @app.errorhandler(HTTPException)
     def handle_http_error(exc):
@@ -80,6 +86,16 @@ except Exception as exc:
     print("[ERROR] Could not connect to MongoDB:", exc)
     print("Check MONGODB_URI in your .env file and Network Access in Atlas.")
     raise SystemExit(1)
+
+# One-time move to a new main domain: set MIGRATE_FROM_DOMAIN on Render
+# (e.g. fahadimtiaz.site), then remove it. Safe to run again (nothing left to change),
+# and a problem here never stops the website.
+if os.getenv("MIGRATE_FROM_DOMAIN"):
+    try:
+        from migrate_domain import migrate
+        print(migrate(os.getenv("MIGRATE_FROM_DOMAIN")), flush=True)
+    except Exception as exc:
+        print("[MIGRATE] Failed:", exc, flush=True)
 
 app = create_app()
 

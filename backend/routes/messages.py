@@ -84,6 +84,7 @@ def list_item(entry):
         "is_read": entry["is_read"],
         "is_starred": entry["is_starred"],
         "has_attachments": entry["has_attachments"],
+        "from_name": entry.get("from_name"),   # "Fahad Imtiaz" (None = only the address is known)
     }
 
 
@@ -242,6 +243,10 @@ def get_message(entry_id):
     item = list_item(entry)
     item["body"] = message["body"]
     item["body_html"] = message.get("body_html")  # email design (already cleaned), or None
+    # Forwarding: the person who wrote the email decides (compose switch)
+    item["allow_forward"] = message.get("allow_forward", True)
+    item["can_forward"] = (item["allow_forward"] or message.get("sender_id") == g.user["_id"]
+                           or g.user.get("role") == "admin")  # the admin may forward anything
     item["attachments"] = [
         {"id": a["id"], "filename": a["filename"], "size": a["size"]}
         for a in message.get("attachments", [])
@@ -338,7 +343,7 @@ def save_draft():
     return jsonify({"draft_id": str(entry_id)}), 201
 # ---------- Sending ----------
 def resolve_recipients(to_emails):
-    """Sort addresses into MailSpace mailboxes and outside addresses.
+    """Sort addresses into DoMailit mailboxes and outside addresses.
     Returns (internal {email: user}, external [emails], None)
     or (None, None, "error message")."""
     internal, external = {}, []
@@ -346,7 +351,7 @@ def resolve_recipients(to_emails):
         domain = email.rsplit("@", 1)[1]
 
         if domain == Config.MAIL_DOMAIN:
-            # A normal MailSpace address, like nimra@fahadimtiaz.site
+            # A normal DoMailit address, like nimra@domailit.com
             user = users.find_one({"email": email, "status": "active"})
         elif domains.find_one({"name": domain, "status": "verified"}):
             # A custom address on a verified customer domain, like info@nimranoor.site
@@ -358,7 +363,7 @@ def resolve_recipients(to_emails):
             continue
 
         if user is None or is_expired(user):
-            return None, None, f"No MailSpace mailbox found for {email}."
+            return None, None, f"No DoMailit mailbox found for {email}."
         internal[email] = user
     return internal, external, None
 
@@ -383,6 +388,18 @@ def send_message():
     invalid = [e for e in to_emails if not EMAIL_PATTERN.fullmatch(e)]
     if invalid:
         return error(f'"{invalid[0]}" is not a valid email address.')
+
+    # "Allow forwarding" switch in compose (on unless the sender turned it off)
+    allow_forward = request.form.get("allow_forward", "1") not in ("0", "false", "off")
+
+    # Forwarding someone else's email: only if its owner allowed it
+    forward_of = request.form.get("forward_of")
+    if forward_of:
+        original_entry = find_entry(forward_of)
+        original = messages.find_one({"_id": original_entry["message_id"]}) if original_entry else None
+        if (original and original.get("allow_forward", True) is False
+                and original.get("sender_id") != me["_id"] and me.get("role") != "admin"):
+            return error("Forwarding has been disabled by the mail owner.", 403)
 
     found, external, problem = resolve_recipients(to_emails)
     if problem:
@@ -415,12 +432,12 @@ def send_message():
             files_for_provider = [
                 (a["filename"], attachment_files.get(a["file_id"]).read()) for a in attachments
             ]
-            external_id = send_external(from_email, me["username"], external, subject, body, files_for_provider)
+            external_id = send_external(from_email, me.get("display_name") or me["username"], external, subject, body, files_for_provider)
         except ExternalSendError as exc:
             delete_files(attachments)
             return error(f"Could not send to {', '.join(external)}: {exc}", 502)
 
-    # 2) Save the message and give every MailSpace user their own copy
+    # 2) Save the message and give every DoMailit user their own copy
     now = now_utc()
     try:
         flagged_words = check_message(subject, body)
@@ -432,12 +449,14 @@ def send_message():
             "external_id": external_id,
             "subject": subject, "body": body, "attachments": attachments,
             "is_draft": False, "created_at": now,
+            "allow_forward": allow_forward,
             "flagged": bool(flagged_words),
             "flag_words": flagged_words,
         }).inserted_id
 
         shared = {
             "message_id": message_id, "from_email": from_email, "to_emails": to_emails,
+            "from_name": me.get("display_name") or None,
             "subject": subject, "snippet": make_snippet(body),
             "search_text": make_search_text(from_email, to_emails, subject, body),
             "has_attachments": bool(attachments), "is_starred": False, "created_at": now,
@@ -460,3 +479,96 @@ def send_message():
     if external:
         return jsonify({"message": "Message sent. The email provider accepted it for delivery."}), 201
     return jsonify({"message": "Message sent"}), 201
+
+# ---------- Screenshot alert ----------
+SCREENSHOT_HOW = {
+    "printscreen": "pressed the Print Screen key on the website",
+    "web-capture": "may have used a screen-capture tool on the website",
+    "android": "took a screenshot in the Android app",
+    "ios": "took a screenshot in the iPhone app",
+}
+
+
+@messages_bp.post("/messages/<entry_id>/screenshot")
+@login_required
+def report_screenshot(entry_id):
+    """The website / app noticed a screenshot -> email the person who wrote it."""
+    me = g.user
+    entry = find_entry(entry_id)
+    message = messages.find_one({"_id": entry["message_id"]}) if entry else None
+    if message is None:
+        return error("Message not found.", 404)
+
+    owner_id = message.get("sender_id")
+    if me.get("role") == "admin":
+        return jsonify({"ok": True, "sent": False})  # the admin's screenshots don't send alerts
+    if owner_id is None or owner_id == me["_id"]:
+        return jsonify({"ok": True, "sent": False})  # outside sender, or my own email
+
+    now = now_utc()
+    last = entry.get("screenshot_alert_at")
+    if last and (now - last).total_seconds() < 60:
+        return jsonify({"ok": True, "sent": False})  # one alert per minute is enough
+    mailboxes.update_one({"_id": entry["_id"]}, {"$set": {"screenshot_alert_at": now}})
+
+    data = request.get_json(silent=True) or {}
+    how = SCREENSHOT_HOW.get(str(data.get("method", "")), "took a screenshot")
+    try:
+        from routes.calls import local_time
+        when = local_time(now)
+    except Exception:
+        when = now.isoformat()
+
+    original_subject = message.get("subject") or "(no subject)"
+    subject = f"Screenshot alert: {me['email']} captured \u201c{original_subject}\u201d"[:200]
+    body = "\n".join([
+        "Someone took a screenshot of your email.",
+        "",
+        f"Who:      {me['email']}",
+        f"Email:    {original_subject}",
+        f"When:     {when}",
+        f"How:      {how}",
+        "",
+        "This email was created automatically by DoMailit.",
+    ])
+    alert_from = f"alerts@{Config.MAIL_DOMAIN}"
+    alert_id = messages.insert_one({
+        "sender_id": None, "sender_email": alert_from,
+        "to_emails": [message.get("sender_email", "")], "recipient_ids": [owner_id],
+        "subject": subject, "body": body, "attachments": [],
+        "is_draft": False, "created_at": now, "screenshot_of": message["_id"],
+        "flagged": False, "flag_words": [],
+    }).inserted_id
+    mailboxes.insert_one({
+        "user_id": owner_id, "message_id": alert_id, "folder": "inbox",
+        "is_read": False, "is_starred": False,
+        "from_email": alert_from, "from_name": "DoMailit Alerts", "to_emails": [message.get("sender_email", "")],
+        "subject": subject, "snippet": make_snippet(body),
+        "search_text": make_search_text(alert_from, [me["email"]], subject, body),
+        "has_attachments": False, "created_at": now,
+    })
+    return jsonify({"ok": True, "sent": True})
+
+
+# ---------- Recent contacts (suggestions in the compose "To" box) ----------
+CONTACT_SKIP = re.compile(r"^(calls|alerts|no-?reply|mailer-daemon|postmaster)@", re.I)
+
+
+@messages_bp.get("/contacts")
+@login_required
+def recent_contacts():
+    """Addresses YOU sent email to — the one used most recently first (like Gmail)."""
+    me = g.user
+    mine = {a.lower() for a in allowed_from_addresses(me)}
+    seen = {}  # email -> last time you emailed it (dict keeps the order: newest first)
+    entries = mailboxes.find({"user_id": me["_id"], "folder": "sent"}).sort("created_at", -1).limit(1000)
+    for entry in entries:
+        for email in entry.get("to_emails") or []:
+            email = (email or "").strip().lower()
+            if "@" not in email or email in mine or CONTACT_SKIP.match(email) or email in seen:
+                continue
+            seen[email] = entry.get("created_at")
+            if len(seen) >= 200:
+                break
+    contacts = [{"email": e, "last": to_iso(t)} for e, t in seen.items()]
+    return jsonify({"contacts": contacts})

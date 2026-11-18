@@ -1,16 +1,18 @@
-// user.dart — one MailSpace account, as the server sends it from
+// user.dart — one DoMailit account, as the server sends it from
 // /api/auth/me, /api/auth/login and /api/auth/signup  (public_user() in auth.py).
 
 class User {
   final String id;
   final String username;
-  final String email;            // e.g. username@fahadimtiaz.site
+  final String email;            // e.g. username@domailit.com
   final String accountType;      // 'regular', 'temp15' or 'temp30'
   final String role;             // 'user' or 'admin'
   final DateTime? createdAt;
   final DateTime? expiresAt;     // only for temporary accounts
   final String? recoveryEmail;   // already masked by the server: n•••@gmail.com
   final String? securityQuestion;
+  final String? displayName;     // "Nimra Noor" — shown to people you email
+  final String? avatar;          // /api/avatar/<id>?v=… (null = no picture)
 
   User({
     required this.id,
@@ -22,6 +24,8 @@ class User {
     this.expiresAt,
     this.recoveryEmail,
     this.securityQuestion,
+    this.displayName,
+    this.avatar,
   });
 
   bool get isTemporary => accountType != 'regular';
@@ -35,8 +39,15 @@ class User {
   }
 
   /// "DM" style initials for the avatar circle.
-  String get initials =>
-      username.length >= 2 ? username.substring(0, 2).toUpperCase() : username.toUpperCase();
+  String get initials {
+    final words = (displayName ?? '').trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    if (words.length == 1 && words[0].length >= 2) return words[0].substring(0, 2).toUpperCase();
+    return username.length >= 2 ? username.substring(0, 2).toUpperCase() : username.toUpperCase();
+  }
+
+  /// The name to show: your display name, or the username.
+  String get shownName => (displayName ?? '').trim().isNotEmpty ? displayName!.trim() : username;
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -49,6 +60,8 @@ class User {
       expiresAt: _date(json['expires_at']),
       recoveryEmail: json['recovery_email'] as String?,
       securityQuestion: json['security_question'] as String?,
+      displayName: json['display_name'] as String?,
+      avatar: json['avatar'] as String?,
     );
   }
 }

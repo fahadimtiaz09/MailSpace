@@ -1,6 +1,6 @@
 workflows:
   ios-unsigned:
-    name: MailSpace iOS (unsigned)
+    name: DoMailit iOS (unsigned)
     instance_type: mac_mini_m2
     max_build_duration: 60
     working_directory: mobile
@@ -17,12 +17,12 @@ workflows:
         script: |
           mkdir -p build/ios/ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
-          cd build/ios/ipa && zip -qr MailSpace-unsigned.ipa Payload
+          cd build/ios/ipa && zip -qr DoMailit-unsigned.ipa Payload
       - name: Build for iOS simulator
         script: flutter build ios --simulator --debug
       - name: Zip simulator app
         script: |
-          cd build/ios/iphonesimulator && zip -qr ../MailSpace-simulator.zip Runner.app
+          cd build/ios/iphonesimulator && zip -qr ../DoMailit-simulator.zip Runner.app
     artifacts:
       - mobile/build/ios/ipa/*.ipa
       - mobile/build/ios/*.zip
@@ -30,7 +30,7 @@ workflows:
       - build/ios/*.zip
 
   android-apk:
-    name: MailSpace Android APK
+    name: DoMailit Android APK
     instance_type: mac_mini_m2
     max_build_duration: 60
     working_directory: mobile

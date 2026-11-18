@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Inbox · MailSpace</title>
+  <title>Inbox · DoMailit</title>
   <meta name="theme-color" content="#F7F9FF">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -13,6 +13,7 @@
   <script src="/theme.js"></script>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/calls.css">
 </head>
 <body class="app-page" data-page="inbox">
   <a class="skip-link" href="#message-list">Skip to messages</a>
@@ -105,6 +106,13 @@
                 <svg class="i" aria-hidden="true"><use href="/icons.svg#star"/></svg>
               </button>
               <span class="spacer"></span>
+              <button id="call-btn" class="icon-btn dial-btn" type="button" aria-label="Voice call" data-tip="Voice call" disabled>
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#phone"/></svg><span class="dial-dot" aria-hidden="true"></span>
+              </button>
+              <button id="video-call-btn" class="icon-btn dial-btn" type="button" aria-label="Video call" data-tip="Video call" disabled>
+                <svg class="i" aria-hidden="true"><use href="/icons.svg#video"/></svg><span class="dial-dot" aria-hidden="true"></span>
+              </button>
+              <span class="sep" aria-hidden="true"></span>
               <button id="reply-btn-top" class="icon-btn" type="button" aria-label="Reply" data-tip="Reply">
                 <svg class="i" aria-hidden="true"><use href="/icons.svg#reply"/></svg>
               </button>
@@ -150,7 +158,7 @@
         <div class="compose-row">
           <label for="compose-to">To</label>
           <input id="compose-to" name="to" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="name@fahadimtiaz.site, friend@gmail.com">
+                 placeholder="name@domailit.com, friend@gmail.com">
         </div>
         <div class="compose-row">
           <label for="compose-subject">Subject</label>
@@ -171,6 +179,10 @@
           <svg class="i" aria-hidden="true"><use href="/icons.svg#paperclip"/></svg>
           <input type="file" id="attachments" multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
         </label>
+        <label class="forward-toggle" data-tip="If off, people can't forward this email">
+          <input type="checkbox" id="compose-allow-forward" name="allow_forward" checked>
+          <span>Allow forwarding</span>
+        </label>
         <span class="hint" id="compose-hint">Up to 5 files, 10 MB each</span>
         <button type="button" id="save-draft-btn" class="btn btn-ghost btn-sm">Save draft</button>
         <button type="button" id="discard-btn" class="icon-btn" aria-label="Discard" data-tip="Discard">
@@ -183,6 +195,7 @@
   <script src="/api.js"></script>
   <script src="/ui.js"></script>
   <script src="/shell.js"></script>
+  <script src="/calls.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

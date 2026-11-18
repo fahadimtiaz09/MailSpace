@@ -68,7 +68,7 @@ class _ForgotScreenState extends State<ForgotScreen> {
         if (info.recoveryEmail == null && info.securityQuestion == null) {
           setState(() => _error =
               'This account has no recovery email or security question, so it can\'t be reset here. '
-              'Please contact the MailSpace admin.');
+              'Please contact the DoMailit admin.');
           return;
         }
         setState(() {

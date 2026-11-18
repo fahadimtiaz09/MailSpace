@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
           children: [
-            const Align(alignment: Alignment.centerLeft, child: BrandLockup(logoWidth: 40, fontSize: 22)),
+            const Align(alignment: Alignment.centerLeft, child: BrandLockup(logoWidth: 30, fontSize: 22)),
             const SizedBox(height: 28),
             Text(
               'Welcome back',
@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
               autocorrect: false,
               enableSuggestions: false,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(hintText: 'username or username@fahadimtiaz.site'),
+              decoration: const InputDecoration(hintText: 'username or username@domailit.com'),
             ),
             const SizedBox(height: 16),
 
@@ -159,11 +159,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             const SizedBox(height: 32),
 
-            // ⑤ New to MailSpace? Create an account
+            // ⑤ New to DoMailit? Create an account
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('New to MailSpace? ', style: TextStyle(fontSize: 14)),
+                const Text('New to DoMailit? ', style: TextStyle(fontSize: 14)),
                 TextButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, '/signup'),
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 44)),

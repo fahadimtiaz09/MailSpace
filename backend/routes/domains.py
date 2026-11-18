@@ -16,7 +16,8 @@ domains_bp = Blueprint("domains", __name__, url_prefix="/api/domains")
 
 DOMAIN_PATTERN = re.compile(r"^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
 LOCAL_PART_PATTERN = re.compile(r"^[a-z0-9._]{1,30}$")
-VERIFY_HOST = "_mailspace"
+VERIFY_HOST = "_domailit"
+OLD_VERIFY_HOST = "_mailspace"   # domains added before the rename
 MAX_DOMAINS_PER_USER = 3
 MAX_ADDRESSES_PER_DOMAIN = 10
 
@@ -43,7 +44,7 @@ def public_domain(d, domain_addresses=None):
             {
                 "type": "TXT",
                 "host": VERIFY_HOST,
-                "value": f"mailspace-verify={d['token']}",
+                "value": f"domailit-verify={d['token']}",
                 "purpose": "Proves you own this domain",
             },
         ],
@@ -104,11 +105,11 @@ def add_domain():
     if not DOMAIN_PATTERN.fullmatch(name):
         return error("Please enter a domain like yourbusiness.com")
     if name == Config.MAIL_DOMAIN:
-        return error("That is MailSpace's own domain.")
+        return error("That is DoMailit's own domain.")
     if domains.count_documents({"owner_id": g.user["_id"]}) >= MAX_DOMAINS_PER_USER:
         return error(f"You can add up to {MAX_DOMAINS_PER_USER} domains.")
     if domains.find_one({"name": name, "status": "verified"}):
-        return error("This domain is already verified by another MailSpace account.", 409)
+        return error("This domain is already verified by another DoMailit account.", 409)
 
     doc = {
         "owner_id": g.user["_id"],
@@ -137,8 +138,12 @@ def verify_domain(domain_id):
     if d["status"] == "verified":
         return jsonify({"domain": public_domain(d), "message": "This domain is already verified."})
 
-    expected = f"mailspace-verify={d['token']}"
+    expected = f"domailit-verify={d['token']}"
     found = lookup_txt(f"{VERIFY_HOST}.{d['name']}")
+    # Records made before the rename (_mailspace / mailspace-verify=) still count
+    old_ok = f"mailspace-verify={d['token']}" in lookup_txt(f"{OLD_VERIFY_HOST}.{d['name']}") if expected not in found else False
+    if old_ok:
+        found = [expected]
 
     if expected not in found:
         if found:
@@ -157,7 +162,7 @@ def verify_domain(domain_id):
             {"$set": {"status": "verified", "verified_at": now_utc()}},
         )
     except DuplicateKeyError:
-        return error("Another MailSpace account has already verified this domain.", 409)
+        return error("Another DoMailit account has already verified this domain.", 409)
 
     d = domains.find_one({"_id": d["_id"]})
     return jsonify({"domain": public_domain(d), "message": f"{d['name']} is verified! 🎉"})

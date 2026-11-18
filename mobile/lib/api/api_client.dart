@@ -1,4 +1,4 @@
-// api_client.dart — the ONLY place in the app that talks to the MailSpace server.
+// api_client.dart — the ONLY place in the app that talks to the DoMailit server.
 //
 // Screens never use Dio directly. They call functions here, for example:
 //   final user = await ApiClient.instance.login('username', 'password');
@@ -9,6 +9,8 @@
 //      "X-CSRFToken", whose value is in a cookie called "csrf_token".
 //   3. A browser does this by itself. In the app we save cookies on the phone
 //      (PersistCookieJar) and add the header ourselves (the interceptor below).
+
+import 'dart:typed_data';
 
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
@@ -71,7 +73,7 @@ class ApiClient {
   /// Use this everywhere: ApiClient.instance.login(...)
   static final ApiClient instance = ApiClient._();
 
-  static const String baseUrl = 'https://mail.fahadimtiaz.site/api';
+  static const String baseUrl = 'https://domailit.com/api';
 
   late final Dio _dio;
   CookieJar? _cookieJar;
@@ -183,7 +185,7 @@ class ApiClient {
   }
 
   /// [login] can be the username ("username") or the full address
-  /// ("username@fahadimtiaz.site"). The backend field is called "login".
+  /// ("username@domailit.com"). The backend field is called "login".
   Future<User> login(String login, String password) async {
     await _ensureCsrf();
     final data = await _post('/auth/login', {
@@ -286,6 +288,8 @@ class ApiClient {
     required String body,
     List<UploadFile> files = const [],
     String? draftId,
+    bool allowForward = true, // "Allow forwarding" switch in compose
+    String? forwardOf,        // id of the email being forwarded (server checks the owner allowed it)
   }) async {
     final form = FormData.fromMap({
       'from': from,
@@ -293,12 +297,91 @@ class ApiClient {
       'subject': subject,
       'body': body,
       if (draftId != null) 'draft_id': draftId,
+      'allow_forward': allowForward ? '1' : '0',
+      if (forwardOf != null) 'forward_of': forwardOf,
     });
     for (final f in files) {
       form.files.add(MapEntry('attachments', await MultipartFile.fromFile(f.path, filename: f.name)));
     }
     final data = await _post('/messages/send', form);
     return (data is Map && data['message'] is String) ? data['message'] as String : 'Message sent';
+  }
+
+  // ---------------- Profile: name + picture ----------------
+
+  Future<void> updateDisplayName(String name) async {
+    await _patch('/auth/profile', {'display_name': name});
+  }
+
+  /// [png] = an already shrunk square picture.
+  Future<void> uploadAvatar(Uint8List png) async {
+    final form = FormData.fromMap({'avatar': MultipartFile.fromBytes(png, filename: 'avatar.png')});
+    await _post('/auth/avatar', form);
+  }
+
+  Future<void> deleteAvatar() async {
+    await _delete('/auth/avatar');
+  }
+
+  /// Names + picture links for DoMailit addresses (outside addresses are left out).
+  Future<Map<String, Map<String, dynamic>>> people(List<String> emails) async {
+    final data = await _get('/people', query: {'emails': emails.join(',')});
+    final found = (data['people'] as Map?) ?? {};
+    return found.map((k, v) => MapEntry(k.toString(), Map<String, dynamic>.from(v as Map)));
+  }
+
+  /// Downloads a profile picture ("/api/avatar/…" from the server).
+  Future<Uint8List?> avatarBytes(String url) async {
+    final path = url.startsWith('/api/') ? url.substring(4) : url;
+    try {
+      final res = await _dio.get<List<int>>(path, options: Options(responseType: ResponseType.bytes));
+      return res.data == null ? null : Uint8List.fromList(res.data!);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Tell the person who wrote this email that we took a screenshot of it.
+  Future<void> reportScreenshot(String messageId, String method) async {
+    try {
+      await _post('/messages/$messageId/screenshot', {'method': method});
+    } catch (_) {/* not important enough to show an error */}
+  }
+
+  // ---------------- Calls (voice / video) ----------------
+
+  /// "I'm online." Returns an incoming call (Map) if someone is calling us.
+  Future<Map<String, dynamic>?> callHeartbeat({String? callId}) async {
+    final data = await _post('/calls/heartbeat', {'call_id': callId});
+    final incoming = (data is Map) ? data['incoming'] : null;
+    return incoming is Map ? Map<String, dynamic>.from(incoming) : null;
+  }
+
+  /// Can I call this address now? {can_call, online, reason}
+  Future<Map<String, dynamic>> callPresence(String email) async {
+    final data = await _get('/calls/presence', query: {'email': email});
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<Map<String, dynamic>> startCall(String to, String kind, Map<String, String> offer) async {
+    final data = await _post('/calls', {'to': to, 'kind': kind, 'offer': offer});
+    return Map<String, dynamic>.from((data as Map)['call'] as Map);
+  }
+
+  Future<Map<String, dynamic>> getCall(String id) async {
+    final data = await _get('/calls/$id');
+    return Map<String, dynamic>.from((data as Map)['call'] as Map);
+  }
+
+  Future<Map<String, dynamic>> answerCall(String id, Map<String, String> answer) async {
+    final data = await _post('/calls/$id/answer', {'answer': answer});
+    return Map<String, dynamic>.from((data as Map)['call'] as Map);
+  }
+
+  Future<void> endCall(String id) async {
+    try {
+      await _post('/calls/$id/end', {});
+    } catch (_) {/* the call may already be over */}
   }
 
   /// Saves (or updates) a draft. Attachments are not saved in drafts.
@@ -323,6 +406,12 @@ class ApiClient {
   // ---------------------------------------------------------------------------
 
   /// Addresses for the From box: main address + custom-domain addresses.
+  /// Addresses you sent email to, most recent first (suggestions in "To").
+  Future<List<String>> getContacts() async {
+    final data = await _get('/contacts');
+    return (data['contacts'] as List).map((c) => (c as Map)['email'].toString()).toList();
+  }
+
   Future<List<String>> getFromAddresses() async {
     final data = await _get('/domains/from-addresses');
     return (data['addresses'] as List).map((e) => e.toString()).toList();

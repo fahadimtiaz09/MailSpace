@@ -225,17 +225,86 @@ function nameFromEmail(email) {
     .join(" ") || local;
 }
 
-function avatar(email, size = "") {
-  const name = nameFromEmail(email);
-  const words = name.split(" ");
-  const initials = (words[0][0] + (words[1] ? words[1][0] : (words[0][1] || ""))).toUpperCase();
+// Round avatar: the person's profile picture if they have one (DoMailit
+// users), otherwise coloured initials. [name] = their real name if known.
+function avatar(email, size = "", name = null) {
+  const shown = (name || "").trim() || nameFromEmail(email);
+  const words = shown.split(/\s+/);
+  const initials = ((words[0][0] || "?") + (words[1] ? words[1][0] : (words[0][1] || ""))).toUpperCase();
   let hash = 0;
   for (const ch of String(email)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   const node = el("span", "avatar" + (size ? " avatar-" + size : ""), initials);
   node.style.setProperty("--h", String(hash % 360));
   node.setAttribute("aria-hidden", "true");
+  People.photoFor(email, node);
   return node;
 }
+
+// ---------- People: names + profile pictures of DoMailit addresses ----------
+// Every avatar asks for its picture; the requests are collected and sent to
+// the server in one go (GET /api/people?emails=a,b,c). Gmail and other outside
+// addresses simply keep their initials.
+const People = (() => {
+  const known = new Map();    // email -> {name, avatar} | null (not a DoMailit address)
+  const waiting = new Map();  // email -> [avatar nodes]
+  let timer = null;
+
+  function showPhoto(node, url) {
+    const img = new Image();
+    img.alt = "";
+    img.decoding = "async";
+    img.addEventListener("load", () => {
+      node.replaceChildren(img);
+      node.classList.add("has-photo");
+    });
+    img.src = url;
+  }
+
+  function photoFor(email, node) {
+    email = String(email || "").toLowerCase();
+    if (!email.includes("@")) return;
+    if (known.has(email)) {
+      const info = known.get(email);
+      if (info && info.avatar) showPhoto(node, info.avatar);
+      return;
+    }
+    if (!waiting.has(email)) waiting.set(email, []);
+    waiting.get(email).push(node);
+    clearTimeout(timer);
+    timer = setTimeout(flush, 30);
+  }
+
+  async function flush() {
+    if (typeof api !== "function") return;
+    const emails = [...waiting.keys()].filter((e) => !known.has(e));
+    while (emails.length) {
+      const batch = emails.splice(0, 60);
+      let found = {};
+      try {
+        found = (await api("/api/people?emails=" + encodeURIComponent(batch.join(",")))).people || {};
+      } catch (_) { /* not signed in, or offline: keep initials */ }
+      batch.forEach((email) => {
+        known.set(email, found[email] || null);
+        const nodes = waiting.get(email) || [];
+        waiting.delete(email);
+        const info = known.get(email);
+        if (info && info.avatar) nodes.forEach((n) => showPhoto(n, info.avatar));
+      });
+    }
+  }
+
+  // Your own name / picture (known right after login or a change in Settings)
+  function remember(email, info) {
+    known.set(String(email).toLowerCase(), info);
+  }
+
+  function nameOf(email) {
+    const info = known.get(String(email || "").toLowerCase());
+    return info && info.name ? info.name : null;
+  }
+
+  return { photoFor, remember, nameOf };
+})();
 
 // ---------- Buttons with a loading state ----------
 function setBusy(button, busy, busyText) {

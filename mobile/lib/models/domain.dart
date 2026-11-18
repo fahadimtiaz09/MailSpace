@@ -2,8 +2,8 @@
 
 class DnsRecord {
   final String type;    // "TXT"
-  final String host;    // "_mailspace"
-  final String value;   // "mailspace-verify=…"
+  final String host;    // "_domailit"
+  final String value;   // "domailit-verify=…"
   final String purpose; // "Proves you own this domain"
 
   DnsRecord({required this.type, required this.host, required this.value, required this.purpose});

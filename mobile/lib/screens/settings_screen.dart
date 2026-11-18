@@ -1,16 +1,24 @@
 // settings_screen.dart — wireframe A12 · Settings  (the "Settings" tab)
 //
-//   ① Profile: username, address, account type, days left   (GET /api/auth/me)
+//   ① Profile: picture, name, address, account type, days left
+//                (GET /api/auth/me, PATCH /api/auth/profile, POST/DELETE /api/auth/avatar)
 //   ② Appearance: Light / Dark / System  (saved on the phone)
 //   ③ Sending addresses (From list)                          (GET /api/domains/from-addresses)
 //   ④ Security: change password, recovery email, security question
 //                                                            (POST /api/auth/change-password, /recovery)
 //   ⑥ Log out                                                (POST /api/auth/logout) → A1 Welcome
 
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../models/user.dart';
+import '../services/people.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/message_row.dart';
@@ -47,6 +55,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } on ApiException catch (e) {
       _snack(e.message);
     }
+  }
+
+  // ---------------- name + picture ----------------
+
+  Future<void> _afterProfileChange(String done) async {
+    People.instance.forget(_user.email); // show the new picture everywhere
+    await _refresh();
+    _snack(done);
+  }
+
+  Future<void> _editName() async {
+    final ctrl = TextEditingController(text: _user.displayName ?? '');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Your name'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: 50,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            hintText: 'Your full name',
+            helperText: 'Shown to people you email. Leave empty to show only your address.',
+            helperMaxLines: 2,
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (name == null) return;
+    try {
+      await _api.updateDisplayName(name);
+      await _afterProfileChange('Name saved.');
+    } on ApiException catch (e) {
+      _snack(e.message);
+    }
+  }
+
+  /// Crop to a square and shrink to 256 × 256 PNG (small upload, fast to show).
+  static Future<Uint8List> _squarePhoto(Uint8List bytes) async {
+    final codec = await ui.instantiateImageCodec(bytes, targetWidth: 640);
+    final image = (await codec.getNextFrame()).image;
+    final side = math.min(image.width, image.height).toDouble();
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(
+      image,
+      Rect.fromLTWH((image.width - side) / 2, (image.height - side) / 2, side, side),
+      const Rect.fromLTWH(0, 0, 256, 256),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    final out = await recorder.endRecording().toImage(256, 256);
+    final data = await out.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  }
+
+  Future<void> _changePhoto() async {
+    // Same picker as Compose (it returns the chosen files directly)
+    final List<PlatformFile>? picked = await FilePicker.pickFiles(type: FileType.image);
+    if (picked == null || picked.isEmpty) return;
+    final f = picked.first;
+   final Uint8List? bytes = f.path != null ? await File(f.path!).readAsBytes() : null;
+    if (bytes == null) return;
+    _snack('Uploading…');
+    try {
+      await _api.uploadAvatar(await _squarePhoto(bytes));
+      await _afterProfileChange('Profile picture updated.');
+    } on ApiException catch (e) {
+      _snack(e.message);
+    } catch (_) {
+      _snack("That file isn't a picture we can read.");
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    try {
+      await _api.deleteAvatar();
+      await _afterProfileChange('Profile picture removed.');
+    } on ApiException catch (e) {
+      _snack(e.message);
+    }
+  }
+
+  void _photoMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(_user.avatar == null ? 'Upload photo' : 'Change photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _changePhoto();
+              },
+            ),
+            if (_user.avatar != null)
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: AppColors.error),
+                title: Text('Remove photo', style: TextStyle(color: AppColors.error)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _removePhoto();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _snack(String text) {
@@ -112,13 +234,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Row(
                 children: [
-                  Avatar(seed: u.email, text: u.initials, radius: 28),
+                  // tap the picture to change it
+                  GestureDetector(
+                    onTap: _photoMenu,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Avatar(seed: u.email, text: u.initials, radius: 28),
+                        Positioned(
+                          right: -2,
+                          bottom: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.bg, width: 2),
+                            ),
+                            child: const Icon(Icons.camera_alt, size: 12, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(u.username, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                        Text(u.shownName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                         Text(u.email, style: TextStyle(fontSize: 13, color: AppColors.muted)),
                         Text(u.isTemporary ? '$typeText · ${u.daysLeft} days left' : typeText,
                             style: TextStyle(fontSize: 13, color: AppColors.muted)),
@@ -127,6 +271,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.badge_outlined),
+              title: const Text('Name'),
+              subtitle: Text(u.displayName ?? 'Not set — people see only your address'),
+              trailing: const Icon(Icons.edit_outlined, size: 20),
+              onTap: _editName,
             ),
             _kv('Member since', u.createdAt == null ? '—' : MessageRow.fullTime(u.createdAt).split(',').first),
             if (u.expiresAt != null) _kv('Account expires', MessageRow.fullTime(u.expiresAt)),

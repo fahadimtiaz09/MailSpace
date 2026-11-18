@@ -31,23 +31,26 @@ import 'screens/login_screen.dart';
 import 'screens/read_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'services/call_service.dart';
+import 'services/screen_guard.dart';
 import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // needed before init() reads phone storage
   await ApiClient.instance.init();
   await themeController.load(); // Light / Dark / System saved on the phone
-  runApp(const MailSpaceApp());
+  ScreenGuard.init();            // screenshot alerts from the phone
+  runApp(const DoMailitApp());
 }
 
-class MailSpaceApp extends StatefulWidget {
-  const MailSpaceApp({super.key});
+class DoMailitApp extends StatefulWidget {
+  const DoMailitApp({super.key});
 
   @override
-  State<MailSpaceApp> createState() => _MailSpaceAppState();
+  State<DoMailitApp> createState() => _DoMailitAppState();
 }
 
-class _MailSpaceAppState extends State<MailSpaceApp> with WidgetsBindingObserver {
+class _DoMailitAppState extends State<DoMailitApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -89,8 +92,10 @@ class _MailSpaceAppState extends State<MailSpaceApp> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MailSpace',
+      title: 'DoMailit',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,           // lets an incoming call open on any screen
+      scaffoldMessengerKey: messengerKey,
       theme: AppTheme.build(),
       home: const StartScreen(),
       routes: {
@@ -140,7 +145,7 @@ class _StartScreenState extends State<StartScreen> {
                 children: [
                   CircularProgressIndicator(color: AppColors.ink),
                   SizedBox(height: 16),
-                  Text('Connecting to MailSpace…', style: TextStyle(color: AppColors.muted)),
+                  Text('Connecting to DoMailit…', style: TextStyle(color: AppColors.muted)),
                 ],
               ),
             ),

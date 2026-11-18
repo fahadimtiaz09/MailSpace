@@ -20,20 +20,119 @@ function settingRow(label, value, note) {
 
 function renderProfile(u) {
   const hero = document.getElementById("profile-hero");
-  const text = el("div");
+  const text = el("div", "grow");
   text.style.minWidth = "0";
-  text.append(el("h3", null, u.username), el("p", null, u.email));
-  hero.replaceChildren(avatar(u.email, "lg"), text);
+  text.append(el("h3", null, u.display_name || u.username), el("p", null, u.email));
+
+  // Profile picture: change / remove
+  const photoBox = el("div", "profile-photo");
+  photoBox.append(avatar(u.email, "profile", u.display_name));
+  const actions = el("div", "profile-photo-actions");
+  const change = el("button", "btn btn-sm", u.avatar ? "Change photo" : "Upload photo");
+  change.type = "button";
+  change.prepend(icon("image", "i-sm"));
+  change.addEventListener("click", () => pickPhoto(change));
+  actions.append(change);
+  if (u.avatar) {
+    const remove = el("button", "btn btn-sm btn-ghost", "Remove");
+    remove.type = "button";
+    remove.addEventListener("click", () => removePhoto(remove));
+    actions.append(remove);
+  }
+  text.append(actions);
+  hero.replaceChildren(photoBox, text);
 
   const rows = document.getElementById("profile-rows");
+  const nameRow = settingRow("Name", u.display_name || "Not set",
+    "Shown to people you email — in DoMailit and in Gmail, Outlook and others.");
+  const editName = el("button", "btn btn-sm", u.display_name ? "Change" : "Add name");
+  editName.type = "button";
+  editName.addEventListener("click", () => nameModal(u));
+  nameRow.append(editName);
   rows.replaceChildren(
-    settingRow("MailSpace address", u.email, "Your main address. It can't be changed."),
+    nameRow,
+    settingRow("DoMailit address", u.email, "Your main address. It can't be changed."),
     settingRow("Account type", ACCOUNT_LABELS[u.account_type] || u.account_type),
     settingRow("Member since", new Date(u.created_at).toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" }))
   );
   if (u.expires_at) {
     rows.append(settingRow("Expires", formatFullDate(u.expires_at),
       "Temporary accounts and their messages are deleted when they expire. Download anything you want to keep."));
+  }
+}
+
+// Show the new name / photo everywhere on the page
+async function reloadProfile() {
+  const { user } = await api("/api/auth/me");
+  Shell.refreshUser(user);
+  renderProfile(user);
+}
+
+function nameModal(u) {
+  recoveryModal({
+    title: "Your name",
+    intro: "People see this next to your address, e.g. \u201cNimra Noor\u201d. Leave it empty to show only your address.",
+    fields: [{ key: "name", label: "Name", placeholder: "Your full name", value: u.display_name || "" }],
+    onSave: async (inputs) => {
+      const name = inputs.name.value.trim();
+      if (name.length > 50) throw new Error("Use 50 characters or fewer.");
+      await api("/api/auth/profile", { method: "PATCH", body: { display_name: name } });
+      await reloadProfile();
+    },
+  });
+}
+
+// Shrink the picture to a 256 × 256 square in the browser before uploading
+function squarePhoto(file, size = 256) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      canvas.getContext("2d").drawImage(img,
+        (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Could not read that picture."))), "image/jpeg", 0.88);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That file isn't a picture we can read.")); };
+    img.src = url;
+  });
+}
+
+function pickPhoto(button) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/png,image/jpeg,image/webp,image/gif";
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) { toast("That picture is too big.", "error"); return; }
+    setBusy(button, true, "Uploading…");
+    try {
+      const form = new FormData();
+      form.append("avatar", await squarePhoto(file), "avatar.jpg");
+      await api("/api/auth/avatar", { method: "POST", body: form });
+      await reloadProfile();
+      toast("Profile picture updated.", "success");
+    } catch (err) {
+      toast(err.message, "error");
+      setBusy(button, false);
+    }
+  });
+  input.click();
+}
+
+async function removePhoto(button) {
+  setBusy(button, true, "Removing…");
+  try {
+    await api("/api/auth/avatar", { method: "DELETE" });
+    await reloadProfile();
+    toast("Profile picture removed.");
+  } catch (err) {
+    toast(err.message, "error");
+    setBusy(button, false);
   }
 }
 
@@ -55,12 +154,12 @@ async function renderFromAddresses() {
 
 // Theme radios
 function syncThemeRadios() {
-  const pref = window.MailSpaceTheme.get();
+  const pref = window.DoMailitTheme.get();
   document.querySelectorAll('input[name="theme"]').forEach((r) => (r.checked = r.value === pref));
 }
 document.querySelectorAll('input[name="theme"]').forEach((radio) => {
   radio.addEventListener("change", () => {
-    window.MailSpaceTheme.set(radio.value);
+    window.DoMailitTheme.set(radio.value);
     toast("Theme set to " + radio.value, "success");
   });
 });

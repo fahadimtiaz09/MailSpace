@@ -1,6 +1,6 @@
 {
-    "name": "mailspace_app",
-    "short_name": "mailspace_app",
+    "name": "DoMailit",
+    "short_name": "DoMailit",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

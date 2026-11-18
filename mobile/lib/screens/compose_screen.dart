@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../models/message.dart';
 import '../theme.dart';
+import '../widgets/brand.dart';
 import '../widgets/message_row.dart';
 
 class ComposeScreen extends StatefulWidget {
@@ -46,6 +47,11 @@ class _ComposeScreenState extends State<ComposeScreen> {
   List<String> _fromAddresses = [];
   String? _from;
   final List<UploadFile> _files = [];
+  bool _allowForward = true; // "Allow forwarding" switch
+  List<String> _contacts = []; // addresses you emailed, newest first → shown under "To"
+  String _typedTo = '';
+  final _toFocus = FocusNode();
+  String? _forwardOf;        // the email being forwarded (server checks the owner allowed it)
 
   bool _started = false;
   bool _sending = false;
@@ -64,6 +70,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
   @override
   void dispose() {
     _toCtrl.dispose();
+    _toFocus.dispose();
     _subjectCtrl.dispose();
     _bodyCtrl.dispose();
     super.dispose();
@@ -78,6 +85,11 @@ class _ComposeScreenState extends State<ComposeScreen> {
       _mode = args['mode'] as String? ?? 'new';
       original = args['message'] as Message?;
     }
+
+    // "To" suggestions (not important if it fails)
+    _api.getContacts().then((list) {
+      if (mounted) setState(() => _contacts = list);
+    }).catchError((_) {});
 
     try {
       final from = await _api.getFromAddresses();
@@ -106,7 +118,10 @@ class _ComposeScreenState extends State<ComposeScreen> {
 
     final mine = _fromAddresses.map((e) => e.toLowerCase()).toSet();
     final subject = full.subject;
-    final quoted = (full.body ?? '').split('\n').map((line) => '> $line').join('\n');
+    // Forwarding switched off by the owner → don't copy their text into a reply
+    final quoted = full.canForward
+        ? (full.body ?? '').split('\n').map((line) => '> $line').join('\n')
+        : '';
 
     setState(() {
       switch (_mode) {
@@ -128,6 +143,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
           _bodyCtrl.text = '\n\nOn ${MessageRow.fullTime(full.createdAt)}, ${full.from} wrote:\n$quoted';
           break;
         case 'forward':
+          _forwardOf = full.id;
           _subjectCtrl.text = _prefix('Fwd: ', subject);
           _bodyCtrl.text = '\n\n---------- Forwarded message ----------\n'
               'From: ${full.from}\n'
@@ -144,6 +160,24 @@ class _ComposeScreenState extends State<ComposeScreen> {
           break;
       }
     });
+  }
+
+  /// Suggestions for the address being typed (the part after the last comma).
+  Iterable<_ToSuggestion> _suggestionsFor(TextEditingValue value) {
+    final text = value.text;
+    var caret = value.selection.baseOffset;
+    if (caret < 0 || caret > text.length) caret = text.length;
+    final start = text.lastIndexOf(RegExp(r'[,;]'), caret > 0 ? caret - 1 : 0) + 1;
+    final typed = text.substring(start, caret).trim().toLowerCase();
+    _typedTo = typed;
+    final already = text.toLowerCase().split(RegExp(r'[,;\s]+')).where((e) => e.isNotEmpty).toSet();
+
+    final before = text.substring(0, start).trimRight();
+    final rest = text.substring(caret).replaceFirst(RegExp(r'^[^,;]*[,;]?\s*'), '');
+    return _contacts
+        .where((e) => !already.contains(e) && e != typed && (typed.isEmpty || e.contains(typed)))
+        .take(6)
+        .map((e) => _ToSuggestion(e, '${before.isEmpty ? '' : '$before '}$e, $rest'));
   }
 
   static String _prefix(String p, String subject) =>
@@ -216,6 +250,8 @@ class _ComposeScreenState extends State<ComposeScreen> {
         body: _bodyCtrl.text,
         files: _files,
         draftId: _draftId,
+        allowForward: _allowForward,
+        forwardOf: _forwardOf,
       );
       if (mounted) Navigator.pop(context, message); // e.g. "Message sent"
     } on ApiException catch (e) {
@@ -352,11 +388,50 @@ class _ComposeScreenState extends State<ComposeScreen> {
               // To
               _FieldRow(
                 label: 'To',
-                child: TextField(
-                  controller: _toCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  decoration: _plain('name@gmail.com, friend@fahadimtiaz.site'),
+                child: RawAutocomplete<_ToSuggestion>(
+                  textEditingController: _toCtrl,
+                  focusNode: _toFocus,
+                  optionsBuilder: _suggestionsFor,
+                  displayStringForOption: (o) => o.fullText,
+                  fieldViewBuilder: (context, controller, focusNode, onSubmitted) => TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    decoration: _plain('name@gmail.com, friend@domailit.com'),
+                  ),
+                  optionsViewBuilder: (context, onSelected, options) => Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      color: AppColors.elevated,
+                      elevation: 6,
+                      borderRadius: BorderRadius.circular(12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 260, maxWidth: 340),
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          shrinkWrap: true,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+                              child: Text(
+                                _toFocus.hasFocus && _typedTo.isNotEmpty ? 'MATCHING ADDRESSES' : 'RECENT',
+                                style: TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .5, color: AppColors.faint),
+                              ),
+                            ),
+                            for (final o in options)
+                              ListTile(
+                                dense: true,
+                                leading: Avatar(seed: o.email, text: MessageRow.initialsOf(o.email), radius: 14),
+                                title: Text(o.email, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                onTap: () => onSelected(o),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               // Subject
@@ -404,6 +479,28 @@ class _ComposeScreenState extends State<ComposeScreen> {
                     ],
                   ),
                 ),
+
+              // Allow forwarding switch
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border, width: 1.5))),
+                child: Row(
+                  children: [
+                    Icon(_allowForward ? Icons.forward : Icons.lock_outline, size: 18, color: AppColors.muted),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _allowForward ? 'Allow forwarding' : 'Forwarding off — people can\'t forward this email',
+                        style: TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                    ),
+                    Switch(
+                      value: _allowForward,
+                      onChanged: busy ? null : (v) => setState(() => _allowForward = v),
+                    ),
+                  ],
+                ),
+              ),
 
               // Bottom row: hint · Save draft · Discard
               Container(
@@ -478,4 +575,12 @@ class _FieldRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One address in the "To" suggestions. [fullText] is what the To box will
+/// contain after picking it (earlier addresses are kept).
+class _ToSuggestion {
+  final String email;
+  final String fullText;
+  const _ToSuggestion(this.email, this.fullText);
 }

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MailSpace design system
+   DoMailit design system
    1. Tokens (light + dark)      5. Forms
    2. Base                       6. Feedback: badges, alerts, toasts, skeletons
    3. Typography helpers         7. Overlays: modals, menus, tooltips
@@ -213,25 +213,23 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
   letter-spacing: -0.03em;
 }
 .brand:hover { text-decoration: none; }
-.brand .logo { width: 42px; height: 35px; }
-.auth-side .logo { filter: drop-shadow(0 2px 6px rgba(10, 25, 80, .45)); }
-/* Logo (inline SVG) — colours that change with the theme */
-.logo { width: 38px; height: 32px; flex: none; overflow: visible; }
-.logo .l-env { stroke: #C3D0F4; }
-.logo .lp-a { stop-color: #8FA8FF; }
-.logo .lp-b { stop-color: #5B7CFF; }
-.logo .l-fold { fill: #3E5FE0; }
-:root[data-theme="dark"] .logo .l-env, .on-dark .logo .l-env { stroke: transparent; }
-:root[data-theme="dark"] .logo .lp-a, .on-dark .logo .lp-a { stop-color: #FFFFFF; }
-:root[data-theme="dark"] .logo .lp-b, .on-dark .logo .lp-b { stop-color: #DCE4FF; }
-:root[data-theme="dark"] .logo .l-fold, .on-dark .logo .l-fold { fill: #9DB2FF; }
-:root[data-theme="dark"] .logo, .on-dark .logo { filter: drop-shadow(0 0 6px rgba(80, 130, 255, .45)); }
-.brand-space {
-  background: linear-gradient(90deg, #1E9BFF 0%, #4F7BFF 55%, #8B5CF6 100%);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-}
-.auth-side .brand-space { background: linear-gradient(90deg, #CFE8FF, #E6DCFF); -webkit-background-clip: text; background-clip: text; }
+.brand .logo { width: 30px; height: 33px; }
+/* Logo (inline SVG): blue "D" with a white fold line, navy "D" behind it */
+.logo { width: 30px; height: 33px; flex: none; overflow: visible; }
+.logo .l-front { fill: #2563EB; }
+.logo .l-back { fill: #0B1F3A; }
+.logo .l-fold { stroke: #FFFFFF; }
+:root[data-theme="dark"] .logo .l-back, .on-dark .logo .l-back { fill: #BFD3FF; }
+/* Name: "Do" blue + "Mailit" navy (white on dark backgrounds) */
+.brand-text { color: #2563EB; }
+.brand-space { color: #0B1F3A; }
+:root[data-theme="dark"] .brand-text, .on-dark .brand-text { color: #7CB1FF; }
+:root[data-theme="dark"] .brand-space, .on-dark .brand-space { color: #FFFFFF; }
+/* Blue side panel (login / sign up): white "D" with a blue fold */
+.auth-side .logo .l-front { fill: #FFFFFF; }
+.auth-side .logo .l-fold { stroke: #2563EB; }
+.auth-side .logo .l-back { fill: #0B1F3A; }
+.auth-side .brand-text { color: #D6E4FF; }
 
 
 /* ---------- 3. Typography helpers ---------- */
@@ -568,6 +566,10 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
   user-select: none;
 }
 .avatar-sm { width: 28px; height: 28px; font-size: .72rem; }
+.avatar-profile { width: 72px; height: 72px; font-size: 1.4rem; }
+.profile-photo-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.avatar.has-photo { background: var(--surface-2, #EEF2F8); overflow: hidden; }
+.avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .avatar-lg { width: 44px; height: 44px; font-size: .95rem; }
 
 /* ---------- 7. Overlays ---------- */

@@ -46,7 +46,7 @@ function updateHeading() {
   Shell.setActiveFolder(state.query ? null : state.folder);
   $("folder-title").textContent = state.query ? "Search results" : FOLDERS[state.folder].title;
   const titleBase = state.query ? "Search" : FOLDERS[state.folder].title;
-  document.title = titleBase + " · MailSpace";
+  document.title = titleBase + " · DoMailit";
 }
 
 function updateMeta() {
@@ -171,7 +171,7 @@ function renderRow(m) {
   const outgoing = isOutgoing(m);
   const who = outgoing
     ? (m.to && m.to.length ? "To: " + m.to.join(", ") : "(no recipients)")
-    : nameFromEmail(m.from);
+    : (m.from_name || nameFromEmail(m.from));
   const avatarEmail = outgoing ? (m.to && m.to[0]) || "?" : m.from;
   li.setAttribute("aria-label",
     (m.is_read ? "" : "Unread, ") + (outgoing ? who : "From " + m.from) + ", " + (m.subject || "no subject"));
@@ -219,7 +219,7 @@ function renderRow(m) {
     li.classList.toggle("picked", pick.checked);
     updateBulk();
   });
-  av.append(avatar(avatarEmail), pick);
+  av.append(avatar(avatarEmail, "", outgoing ? null : m.from_name), pick);
   if (pick.checked) li.classList.add("picked");
 
   li.append(av, top, lines, actions);
@@ -453,6 +453,7 @@ function showReader() {
 }
 
 function closeReader({ fromHistory = false } = {}) {
+  clearInterval(dialTimer);
   const mail = $("mail");
   const wasReading = mail.classList.contains("reading");
   state.current = null;
@@ -501,6 +502,7 @@ function htmlBody(html) {
   };
   frame.addEventListener("load", () => {
     fit();
+    try { guardDocument(frame.contentDocument); } catch (_) { /* ignore */ }
     try {
       frame.contentDocument.querySelectorAll("img").forEach((img) => {
         if (!img.complete) img.addEventListener("load", fit);
@@ -548,12 +550,12 @@ function renderReader(m) {
 
   const from = el("div", "read-from");
   const text = el("div", "read-from-text");
-  const name = el("div", "read-from-name", nameFromEmail(m.from));
+  const name = el("div", "read-from-name", m.from_name || nameFromEmail(m.from));
   name.append(el("span", null, "<" + m.from + ">"));
   text.append(name, el("div", "read-to", "To: " + ((m.to || []).join(", ") || "(no recipients)")));
   const date = el("time", "read-date", formatFullDate(m.created_at));
   date.dateTime = m.created_at;
-  from.append(avatar(m.from, "lg"), text, date);
+  from.append(avatar(m.from, "lg", m.from_name), text, date);
 
   // Email design (Gmail templates: logos, header, footer) is shown in a locked
   // frame; otherwise the plain text is shown.
@@ -593,6 +595,11 @@ function renderReader(m) {
     const forward = el("button", "btn");
     forward.type = "button";
     forward.append(icon("forward", "i-sm"), el("span", null, "Forward"));
+    if (m.can_forward === false) {
+      forward.classList.add("is-locked");
+      forward.setAttribute("aria-disabled", "true");
+      forward.title = "Forwarding has been disabled by the mail owner.";
+    }
     forward.addEventListener("click", () => forwardMessage(m));
     bar.append(reply);
     if (canReplyAll(m)) {
@@ -607,6 +614,7 @@ function renderReader(m) {
   }
 
   updateToolbar(m);
+  updateDialButtons(m);
 }
 
 function setIcon(button, name) {
@@ -632,6 +640,8 @@ function updateToolbar(m) {
   $("delete-forever-btn").classList.toggle("hidden", !inTrash);
   $("reply-btn-top").classList.toggle("hidden", inTrash);
   $("forward-btn-top").classList.toggle("hidden", inTrash);
+  $("forward-btn-top").classList.toggle("is-locked", m.can_forward === false);
+  $("forward-btn-top").dataset.tip = m.can_forward === false ? "Forwarding disabled by the owner" : "Forward";
   $("reply-all-btn-top").classList.toggle("hidden", !canReplyAll(m));
 }
 
@@ -652,6 +662,7 @@ async function toolbarAction(action, successText) {
 
 // ---------- Reply and forward (prefill compose; sending uses the normal send) ----------
 function quoteBody(m) {
+  if (m.can_forward === false) return "";
   const lines = (m.body || "").split("\n").map((line) => "> " + line).join("\n");
   return "\n\nOn " + formatFullDate(m.created_at) + ", " + m.from + " wrote:\n" + lines;
 }
@@ -696,6 +707,10 @@ function replyAll(m) {
 }
 
 function forwardMessage(m) {
+  if (m.can_forward === false) {
+    toast("Forwarding has been disabled by the mail owner.", "error");
+    return;
+  }
   const header = "\n\n---------- Forwarded message ----------\n" +
     "From: " + m.from + "\n" +
     "Date: " + formatFullDate(m.created_at) + "\n" +
@@ -706,6 +721,7 @@ function forwardMessage(m) {
     subject: withPrefix("Fwd", m.subject),
     body: header,
     title: "Forward",
+    forwardOf: m.id,
     notice: m.attachments && m.attachments.length
       ? "Attachments from the original message aren't included when forwarding. Attach them again if needed."
       : "",
@@ -731,6 +747,8 @@ function hideComposeMessage() {
 }
 
 function openCompose(prefill = {}) {
+  contactList = null; // reload "To" suggestions (new people since last time)
+  hideSuggestions();
   if (compose.classList.contains("open") && isComposeDirty()) {
     // Don't throw away what's being written: bring the window back instead
     compose.classList.remove("minimized");
@@ -748,6 +766,8 @@ function openCompose(prefill = {}) {
   composeForm.elements.to.value = (prefill.to || []).join(", ");
   composeForm.elements.subject.value = prefill.subject || "";
   composeForm.elements.body.value = prefill.body || "";
+  $("compose-allow-forward").checked = true;
+  state.forwardOf = prefill.forwardOf || null;
   $("compose-title").textContent = prefill.title || (state.draftId ? "Edit draft" : "New message");
   if (prefill.notice) showComposeMessage(prefill.notice, "info");
   else hideComposeMessage();
@@ -835,6 +855,111 @@ function renderFileList() {
     ? state.files.length + " of " + MAX_FILES + " files · " + formatSize(total)
     : "Up to 5 files, 10 MB each";
 }
+
+// ---------- "To" suggestions (people you emailed before) ----------
+// Click the To box → the addresses you emailed recently appear under it
+// (newest first, like Gmail). Typing narrows the list.
+// Click one (or use ↑ ↓ and Enter / Tab) to add it.
+let contactList = null;
+let suggestIndex = -1;
+const toInput = composeForm.elements.to;
+const suggestBox = el("ul", "to-suggest hidden");
+suggestBox.setAttribute("role", "listbox");
+suggestBox.id = "to-suggest";
+toInput.setAttribute("aria-controls", "to-suggest");
+toInput.closest(".compose-row").append(suggestBox);
+
+async function loadContacts() {
+  if (contactList) return contactList;
+  try {
+    contactList = (await api("/api/contacts")).contacts.map((c) => c.email);
+  } catch (_) {
+    contactList = [];
+  }
+  return contactList;
+}
+
+function currentToken() {
+  const value = toInput.value;
+  const caret = toInput.selectionStart == null ? value.length : toInput.selectionStart;
+  const start = Math.max(value.lastIndexOf(",", caret - 1), value.lastIndexOf(";", caret - 1)) + 1;
+  return { start, end: caret, text: value.slice(start, caret).trim().toLowerCase() };
+}
+
+function hideSuggestions() {
+  suggestBox.classList.add("hidden");
+  suggestBox.replaceChildren();
+  suggestIndex = -1;
+  toInput.setAttribute("aria-expanded", "false");
+}
+
+async function showSuggestions() {
+  const list = await loadContacts();
+  if (document.activeElement !== toInput) return;
+  const token = currentToken();
+  const already = new Set(parseRecipients(toInput.value));
+  const matches = list
+    .filter((email) => !already.has(email) || email === token.text)
+    .filter((email) => !token.text || email.includes(token.text))
+    .filter((email) => email !== token.text)
+    .slice(0, 6);
+  suggestBox.replaceChildren();
+  suggestIndex = -1;
+  if (!matches.length) { hideSuggestions(); return; }
+  const head = el("li", "to-suggest-head", token.text ? "Matching addresses" : "Recent");
+  head.setAttribute("role", "presentation");
+  suggestBox.append(head);
+  matches.forEach((email, i) => {
+    const item = el("li", "to-suggest-item");
+    item.setAttribute("role", "option");
+    item.dataset.email = email;
+    item.append(avatar(email, "sm"), el("span", "to-suggest-email", email));
+    item.addEventListener("mousedown", (event) => {
+      event.preventDefault(); // keep focus in the To box
+      pickSuggestion(email);
+    });
+    item.addEventListener("mousemove", () => highlightSuggestion(i));
+    suggestBox.append(item);
+  });
+  suggestBox.classList.remove("hidden");
+  toInput.setAttribute("aria-expanded", "true");
+}
+
+function highlightSuggestion(i) {
+  const items = [...suggestBox.querySelectorAll(".to-suggest-item")];
+  suggestIndex = items.length ? (i + items.length) % items.length : -1;
+  items.forEach((item, n) => item.classList.toggle("active", n === suggestIndex));
+}
+
+function pickSuggestion(email) {
+  const value = toInput.value;
+  const token = currentToken();
+  const before = value.slice(0, token.start).replace(/\s*$/, "");
+  const rest = value.slice(token.end).replace(/^[^,;]*[,;]?\s*/, "");
+  const text = (before ? before + " " : "") + email + ", " + rest;
+  toInput.value = text;
+  const caret = (before ? before.length + 1 : 0) + email.length + 2;
+  toInput.setSelectionRange(caret, caret);
+  hideSuggestions();
+  toInput.dispatchEvent(new Event("input", { bubbles: true }));
+  showSuggestions(); // offer the next person straight away
+}
+
+toInput.addEventListener("input", (event) => {
+  if (event.isTrusted) showSuggestions();
+});
+toInput.addEventListener("focus", showSuggestions);
+toInput.addEventListener("blur", () => setTimeout(hideSuggestions, 100));
+toInput.addEventListener("keydown", (event) => {
+  if (suggestBox.classList.contains("hidden")) return;
+  const items = suggestBox.querySelectorAll(".to-suggest-item");
+  if (event.key === "ArrowDown") { event.preventDefault(); highlightSuggestion(suggestIndex + 1); }
+  else if (event.key === "ArrowUp") { event.preventDefault(); highlightSuggestion(suggestIndex - 1); }
+  else if ((event.key === "Enter" || event.key === "Tab") && suggestIndex >= 0) {
+    event.preventDefault();
+    pickSuggestion(items[suggestIndex].dataset.email);
+  } else if (event.key === "Escape") { event.stopPropagation(); hideSuggestions(); }
+});
 
 function parseRecipients(text) {
   return text.split(/[,;\s]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -960,6 +1085,8 @@ composeForm.addEventListener("submit", async (event) => {
   formData.append("subject", composeForm.elements.subject.value.trim());
   formData.append("body", composeForm.elements.body.value);
   if (state.draftId) formData.append("draft_id", state.draftId);
+  formData.append("allow_forward", $("compose-allow-forward").checked ? "1" : "0");
+  if (state.forwardOf) formData.append("forward_of", state.forwardOf);
   state.files.forEach((file) => formData.append("attachments", file));
 
   const sendButton = $("send-btn");
@@ -1057,6 +1184,155 @@ $("reply-btn-top").addEventListener("click", () => state.current && replyTo(stat
 $("reply-all-btn-top").addEventListener("click", () => state.current && replyAll(state.current));
 $("forward-btn-top").addEventListener("click", () => state.current && forwardMessage(state.current));
 
+$("call-btn").addEventListener("click", () => dial("audio"));
+$("video-call-btn").addEventListener("click", () => dial("video"));
+
+// ---------- Calls: dial buttons (blue when the other person is online) ----------
+let dialTimer = null;
+const SYSTEM_SENDERS = /^(calls|alerts|no-?reply)@/i;
+
+function callTarget(m) {
+  if (!m) return null;
+  const email = isOutgoing(m) ? (m.to || [])[0] : m.from;
+  if (!email || SYSTEM_SENDERS.test(email)) return null;
+  return email;
+}
+
+function setDialState(canCall, tip) {
+  ["call-btn", "video-call-btn"].forEach((id) => {
+    const b = $(id);
+    b.disabled = !canCall;
+    b.dataset.tip = tip || (id === "call-btn" ? "Voice call" : "Video call");
+  });
+}
+
+function updateDialButtons(m) {
+  clearInterval(dialTimer);
+  const email = callTarget(m);
+  const show = !!email && m.folder !== "trash" && typeof Calls !== "undefined";
+  $("call-btn").classList.toggle("hidden", !show);
+  $("video-call-btn").classList.toggle("hidden", !show);
+  if (!show) return;
+  setDialState(false, "Checking if " + email + " is online…");
+  const check = async () => {
+    const p = await Calls.presence(email);
+    if (!state.current || callTarget(state.current) !== email) return;
+    setDialState(p.can_call, p.can_call ? null : (p.reason || email + " is offline"));
+  };
+  check();
+  dialTimer = setInterval(check, 8000);
+}
+
+function dial(kind) {
+  const email = callTarget(state.current);
+  if (email) Calls.start(email, kind);
+}
+
+// ---------- Mail protection ----------
+// 1) Copying text from an email gives only stars (*****).
+// 2) Print Screen / screen-capture shortcuts are noticed: the email is blurred
+//    and the person who wrote it gets a "screenshot alert" email.
+//    (Browsers can't detect every screenshot tool or a phone camera.)
+function starsFor(text) {
+  const n = Math.min(Math.max((text || "").length, 8), 2000);
+  return "*".repeat(n);
+}
+
+// The admin is not limited by these protections (copy, screenshots, print).
+function isAdmin() {
+  return !!(Shell.user && Shell.user.role === "admin");
+}
+
+function guardDocument(doc) {
+  if (!doc || doc.__mailGuard) return;
+  doc.__mailGuard = true;
+  const onCopy = (event) => {
+    if (isAdmin()) return; // normal copy for the admin
+    const target = event.target;
+    if (target && target.closest && target.closest("input, textarea, [contenteditable='true']")) return; // your own typing
+    const sel = doc.getSelection ? doc.getSelection() : null;
+    const text = sel ? sel.toString() : "";
+    event.preventDefault();
+    if (event.clipboardData) event.clipboardData.setData("text/plain", starsFor(text));
+    if (text) toast("Copying email text is not allowed.");
+  };
+  doc.addEventListener("copy", onCopy);
+  doc.addEventListener("cut", onCopy);
+  doc.addEventListener("dragstart", (event) => {
+    if (isAdmin()) return;
+    if (!(event.target.closest && event.target.closest("input, textarea"))) event.preventDefault();
+  });
+  doc.addEventListener("keyup", onCaptureKey);
+  doc.addEventListener("keydown", onCaptureKeyDown);
+}
+
+let captureKeyAt = 0;
+function reportScreenshot(method) {
+  if (isAdmin()) return;
+  const m = state.current;
+  blurMail(1800);
+  // Replace the picture in the clipboard (Print Screen copies the screen)
+  try { navigator.clipboard && navigator.clipboard.writeText("Screenshots of emails are not allowed on DoMailit."); } catch (_) { /* ignore */ }
+  if (!m) return;
+  toast("Screenshot detected. The sender has been notified.", "error");
+  api("/api/messages/" + m.id + "/screenshot", { method: "POST", body: { method } }).catch(() => {});
+}
+
+function onCaptureKey(event) {
+  if (event.key === "PrintScreen" || event.code === "PrintScreen") reportScreenshot("printscreen");
+}
+function onCaptureKeyDown(event) {
+  if (isAdmin()) return;
+  // Windows key / Win+Shift+S (Snipping Tool), Mac Cmd+Shift+3/4/5
+  if (event.key === "Meta" || event.key === "OS" || (event.metaKey && event.shiftKey)) {
+    captureKeyAt = Date.now();
+    blurMail(1500);
+  }
+  if (event.metaKey && event.shiftKey && ["3", "4", "5", "s", "S"].includes(event.key)) {
+    reportScreenshot("web-capture");
+  }
+  if ((event.ctrlKey || event.metaKey) && (event.key === "p" || event.key === "P")) {
+    event.preventDefault();
+    toast("Printing emails is not allowed.");
+  }
+}
+
+let blurTimer = null;
+function blurMail(ms) {
+  if (isAdmin()) return;
+  document.body.classList.add("mail-guard-blur");
+  clearTimeout(blurTimer);
+  if (ms) blurTimer = setTimeout(() => { if (document.hasFocus()) document.body.classList.remove("mail-guard-blur"); }, ms);
+}
+
+// Admin: printing allowed too (see calls.css "body.no-mail-guard")
+Shell.userReady.then((u) => { if (u && u.role === "admin") document.body.classList.add("no-mail-guard"); }).catch(() => {});
+
+(function setUpMailGuard() {
+  const notice = el("div", "guard-notice");
+  notice.append(icon("eye-off", "i-sm"), el("span", null, "Email hidden — click here to show it again"));
+  document.body.append(notice);
+  guardDocument(document);
+  // Leaving the window (snipping tool, another app) hides the email
+  window.addEventListener("blur", () => {
+    // Clicking inside an email's design (iframe) also "blurs" the window — that's fine
+    setTimeout(() => {
+      if (document.activeElement && document.activeElement.tagName === "IFRAME" && document.hasFocus()) return;
+      blurMail(0);
+      // A capture shortcut was pressed just before → most likely a screenshot tool
+      if (Date.now() - captureKeyAt < 2500 && state.current) reportScreenshot("web-capture");
+    }, 0);
+  });
+  window.addEventListener("focus", () => document.body.classList.remove("mail-guard-blur"));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) blurMail(0);
+  });
+  document.addEventListener("contextmenu", (event) => {
+    if (isAdmin()) return;
+    if (event.target.closest && event.target.closest(".read-article, .message-list")) event.preventDefault();
+  });
+})();
+
 // ---------- Search, refresh, pages ----------
 function setSearch(q) {
   state.query = q;
@@ -1121,7 +1397,7 @@ setInterval(async () => {
     loadFromAddresses().then(() => {
       if (params.has("compose")) openCompose();
     });
-  }).catch(() => renderListError("Couldn't reach MailSpace. Check your connection and refresh."));
+  }).catch(() => renderListError("Couldn't reach DoMailit. Check your connection and refresh."));
 })();
 
 // ============================================================

@@ -32,6 +32,8 @@ messages = db["messages"]
 mailboxes = db["mailboxes"]
 domains = db["domains"]
 addresses = db["addresses"]
+presence = db["presence"]    # last time each user's website/app said "I'm online"
+calls = db["calls"]          # voice calls (who, when, how long)
 audit_logs = db["audit_logs"]  # record of every admin review of a user's mail
 # Attachment files are stored inside MongoDB (GridFS), because the online server's disk is temporary
 attachment_files = GridFS(db, collection="attachment_files")
@@ -63,6 +65,12 @@ def init_indexes():
     # Who reviewed whose mail, when and why. Newest first per target user.
     audit_logs.create_index([("target_user_id", ASCENDING), ("created_at", DESCENDING)])
     audit_logs.create_index([("admin_id", ASCENDING), ("created_at", DESCENDING)])
+
+    # Voice calls
+    presence.create_index("user_id", unique=True)
+    calls.create_index([("callee_id", ASCENDING), ("status", ASCENDING)])
+    calls.create_index([("caller_id", ASCENDING), ("status", ASCENDING)])
+
 
 def ping():
     client.admin.command("ping")

@@ -51,6 +51,9 @@ def public_user(user):
         "expires_at": to_iso(user.get("expires_at")),
         "recovery_email": mask_email(user.get("recovery_email")),
         "security_question": user.get("security_question") or None,
+        "display_name": user.get("display_name") or None,
+        "avatar": (f"/api/avatar/{user['_id']}?v={user.get('avatar_version', 0)}"
+                   if user.get("avatar_file_id") else None),
     }
 
 
@@ -253,12 +256,12 @@ def forgot_send_code():
 
     body = (
         f"Hi {user['username']},\n\n"
-        f"Your MailSpace password reset code is: {code}\n\n"
+        f"Your DoMailit password reset code is: {code}\n\n"
         "It expires in 15 minutes. If you didn't ask for this, you can ignore this email."
     )
     try:
-        send_external(f"security@{Config.MAIL_DOMAIN}", "MailSpace Security",
-                      [user["recovery_email"]], "Your MailSpace reset code", body)
+        send_external(f"security@{Config.MAIL_DOMAIN}", "DoMailit Security",
+                      [user["recovery_email"]], "Your DoMailit reset code", body)
     except ExternalSendError as exc:
         return error(f"Could not send the code: {exc}", 502)
 
