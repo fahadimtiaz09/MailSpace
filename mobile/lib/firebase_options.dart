@@ -14,10 +14,10 @@
 import 'package:firebase_core/firebase_core.dart';
 
 class DefaultFirebaseOptions {
-  static const String apiKey = '';
-  static const String appId = '';
-  static const String messagingSenderId = '';
-  static const String projectId = '';
+  static const String apiKey = 'AIzaSyA57YvAZIVAvdE6kWYV7c5q3woEdKPsNrg';
+  static const String appId = '1:120406568964:android:e110f17e69106700ffc551';
+  static const String messagingSenderId = '120406568964';
+  static const String projectId = 'domailit-d4d0a';
 
   static bool get configured =>
       apiKey.isNotEmpty && appId.isNotEmpty && messagingSenderId.isNotEmpty && projectId.isNotEmpty;
