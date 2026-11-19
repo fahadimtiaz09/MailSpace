@@ -1,4 +1,4 @@
-package site.fahadimtiaz.mailspace_app
+package com.domailit.app
 
 import android.app.Activity
 import android.app.NotificationChannel

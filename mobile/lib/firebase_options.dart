@@ -1,7 +1,7 @@
 // firebase_options.dart — the 4 values that connect the app to YOUR Firebase project.
 //
 // Where to find them: Firebase console → ⚙ Project settings → General →
-// "Your apps" → the Android app (site.fahadimtiaz.mailspace_app).
+// "Your apps" → the Android app (com.domailit.app).
 // Or open the google-services.json file Firebase gives you:
 //   apiKey            → client[0].api_key[0].current_key
 //   appId             → client[0].client_info.mobilesdk_app_id
