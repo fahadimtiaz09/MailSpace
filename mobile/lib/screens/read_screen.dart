@@ -579,6 +579,9 @@ class MailHtmlBody extends StatefulWidget {
 class _MailHtmlBodyState extends State<MailHtmlBody> {
   bool _showRemote = false;
 
+  /// No colours or backgrounds of its own → show it in the app's colours.
+  bool get _simple => !RegExp(r'(bgcolor|background|color\s*[:=])', caseSensitive: false).hasMatch(widget.html);
+
   bool get _hasRemoteImages => RegExp(r'<img[^>]+src="https?:', caseSensitive: false).hasMatch(widget.html);
 
   Future<bool> _openLink(String url) async {
@@ -665,22 +668,33 @@ class _MailHtmlBodyState extends State<MailHtmlBody> {
               ],
             ),
           ),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white, // email designs expect a white page (Gmail does the same)
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: HtmlWidget(
+        // A normal email (just text, no colours of its own) follows the app's
+        // light/dark theme. Designed emails keep a white card (Gmail does the same).
+        if (_simple)
+          HtmlWidget(
             widget.html,
-            key: ValueKey(_showRemote), // redraw after "Show images"
-            textStyle: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF202124)),
+            key: ValueKey('simple-$_showRemote-${AppColors.dark}'),
+            textStyle: TextStyle(fontSize: 15, height: 1.55, color: AppColors.ink),
             customWidgetBuilder: _image,
             onTapUrl: _openLink,
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white, // email designs expect a white page (Gmail does the same)
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: HtmlWidget(
+              widget.html,
+              key: ValueKey(_showRemote), // redraw after "Show images"
+              textStyle: const TextStyle(fontSize: 14, height: 1.45, color: Color(0xFF202124)),
+              customWidgetBuilder: _image,
+              onTapUrl: _openLink,
+            ),
           ),
-        ),
       ],
     );
   }

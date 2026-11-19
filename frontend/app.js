@@ -492,11 +492,18 @@ function htmlBody(html) {
   frame.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
   frame.setAttribute("referrerpolicy", "no-referrer");
 
+  // Simple emails (a normal Gmail/Outlook message: just text, no colours of its own)
+  // follow DoMailit's light/dark theme with no white box. Designed emails
+  // (newsletters, templates) keep their own colours on a white card, like Gmail.
+  const simple = !/(bgcolor|background|color\s*[:=])/i.test(html);
+  if (simple) wrap.classList.add("read-html-simple");
+
   const fit = () => {
     try {
       const doc = frame.contentDocument;
-      if (doc && doc.documentElement) {
-        frame.style.height = Math.max(doc.documentElement.scrollHeight, 60) + "px";
+      if (doc && doc.body) {
+        // the body's own height, so a short email gets a short frame
+        frame.style.height = Math.max(Math.ceil(doc.body.getBoundingClientRect().height), 40) + "px";
       }
     } catch (_) { /* ignore */ }
   };
@@ -511,17 +518,25 @@ function htmlBody(html) {
     setTimeout(fit, 400);
   });
 
+  let remoteShown = false;
   const show = (allowRemote) => {
+    remoteShown = allowRemote;
     const imgSrc = allowRemote ? "data: https: http:" : "data:";
+    const page = getComputedStyle(document.body);
+    const theme = simple
+      ? "html,body{margin:0;padding:0;background:transparent;color:" + page.color + "}" +
+        "body{padding:0;display:flow-root;font:15px/1.7 " + page.fontFamily.replace(/[<>]/g, "") + ";overflow-wrap:anywhere}" +
+        "a{color:" + getComputedStyle(document.documentElement).getPropertyValue("--primary").trim() + "}" +
+        "blockquote{margin:8px 0;padding-left:12px;border-left:3px solid rgba(128,128,128,.4);opacity:.85}"
+      : "html,body{margin:0;padding:0;background:#fff;color:#202124}" +
+        "body{padding:16px;display:flow-root;font:14px/1.5 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}a{color:#1a73e8}";
     frame.srcdoc =
       '<!doctype html><html><head><meta charset="utf-8">' +
       '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src ' + imgSrc +
       '; style-src \'unsafe-inline\'; font-src data:">' +
       '<meta name="viewport" content="width=device-width, initial-scale=1">' +
       '<base target="_blank">' +
-      "<style>html,body{margin:0;padding:0;background:#fff;color:#202124}" +
-      "body{padding:16px;font:14px/1.5 Arial,Helvetica,sans-serif;overflow-wrap:anywhere}" +
-      "img{max-width:100%;height:auto}table{max-width:100%}a{color:#1a73e8}</style>" +
+      "<style>" + theme + "img{max-width:100%;height:auto}table{max-width:100%}</style>" +
       "</head><body>" + html + "</body></html>";
   };
 
@@ -536,6 +551,14 @@ function htmlBody(html) {
   }
   wrap.append(frame);
   show(false);
+  // Light/dark switched while reading → redraw a simple email in the new colours
+  if (simple) {
+    const watch = new MutationObserver(() => {
+      if (!wrap.isConnected) { watch.disconnect(); return; }
+      show(remoteShown);
+    });
+    watch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  }
   return wrap;
 }
 
