@@ -15,7 +15,7 @@ from routes.domains import allowed_from_addresses
 from push import notify, notify_new_mail
 from email_service import ExternalSendError, external_sending_ready, send_external
 from safety import check_message
-from security import is_expired, login_required, now_utc, parse_object_id, to_iso
+from security import active_user_by_email, is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
 
@@ -353,7 +353,7 @@ def resolve_recipients(to_emails):
 
         if domain == Config.MAIL_DOMAIN:
             # A normal DoMailit address, like nimra@domailit.com
-            user = users.find_one({"email": email, "status": "active"})
+            user = active_user_by_email(email)
         elif domains.find_one({"name": domain, "status": "verified"}):
             # A custom address on a verified customer domain, like info@nimranoor.site
             address = addresses.find_one({"email": email})

@@ -13,6 +13,7 @@ from routes.profile import profile_bp
 from routes.domains import domains_bp
 from routes.admin import admin_bp
 from routes.inbound import inbound_bp
+from routes.contact import contact_bp
 from routes.messages import messages_bp
 from routes.push import init_push_indexes, push_bp
 from security import csrf_protect, set_csrf_cookie
@@ -45,6 +46,7 @@ def create_app():
     app.register_blueprint(calls_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(push_bp)
+    app.register_blueprint(contact_bp)
 
     @app.route("/")
     def home():

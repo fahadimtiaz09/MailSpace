@@ -29,7 +29,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 from config import Config
 from database import addresses, calls, domains, mailboxes, messages, presence, users
 from push import notify
-from security import is_expired, login_required, now_utc, parse_object_id, to_iso
+from security import active_user_by_email, is_expired, login_required, now_utc, parse_object_id, to_iso
 
 calls_bp = Blueprint("calls", __name__, url_prefix="/api/calls")
 
@@ -53,7 +53,7 @@ def find_user_by_address(email):
         return None
     domain = email.rsplit("@", 1)[1]
     if domain == Config.MAIL_DOMAIN:
-        user = users.find_one({"email": email, "status": "active"})
+        user = active_user_by_email(email)
     elif domains.find_one({"name": domain, "status": "verified"}):
         address = addresses.find_one({"email": email})
         user = users.find_one({"_id": address["user_id"], "status": "active"}) if address else None

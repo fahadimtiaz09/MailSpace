@@ -16,6 +16,15 @@ CSRF_COOKIE = "csrf_token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
+def active_user_by_email(email):
+    """The active account with this @MAIL_DOMAIN address — its address now, one it had
+    before it was renamed, or an extra address (alias) such as support@
+    (backend/rename_account.py)."""
+    from database import users
+    return users.find_one({"$or": [{"email": email}, {"old_emails": email}, {"aliases": email}],
+                           "status": "active"})
+
+
 def now_utc():
     return datetime.now(timezone.utc)
 

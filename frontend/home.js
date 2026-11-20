@@ -123,4 +123,41 @@
       }
     });
   });
+
+  // ---------- Contact form ----------
+  const contactForm = document.getElementById("contact-form");
+  if (contactForm) {
+    const msg = document.getElementById("contact-msg");
+    const sendBtn = document.getElementById("contact-send");
+    const show = (text, ok) => {
+      msg.textContent = text;
+      msg.className = "alert " + (ok ? "alert-success" : "alert-error");
+    };
+    api("/api/contact").then((r) => {
+      const link = document.getElementById("contact-mail");
+      link.href = "mailto:" + r.email;
+      document.getElementById("contact-mail-text").textContent = r.email;
+    }).catch(() => {});
+    contactForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(contactForm).entries());
+      if (!data.name.trim() || !data.email.trim() || data.message.trim().length < 10) {
+        show("Please fill in your name, email and a message (at least 10 characters).", false);
+        return;
+      }
+      sendBtn.disabled = true;
+      const label = sendBtn.lastChild.textContent;
+      sendBtn.lastChild.textContent = "Sending…";
+      try {
+        await api("/api/contact", { method: "POST", body: data });
+        contactForm.reset();
+        show("Thanks! Your message was sent. We'll reply to your email soon.", true);
+      } catch (err) {
+        show(err.message, false);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.lastChild.textContent = label;
+      }
+    });
+  }
 })();

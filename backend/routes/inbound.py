@@ -15,7 +15,7 @@ from database import addresses, attachment_files, domains, mailboxes, messages, 
 from email_service import download_bytes, fetch_received_attachments, fetch_received_email
 from html_safety import clean_email_html
 from safety import check_message
-from security import is_expired, now_utc
+from security import active_user_by_email, is_expired, now_utc
 
 inbound_bp = Blueprint("inbound", __name__, url_prefix="/api/inbound")
 
@@ -34,7 +34,7 @@ def find_user_for(address):
     address = address.strip().lower()
     domain = address.rsplit("@", 1)[-1]
     if domain == Config.MAIL_DOMAIN:
-        return users.find_one({"email": address, "status": "active"})
+        return active_user_by_email(address)
     if domains.find_one({"name": domain, "status": "verified"}):
         a = addresses.find_one({"email": address})
         if a:

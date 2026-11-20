@@ -43,6 +43,7 @@
         <a href="#security">Security</a>
         <a href="#pricing">Pricing</a>
         <a href="#about">About</a>
+        <a href="#contact">Contact</a>
         <div class="nav-mobile-actions">
           <a href="/login.html" class="btn btn-lg btn-block js-guest">Sign in</a>
           <a href="/signup.html" class="btn btn-primary btn-lg btn-block js-guest">Get started</a>
@@ -596,6 +597,49 @@
     </section>
 
     <!-- ================= Call to action ================= -->
+    <!-- ================= Contact ================= -->
+    <section id="contact" class="contact" aria-labelledby="contact-title">
+      <div class="container contact-inner reveal">
+        <div class="contact-intro">
+          <p class="pill small-pill"><span class="pill-dot"></span>Contact</p>
+          <h2 id="contact-title">Talk to us</h2>
+          <p>A question, a problem, or an idea for DoMailit? Send us a message and we'll reply by email, usually within a day.</p>
+          <a class="contact-mail" id="contact-mail" href="mailto:support@domailit.com">
+            <span class="contact-mail-icon"><svg class="i" aria-hidden="true"><use href="/icons.svg#mail"/></svg></span>
+            <span><small>Or email us at</small><strong id="contact-mail-text">support@domailit.com</strong></span>
+          </a>
+        </div>
+        <form id="contact-form" class="contact-form" novalidate>
+          <div id="contact-msg" class="alert hidden" role="status"></div>
+          <div class="contact-row">
+            <div class="field">
+              <label for="c-name">Your name</label>
+              <input id="c-name" class="input" name="name" autocomplete="name" maxlength="80" required>
+            </div>
+            <div class="field">
+              <label for="c-email">Your email</label>
+              <input id="c-email" class="input" name="email" type="email" autocomplete="email" maxlength="254" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="c-subject">Subject <span class="optional">(optional)</span></label>
+            <input id="c-subject" class="input" name="subject" maxlength="120">
+          </div>
+          <div class="field">
+            <label for="c-message">Message</label>
+            <textarea id="c-message" class="textarea" name="message" rows="5" maxlength="5000" required></textarea>
+          </div>
+          <div class="hp-field" aria-hidden="true">
+            <label for="c-website">Leave this empty</label>
+            <input id="c-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+          <button class="btn btn-primary btn-lg" type="submit" id="contact-send">
+            <svg class="i" aria-hidden="true"><use href="/icons.svg#send"/></svg>Send message
+          </button>
+        </form>
+      </div>
+    </section>
+
     <section class="cta" aria-labelledby="cta-title">
       <div class="container">
         <div class="cta-card reveal">
@@ -643,6 +687,7 @@
         <h3>Company</h3>
         <a href="#about">About</a>
         <a href="#faq">FAQ</a>
+        <a href="#contact">Contact us</a>
         <span class="soon">Privacy policy <em>Soon</em></span>
         <span class="soon">Terms of service <em>Soon</em></span>
       </nav>

@@ -66,7 +66,7 @@ def find_domain(domain_id):
 
 def allowed_from_addresses(user):
     """All addresses this user may send from: their main address + their custom ones."""
-    emails = [user["email"]]
+    emails = [user["email"]] + list(user.get("aliases", []))  # e.g. support@domailit.com
     emails += [a["email"] for a in addresses.find({"user_id": user["_id"]}).sort("email", 1)]
     return emails
 

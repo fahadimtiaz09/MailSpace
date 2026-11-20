@@ -82,6 +82,11 @@ def signup():
         return error("Password must be between 8 and 128 characters.")
     if account_type not in ACCOUNT_DAYS:
         return error("Unknown account type.")
+    # A renamed account keeps its old address, so nobody else can take it
+    taken_email = f"{username}@{Config.MAIL_DOMAIN}"
+    if users.find_one({"$or": [{"old_usernames": username}, {"old_emails": taken_email},
+                               {"aliases": taken_email}]}):
+        return error("That username is already taken.", 409)
 
     created = now_utc()
     days = ACCOUNT_DAYS[account_type]
@@ -132,7 +137,8 @@ def login():
         return error("Please enter your username/email and password.")
 
     field = "email" if "@" in login_value else "username"
-    user = users.find_one({field: login_value})
+    # also the old address/username of a renamed account
+    user = users.find_one({"$or": [{field: login_value}, {f"old_{field}s": login_value}]})
 
     # Same message for "no such user" and "wrong password", so attackers learn nothing
     if user is None or not user.get("password_hash") \
@@ -217,7 +223,7 @@ def _find_login(login_value):
     if not login_value:
         return None
     field = "email" if "@" in login_value else "username"
-    user = users.find_one({field: login_value})
+    user = users.find_one({"$or": [{field: login_value}, {f"old_{field}s": login_value}]})
     if user is None or user.get("status") != "active" or is_expired(user):
         return None
     return user

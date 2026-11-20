@@ -44,6 +44,10 @@ def init_indexes():
     users.create_index("username", unique=True)
     users.create_index("email", unique=True)
     users.create_index("expires_at")
+    # Addresses / usernames an account had before it was renamed (still delivered to it)
+    users.create_index("old_emails", sparse=True)
+    users.create_index("old_usernames", sparse=True)
+    users.create_index("aliases", sparse=True)  # extra addresses, e.g. support@
 
     # Speed up "show my inbox, newest first" and "show my starred"
     mailboxes.create_index([("user_id", ASCENDING), ("folder", ASCENDING), ("created_at", DESCENDING)])
