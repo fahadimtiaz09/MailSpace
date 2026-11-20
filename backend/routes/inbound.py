@@ -15,7 +15,7 @@ from database import addresses, attachment_files, domains, mailboxes, messages, 
 from email_service import download_bytes, fetch_received_attachments, fetch_received_email
 from html_safety import clean_email_html
 from safety import check_message
-from security import active_user_by_email, is_expired, now_utc
+from security import active_user_by_email, team_members, is_expired, now_utc
 
 inbound_bp = Blueprint("inbound", __name__, url_prefix="/api/inbound")
 
@@ -134,9 +134,10 @@ def receive(secret):
     # Find the DoMailit recipients, without duplicates
     recipients = {}
     for addr in to_list:
-        u = find_user_for(addr)
-        if u and not is_expired(u):
-            recipients[u["_id"]] = u
+        team = team_members(addr)  # support@ → every admin
+        for u in team if team is not None else [find_user_for(addr)]:
+            if u and not is_expired(u):
+                recipients[u["_id"]] = u
     if not recipients:
         return jsonify({"ok": True})  # not addressed to anyone here
 

@@ -9,12 +9,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from config import Config
 from database import users
-from security import is_expired, login_required, now_utc, rate_limited, to_iso
+from security import contact_address, is_expired, login_required, now_utc, rate_limited, to_iso
 from email_service import ExternalSendError, external_sending_ready, send_external
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9._]{3,20}$")
+# Addresses DoMailit itself uses — nobody may sign up with them
+RESERVED_USERNAMES = {"support", "admin", "administrator", "calls", "alerts", "noreply", "no-reply",
+                      "postmaster", "abuse", "security", "help", "info", "contact", "team", "webmaster"}
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 ACCOUNT_DAYS = {"regular": None, "temp15": 15, "temp30": 30}
 RESET_CODE_TTL = timedelta(minutes=15)
@@ -84,8 +87,9 @@ def signup():
         return error("Unknown account type.")
     # A renamed account keeps its old address, so nobody else can take it
     taken_email = f"{username}@{Config.MAIL_DOMAIN}"
-    if users.find_one({"$or": [{"old_usernames": username}, {"old_emails": taken_email},
-                               {"aliases": taken_email}]}):
+    if username in RESERVED_USERNAMES or taken_email == contact_address() \
+            or users.find_one({"$or": [{"old_usernames": username}, {"old_emails": taken_email},
+                                       {"aliases": taken_email}]}):
         return error("That username is already taken.", 409)
 
     created = now_utc()

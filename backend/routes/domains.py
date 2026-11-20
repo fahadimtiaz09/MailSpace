@@ -10,7 +10,7 @@ from pymongo.errors import DuplicateKeyError
 
 from config import Config
 from database import addresses, domains
-from security import login_required, now_utc, parse_object_id, rate_limited, to_iso
+from security import contact_address, login_required, now_utc, parse_object_id, rate_limited, to_iso
 
 domains_bp = Blueprint("domains", __name__, url_prefix="/api/domains")
 
@@ -66,7 +66,9 @@ def find_domain(domain_id):
 
 def allowed_from_addresses(user):
     """All addresses this user may send from: their main address + their custom ones."""
-    emails = [user["email"]] + list(user.get("aliases", []))  # e.g. support@domailit.com
+    emails = [user["email"]] + list(user.get("aliases", []))
+    if user.get("role") == "admin":
+        emails.append(contact_address())  # admins can reply as support@domailit.com
     emails += [a["email"] for a in addresses.find({"user_id": user["_id"]}).sort("email", 1)]
     return emails
 

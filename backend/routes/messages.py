@@ -15,7 +15,7 @@ from routes.domains import allowed_from_addresses
 from push import notify, notify_new_mail
 from email_service import ExternalSendError, external_sending_ready, send_external
 from safety import check_message
-from security import active_user_by_email, is_expired, login_required, now_utc, parse_object_id, to_iso
+from security import active_user_by_email, team_members, is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
 
@@ -350,6 +350,14 @@ def resolve_recipients(to_emails):
     internal, external = {}, []
     for email in to_emails:
         domain = email.rsplit("@", 1)[1]
+
+        team = team_members(email)  # support@ → every admin
+        if team is not None:
+            if not team:
+                return None, None, f"No DoMailit mailbox found for {email}."
+            for member in team:
+                internal[f"{email}#{member['_id']}"] = member
+            continue
 
         if domain == Config.MAIL_DOMAIN:
             # A normal DoMailit address, like nimra@domailit.com

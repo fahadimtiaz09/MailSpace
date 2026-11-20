@@ -1,7 +1,7 @@
 """routes/contact.py — the "Contact us" form on the home page.
 
-A message from the form lands in the inbox of the account that owns CONTACT_EMAIL
-(default support@<MAIL_DOMAIN>, usually an alias — see rename_account.py --alias).
+A message from the form lands in the inbox of EVERY admin (the team address
+CONTACT_EMAIL, default support@<MAIL_DOMAIN>).
 It appears "from" the visitor, so pressing Reply writes back to them.
 """
 from flask import Blueprint, jsonify, request
@@ -11,13 +11,9 @@ from database import mailboxes, messages
 from push import notify_new_mail
 from routes.auth import EMAIL_PATTERN
 from routes.messages import make_search_text, make_snippet
-from security import active_user_by_email, now_utc, rate_limited
+from security import contact_address, now_utc, rate_limited, team_members
 
 contact_bp = Blueprint("contact", __name__, url_prefix="/api")
-
-
-def contact_address():
-    return Config.CONTACT_EMAIL or f"support@{Config.MAIL_DOMAIN}"
 
 
 def error(message, status=400):
@@ -48,8 +44,8 @@ def contact():
     if len(text) < 10:
         return error("Please write a little more (at least 10 characters).")
 
-    owner = active_user_by_email(contact_address())
-    if owner is None:
+    team = team_members(contact_address())
+    if not team:
         return error("Sorry, messages can't be received right now. Please email us instead.", 503)
 
     now = now_utc()
@@ -58,18 +54,19 @@ def contact():
     body = f"{text}\n\n—\nSent from the Contact form on {Config.MAIL_DOMAIN}\nName: {name}\nEmail: {email}"
     message_id = messages.insert_one({
         "sender_id": None, "sender_email": email,
-        "to_emails": [to], "recipient_ids": [owner["_id"]],
+        "to_emails": [to], "recipient_ids": [u["_id"] for u in team],
         "subject": subject, "body": body, "attachments": [],
         "is_draft": False, "created_at": now, "flagged": False, "flag_words": [],
         "via": "contact_form",
     }).inserted_id
-    entry_id = mailboxes.insert_one({
-        "user_id": owner["_id"], "message_id": message_id, "folder": "inbox",
+    entries = [{
+        "user_id": admin["_id"], "message_id": message_id, "folder": "inbox",
         "is_read": False, "is_starred": False,
         "from_email": email, "from_name": name, "to_emails": [to],
         "subject": subject, "snippet": make_snippet(text),
         "search_text": make_search_text(email, [to], subject, body + " " + name),
         "has_attachments": False, "created_at": now,
-    }).inserted_id
-    notify_new_mail(owner["_id"], entry_id, email, name, subject)
+    } for admin in team]
+    for entry, entry_id in zip(entries, mailboxes.insert_many(entries).inserted_ids):
+        notify_new_mail(entry["user_id"], entry_id, email, name, subject)
     return jsonify({"ok": True})

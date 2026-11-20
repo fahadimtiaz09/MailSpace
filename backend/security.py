@@ -25,6 +25,21 @@ def active_user_by_email(email):
                            "status": "active"})
 
 
+def contact_address():
+    """The team address on the website (Contact us), default support@<MAIL_DOMAIN>."""
+    from config import Config
+    return Config.CONTACT_EMAIL or f"support@{Config.MAIL_DOMAIN}"
+
+
+def team_members(email):
+    """support@ is a team address: every active admin gets a copy.
+    Returns that list of admins, or None when this is not the team address."""
+    if (email or "").strip().lower() != contact_address():
+        return None
+    from database import users
+    return [u for u in users.find({"role": "admin", "status": "active"}) if not is_expired(u)]
+
+
 def now_utc():
     return datetime.now(timezone.utc)
 
