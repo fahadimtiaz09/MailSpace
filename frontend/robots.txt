@@ -1,0 +1,11 @@
+# DoMailit — what search engines may show
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /inbox
+Disallow: /settings.html
+Disallow: /domains.html
+Disallow: /admin.html
+Disallow: /index.html
+
+Sitemap: https://domailit.com/sitemap.xml
