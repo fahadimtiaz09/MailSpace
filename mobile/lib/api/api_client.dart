@@ -210,6 +210,7 @@ class ApiClient {
       'username': username.trim().toLowerCase(),
       'password': password,
       'account_type': accountType,
+      'accept_terms': true, // only called after "I agree" on the Privacy and Terms page
       if (recoveryEmail != null && recoveryEmail.isNotEmpty) 'recovery_email': recoveryEmail,
       if (securityQuestion != null && securityQuestion.isNotEmpty) 'security_question': securityQuestion,
       if (securityAnswer != null && securityAnswer.isNotEmpty) 'security_answer': securityAnswer,

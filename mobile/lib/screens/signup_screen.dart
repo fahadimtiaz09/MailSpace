@@ -5,12 +5,13 @@
 //   ② Password  → 4-bar strength meter
 //   ③ Account type: Regular / Temporary 15 days / Temporary 30 days
 //   ④ Account recovery (optional, tap to open)
-//   ⑤ Create account → Inbox ('/home')   ·   "Log in" → A3 ('/login')
+//   ⑤ Create account → "Privacy and Terms" (I agree) → Inbox ('/home')   ·   "Log in" → A3 ('/login')
 
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
 import '../theme.dart';
+import '../widgets/legal.dart';
 import '../widgets/theme_button.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -96,6 +97,10 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() => _error = problem);
       return;
     }
+
+    // Like Gmail: the account is only created after "I agree".
+    setState(() => _error = null);
+    if (!await showTermsDialog(context) || !mounted) return;
 
     setState(() {
       _loading = true;
@@ -298,8 +303,7 @@ class _SignupScreenState extends State<SignupScreen> {
             const SizedBox(height: 14),
 
             Text(
-              'To keep DoMailit safe, messages and attachments may be reviewed by administrators '
-              'for illegal or harmful content. By creating an account you agree to this.',
+              'Next, you\'ll review our Terms of Service and Privacy Policy.',
               style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
             ),
             const SizedBox(height: 18),

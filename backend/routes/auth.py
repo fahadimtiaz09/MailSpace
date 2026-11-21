@@ -20,6 +20,7 @@ RESERVED_USERNAMES = {"support", "admin", "administrator", "calls", "alerts", "n
                       "postmaster", "abuse", "security", "help", "info", "contact", "team", "webmaster"}
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 ACCOUNT_DAYS = {"regular": None, "temp15": 15, "temp30": 30}
+TERMS_VERSION = "2026-11-21"  # change when terms.html / privacy.html change a lot
 RESET_CODE_TTL = timedelta(minutes=15)
 MAX_CODE_ATTEMPTS = 5
 
@@ -85,6 +86,8 @@ def signup():
         return error("Password must be between 8 and 128 characters.")
     if account_type not in ACCOUNT_DAYS:
         return error("Unknown account type.")
+    if data.get("accept_terms") is not True:
+        return error("To create an account, please agree to the Terms of Service and Privacy Policy.")
     # A renamed account keeps its old address, so nobody else can take it
     taken_email = f"{username}@{Config.MAIL_DOMAIN}"
     if username in RESERVED_USERNAMES or taken_email == contact_address() \
@@ -102,6 +105,8 @@ def signup():
         "created_at": created,
         "expires_at": created + timedelta(days=days) if days else None,
         "status": "active",
+        "terms_accepted_at": created,          # when they tapped "I agree"
+        "terms_version": TERMS_VERSION,        # which version of the Terms they agreed to
     }
 
     # Optional account-recovery info

@@ -120,13 +120,16 @@ if (signupForm) {
     }
     markInvalid(confirmInput, false);
 
+    // Like Gmail: the account is only created after "I agree"
+    if (!(await termsDialog())) return;
+
     const button = signupForm.querySelector("button[type=submit]");
     setBusy(button, true, "Creating account…");
     try {
       await api("/api/auth/signup", {
         method: "POST",
           body: {
-          username, password, account_type: accountType,
+          username, password, account_type: accountType, accept_terms: true,
           recovery_email: (signupForm.elements.recovery_email?.value || "").trim(),
           security_question: (signupForm.elements.security_question?.value || "").trim(),
           security_answer: (signupForm.elements.security_answer?.value || "").trim(),
@@ -142,6 +145,70 @@ if (signupForm) {
         usernameInput.focus();
       }
     }
+  });
+}
+
+// "Privacy and Terms" step before a new account is created.
+// Resolves to true when the user taps "I agree", false for Cancel / Escape.
+function termsDialog() {
+  return new Promise((resolve) => {
+    const box = el("div", "modal modal-wide terms-modal");
+    box.setAttribute("aria-labelledby", "terms-title");
+
+    const head = el("div", "modal-head");
+    const text = el("div");
+    const badge = el("div", "modal-icon terms-icon");
+    badge.append(icon("shield"));
+    const h = el("h2", null, "Privacy and Terms");
+    h.id = "terms-title";
+    text.append(badge, h, el("p", null,
+      "To create a DoMailit account, you need to agree to the Terms of Service. " +
+      "When you create an account, we process your information as described in our Privacy Policy, including these key points:"));
+    head.append(text);
+
+    const body = el("div", "modal-body terms-body");
+    body.tabIndex = 0; // scrollable with the keyboard
+    const points = [
+      ["Data we process when you use DoMailit",
+        "Your username and password (stored only as a secure hash), the emails and attachments you send and receive, " +
+        "your call history (not the calls themselves), and technical data such as your IP address."],
+      ["Why we process it",
+        "To deliver your mail and calls, send the notifications you turn on, keep your account secure, and stop spam and abuse. " +
+        "We don't show ads and we never sell your data."],
+      ["Keeping DoMailit safe",
+        "Administrators may review messages and attachments for illegal or harmful content. Every review is recorded in an audit log."],
+      ["Acceptable use",
+        "No spam, scams, phishing, malware, harassment or illegal content. Accounts that break these rules can be suspended."],
+      ["You're in control",
+        "Hide your online status, turn notifications on or off, and delete your account and its data at any time from Settings."],
+    ];
+    for (const [title, line] of points) {
+      const item = el("div", "terms-point");
+      item.append(el("h3", null, title), el("p", null, line));
+      body.append(item);
+    }
+    const links = el("p", "terms-links");
+    const t = el("a", null, "Terms of Service");
+    t.href = "/terms.html"; t.target = "_blank"; t.rel = "noopener";
+    const p = el("a", null, "Privacy Policy");
+    p.href = "/privacy.html"; p.target = "_blank"; p.rel = "noopener";
+    links.append("Read the full ", t, " and ", p, ".");
+    body.append(links);
+
+    const foot = el("div", "modal-foot");
+    const cancel = el("button", "btn", "Cancel");
+    const ok = el("button", "btn btn-primary", "I agree");
+    cancel.type = ok.type = "button";
+    foot.append(cancel, ok);
+    box.append(head, body, foot);
+
+    let agreed = false;
+    const close = openModal(box, { onClose: () => resolve(agreed) });
+    cancel.addEventListener("click", close);
+    ok.addEventListener("click", () => {
+      agreed = true;
+      close();
+    });
   });
 }
 

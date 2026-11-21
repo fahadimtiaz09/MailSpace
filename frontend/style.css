@@ -820,6 +820,17 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
   color: #92400e;
 }
 
+/* Privacy & Terms (signup) and legal links on login / signup pages */
+.terms-icon { background: var(--primary-soft); color: var(--primary); }
+.terms-body { max-height: min(46vh, 420px); overflow-y: auto; margin: 16px 24px 18px; padding: 4px 18px; border: 1px solid var(--border); border-radius: var(--r-md, 12px); background: var(--bg); }
+.terms-point { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.terms-point h3 { font-size: .95rem; font-weight: 700; margin-bottom: 4px; }
+.terms-point p { color: var(--text-2); font-size: .9rem; line-height: 1.55; }
+.terms-links { padding: 14px 0 12px; font-size: .9rem; color: var(--text-2); }
+.terms-links a { color: var(--primary); font-weight: 600; }
+.auth-legal { display: flex; justify-content: center; gap: 22px; padding: 0 0 26px; font-size: .84rem; }
+.auth-legal a { color: var(--text-2); }
+.auth-legal a:hover { color: var(--primary); }
 .recovery-details { margin-bottom: 18px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
 .recovery-details summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
 .recovery-details[open] summary { margin-bottom: 6px; }

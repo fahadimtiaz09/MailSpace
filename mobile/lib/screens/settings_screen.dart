@@ -24,6 +24,7 @@ import '../services/people.dart';
 import '../services/push_service.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
+import '../widgets/legal.dart';
 import '../widgets/message_row.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -380,6 +381,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('When this is on, people can see you\'re online and call you from your email.'),
               value: _savingOnline ?? u.showOnline,
               onChanged: _savingOnline != null ? null : _setShowOnline,
+            ),
+            ListTile(
+              leading: const Icon(Icons.policy_outlined),
+              title: const Text('Privacy Policy'),
+              trailing: const Icon(Icons.open_in_new, size: 18),
+              onTap: () => openLegalPage(context, 'privacy.html'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('Terms of Service'),
+              trailing: const Icon(Icons.open_in_new, size: 18),
+              onTap: () => openLegalPage(context, 'terms.html'),
             ),
 
             // ⑤ security
