@@ -58,6 +58,16 @@ def create_app():
         # The email app itself
         return send_from_directory(Config.FRONTEND_DIR, "index.html")
 
+    # Windows app (Microsoft Store): links to domailit.com open in the DoMailit app.
+    # Windows reads this file to check that the app really belongs to this website.
+    @app.route("/.well-known/windows-app-web-link")
+    def windows_app_web_link():
+        return jsonify([{
+            "packageFamilyName": Config.WINDOWS_PACKAGE_FAMILY,
+            "paths": ["*"],
+            "excludePaths": ["/api/*", "/.well-known/*"],
+        }])
+
     @app.route("/api/health")
     def health():
         try:
