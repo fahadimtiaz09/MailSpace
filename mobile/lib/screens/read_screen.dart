@@ -50,6 +50,7 @@ class _ReadScreenState extends State<ReadScreen> {
   Message? _message;
   String? _error;
   bool _busy = false;            // while an action (trash, star…) is running
+  bool _details = false;         // sender row tapped: show full From / To / Date (like Gmail)
   String? _downloadingId;        // attachment being downloaded
 
   // Calls: can we call the other person right now?
@@ -336,37 +337,64 @@ class _ReadScreenState extends State<ReadScreen> {
         ),
         const SizedBox(height: 16),
 
-        // sender row
-        Row(
-          children: [
-            Avatar(
-                seed: m.from,
-                text: m.fromName == null ? _initials(m.from) : MessageRow.initialsOfName(m.fromName!),
-                radius: 21),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(m.fromName ?? m.from,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-                  if (m.fromName != null)
-                    Text(m.from,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                  Text('to ${m.to.join(', ')}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                ],
-              ),
+        // sender row — tap to see the full From / To / Date (like Gmail)
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _details = !_details),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Avatar(
+                    seed: m.from,
+                    text: m.fromName == null ? _initials(m.from) : MessageRow.initialsOfName(m.fromName!),
+                    radius: 21),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(m.fromName ?? m.from,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(_fullTime(m.createdAt), style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              m.to.isEmpty
+                                  ? 'to (no recipients)'
+                                  : 'to ${m.to.first}${m.to.length > 1 ? ' +${m.to.length - 1}' : ''}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, color: AppColors.muted),
+                            ),
+                          ),
+                          Icon(_details ? Icons.expand_less : Icons.expand_more, size: 20, color: AppColors.muted),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(_fullTime(m.createdAt), style: TextStyle(fontSize: 12, color: AppColors.muted)),
-          ],
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: _details ? _detailsBox(m) : const SizedBox(width: double.infinity),
         ),
         const SizedBox(height: 20),
 
@@ -441,6 +469,52 @@ class _ReadScreenState extends State<ReadScreen> {
   }
 
   /// "11 Nov, 10:42"
+  /// Full From / To / Date, shown when the sender row is tapped.
+  Widget _detailsBox(Message m) {
+    final label = TextStyle(fontSize: 13, color: AppColors.muted);
+    final value = TextStyle(fontSize: 13, height: 1.35, color: AppColors.ink);
+    Widget row(String name, List<Widget> lines) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 52, child: Text(name, style: label)),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: lines)),
+            ],
+          ),
+        );
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          row('From', [
+            if (m.fromName != null) Text(m.fromName!, style: value.copyWith(fontWeight: FontWeight.w600)),
+            SelectableText(m.from, style: value),
+          ]),
+          row('To', [for (final t in m.to) SelectableText(t, style: value)]),
+          row('Date', [Text(_longTime(m.createdAt), style: value)]),
+        ],
+      ),
+    );
+  }
+
+  /// "Wed, 19 Nov 2026, 07:03"
+  static String _longTime(DateTime? t) {
+    if (t == null) return '';
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final hh = t.hour.toString().padLeft(2, '0');
+    final mm = t.minute.toString().padLeft(2, '0');
+    return '${days[t.weekday - 1]}, ${t.day} ${months[t.month - 1]} ${t.year}, $hh:$mm';
+  }
+
   static String _fullTime(DateTime? t) {
     if (t == null) return '';
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

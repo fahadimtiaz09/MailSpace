@@ -376,7 +376,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ④ privacy
             const _Section('Privacy'),
             SwitchListTile(
-              secondary: const Icon(Icons.circle_outlined),
+              // Green dot when people can see you're online, grey ring when hidden
+              secondary: _OnlineDot(on: _savingOnline ?? u.showOnline),
               title: const Text('Show when I\'m online'),
               subtitle: const Text('When this is on, people can see you\'re online and call you from your email.'),
               value: _savingOnline ?? u.showOnline,
@@ -789,6 +790,36 @@ class _DeleteAccountPageState extends State<_DeleteAccountPage> {
                   : const Text('Delete account forever'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// The "online" dot next to "Show when I'm online": filled green when on.
+class _OnlineDot extends StatelessWidget {
+  final bool on;
+  const _OnlineDot({required this.on});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: on ? AppColors.success : Colors.transparent,
+            border: Border.all(color: on ? AppColors.success : AppColors.faint, width: 2),
+            boxShadow: on
+                ? [BoxShadow(color: AppColors.success.withValues(alpha: 0.35), blurRadius: 6, spreadRadius: 1)]
+                : null,
+          ),
         ),
       ),
     );
