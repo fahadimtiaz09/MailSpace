@@ -28,7 +28,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
-    CallService.instance.stop(); // logged out → not "online" any more
+    CallService.instance.stop(owner: this); // logged out → not "online" any more
     super.dispose();
   }
 
@@ -51,7 +51,7 @@ class _HomeShellState extends State<HomeShell> {
 
         // Tell the server we're online (dial buttons turn blue for others)
         // and listen for incoming calls.
-        CallService.instance.start(user.email, admin: user.isAdmin);
+        CallService.instance.start(user.email, admin: user.isAdmin, owner: this);
         PushService.instance.afterLogin(); // notifications for this phone
 
         return Scaffold(

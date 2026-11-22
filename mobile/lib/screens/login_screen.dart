@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
+import '../services/push_service.dart';
 import '../theme.dart';
 import '../widgets/theme_button.dart';
 import '../widgets/brand.dart';
@@ -26,6 +27,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _hidePassword = true; // eye icon
   bool _loading = false;     // true while waiting for the server
+
+  /// Opened from "Add another account": the accounts already here stay signed in.
+  bool get _adding {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    return args is Map && args['add'] == true;
+  }
   String? _error;            // red message box (null = hidden)
 
   @override
@@ -51,7 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await ApiClient.instance.login(login, password);
+      await ApiClient.instance.login(login, password, add: _adding);
+      if (_adding) await PushService.instance.beforeSwitch(); // notifications follow the new account
       if (!mounted) return;
       // Go to the inbox and remove Welcome/Login from the back stack,
       // so the phone's back button doesn't return to the login page.
@@ -76,12 +84,14 @@ class _LoginScreenState extends State<LoginScreen> {
             const Align(alignment: Alignment.centerLeft, child: BrandLockup(logoWidth: 30, fontSize: 22)),
             const SizedBox(height: 28),
             Text(
-              'Welcome back',
+              _adding ? 'Add another account' : 'Welcome back',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.ink),
             ),
             const SizedBox(height: 4),
             Text(
-              'Log in to open your inbox.',
+              _adding
+                  ? 'You\'ll stay logged in to your other accounts and can switch from your profile picture.'
+                  : 'Log in to open your inbox.',
               style: TextStyle(fontSize: 15, color: AppColors.muted),
             ),
             const SizedBox(height: 24),
@@ -165,7 +175,8 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Text('New to DoMailit? ', style: TextStyle(fontSize: 14)),
                 TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/signup'),
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/signup',
+                      arguments: _adding ? {'add': true} : null),
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 44)),
                   child: const Text('Create an account'),
                 ),

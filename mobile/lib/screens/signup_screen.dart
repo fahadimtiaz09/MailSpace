@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
+import '../services/push_service.dart';
 import '../theme.dart';
 import '../widgets/legal.dart';
 import '../widgets/theme_button.dart';
@@ -75,6 +76,12 @@ class _SignupScreenState extends State<SignupScreen> {
     return score.clamp(1, 4);
   }
 
+  /// Opened from "Add another account" (via Log in): the other accounts stay signed in.
+  bool get _adding {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    return args is Map && args['add'] == true;
+  }
+
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
@@ -115,7 +122,9 @@ class _SignupScreenState extends State<SignupScreen> {
         recoveryEmail: _recoveryEmailCtrl.text.trim(),
         securityQuestion: _questionCtrl.text.trim(),
         securityAnswer: _answerCtrl.text.trim(),
+        add: _adding,
       );
+      if (_adding) await PushService.instance.beforeSwitch();
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } on ApiException catch (e) {
@@ -325,7 +334,8 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 const Text('Have an account? ', style: TextStyle(fontSize: 14)),
                 TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/login',
+                      arguments: _adding ? {'add': true} : null),
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 44)),
                   child: const Text('Log in'),
                 ),

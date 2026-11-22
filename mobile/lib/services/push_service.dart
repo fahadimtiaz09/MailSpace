@@ -74,6 +74,18 @@ class PushService {
     await forget();
   }
 
+  /// Leaving this account but another one stays signed in on the phone:
+  /// the next account takes over this phone's notifications (afterLogin).
+  Future<void> beforeSwitch({bool unsubscribe = false}) async {
+    if (unsubscribe && _ready) {
+      try {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) await ApiClient.instance.pushUnsubscribe(token);
+      } catch (_) {}
+    }
+    _linked = false;
+  }
+
   /// The account is gone (deleted) — just drop this phone's token.
   Future<void> forget() async {
     _linked = false;

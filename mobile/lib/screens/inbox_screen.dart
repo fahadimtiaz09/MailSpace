@@ -18,6 +18,7 @@ import '../api/api_client.dart';
 import '../models/message.dart';
 import '../models/user.dart';
 import '../theme.dart';
+import '../widgets/account_sheet.dart';
 import '../widgets/brand.dart';
 import '../widgets/message_row.dart';
 import 'search_screen.dart';
@@ -240,7 +241,8 @@ class _InboxScreenState extends State<InboxScreen> {
             padding: const EdgeInsets.only(right: 10, left: 2),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: widget.onOpenSettings,
+              // Gmail-style: switch accounts or add another one
+              onTap: () => showAccountSheet(context, user, onManage: widget.onOpenSettings),
               child: Avatar(seed: user.email, text: user.initials, radius: 18),
             ),
           ),

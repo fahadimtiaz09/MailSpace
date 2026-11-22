@@ -34,6 +34,8 @@ class Message {
   final String? body;
   final String? bodyHtml;       // email design (logos, header, footer) — already cleaned by the server
   final bool canForward;        // false when the person who wrote it switched forwarding off
+  final bool senderBlocked;     // you blocked this sender (their mail goes to Spam)
+  final bool canReport;         // mail someone else sent you → Block / Report are offered
   final List<Attachment> attachments;
 
   Message({
@@ -51,12 +53,14 @@ class Message {
     this.body,
     this.bodyHtml,
     this.canForward = true,
+    this.senderBlocked = false,
+    this.canReport = false,
     this.attachments = const [],
   });
 
   /// A copy with a few fields changed — used when the user stars a message
   /// or opens it, so the list updates straight away.
-  Message copyWith({bool? isRead, bool? isStarred}) => Message(
+  Message copyWith({bool? isRead, bool? isStarred, bool? senderBlocked}) => Message(
         id: id,
         folder: folder,
         from: from,
@@ -71,6 +75,8 @@ class Message {
         body: body,
         bodyHtml: bodyHtml,
         canForward: canForward,
+        senderBlocked: senderBlocked ?? this.senderBlocked,
+        canReport: canReport,
         attachments: attachments,
       );
 
@@ -91,6 +97,8 @@ class Message {
       body: json['body'] as String?,
       bodyHtml: json['body_html'] as String?,
       canForward: json['can_forward'] as bool? ?? true,
+      senderBlocked: json['sender_blocked'] as bool? ?? false,
+      canReport: json['can_report'] as bool? ?? false,
       attachments: (json['attachments'] as List? ?? [])
           .map((a) => Attachment.fromJson(a as Map<String, dynamic>))
           .toList(),

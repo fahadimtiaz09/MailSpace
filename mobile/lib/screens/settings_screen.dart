@@ -183,29 +183,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _logout() async {
-    final yes = await showDialog<bool>(
+    // More than one account on this phone? Offer "this one" or "all of them" (like Gmail).
+    var count = 1;
+    try {
+      count = (await _api.accounts()).length;
+    } catch (_) {}
+    if (!mounted) return;
+    final many = count > 1;
+    final choice = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Log out?'),
-        content: const Text('You will need your password to log in again.'),
+        content: Text(many
+            ? 'Log out of ${widget.user.email} only, or of all $count accounts on this phone?'
+            : 'You will need your password to log in again.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          if (many)
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'all'),
+              child: Text('All accounts', style: TextStyle(color: AppColors.error)),
+            ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Log out', style: TextStyle(color: AppColors.error)),
+            onPressed: () => Navigator.pop(context, 'one'),
+            child: Text(many ? 'This account' : 'Log out', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
     );
-    if (yes != true) return;
-    await PushService.instance.beforeLogout();
+    if (choice == null) return;
+    final all = choice == 'all' || !many;
+    if (all) {
+      await PushService.instance.beforeLogout();
+    } else {
+      await PushService.instance.beforeSwitch(unsubscribe: true); // the next account takes over notifications
+    }
+    var remaining = 0;
     try {
-      await _api.logout();
+      remaining = await _api.logout(all: all);
     } catch (_) {
       // cookies are cleared on the phone anyway
     }
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
+    Navigator.pushNamedAndRemoveUntil(context, remaining > 0 ? '/home' : '/welcome', (route) => false);
   }
 
   bool? _savingOnline; // the value being saved, while the request runs
@@ -224,11 +244,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _deleteAccount() async {
-    final deleted = await Navigator.push<bool>(
+    // The page returns how many other accounts are still signed in (null = not deleted)
+    final remaining = await Navigator.push<int>(
         context, MaterialPageRoute(builder: (context) => const _DeleteAccountPage()));
-    if (deleted == true) await PushService.instance.forget();
-    if (deleted == true && mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
+    if (remaining == null) return;
+    await PushService.instance.forget();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, remaining > 0 ? '/home' : '/welcome', (route) => false);
     }
   }
 
@@ -382,6 +404,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('When this is on, people can see you\'re online and call you from your email.'),
               value: _savingOnline ?? u.showOnline,
               onChanged: _savingOnline != null ? null : _setShowOnline,
+            ),
+            ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Blocked addresses'),
+              subtitle: const Text('Their emails go to Spam, and they can\'t call you.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const _BlockedPage())),
             ),
             ListTile(
               leading: const Icon(Icons.policy_outlined),
@@ -743,8 +772,8 @@ class _DeleteAccountPageState extends State<_DeleteAccountPage> {
       _error = null;
     });
     try {
-      await ApiClient.instance.deleteAccount(_password.text);
-      if (mounted) Navigator.pop(context, true);
+      final remaining = await ApiClient.instance.deleteAccount(_password.text);
+      if (mounted) Navigator.pop(context, remaining);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
@@ -821,6 +850,128 @@ class _OnlineDot extends StatelessWidget {
                 : null,
           ),
         ),
+      ),
+    );
+  }
+}
+
+
+/// Settings → Blocked addresses: see, unblock and add blocked senders.
+class _BlockedPage extends StatefulWidget {
+  const _BlockedPage();
+
+  @override
+  State<_BlockedPage> createState() => _BlockedPageState();
+}
+
+class _BlockedPageState extends State<_BlockedPage> {
+  final _api = ApiClient.instance;
+  final _emailCtrl = TextEditingController();
+  List<String>? _list;
+  String? _error;
+  bool _adding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final list = await _api.blockedAddresses();
+      if (mounted) setState(() => _list = list);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    }
+  }
+
+  void _snack(String text) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
+
+  Future<void> _add() async {
+    final email = _emailCtrl.text.trim().toLowerCase();
+    if (email.isEmpty) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _adding = true);
+    try {
+      await _api.blockAddress(email);
+      _emailCtrl.clear();
+      _snack('$email is blocked.');
+      await _load();
+    } on ApiException catch (e) {
+      _snack(e.message);
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  Future<void> _unblock(String email) async {
+    try {
+      await _api.unblockAddress(email);
+      _snack('$email is unblocked.');
+      await _load();
+    } on ApiException catch (e) {
+      _snack(e.message);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = _list;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Blocked addresses', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          Text('Emails from these addresses go straight to Spam, and they can\'t call you.',
+              style: TextStyle(fontSize: 13, color: AppColors.muted)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _add(),
+                  decoration: const InputDecoration(hintText: 'name@example.com'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(onPressed: _adding ? null : _add, child: const Text('Block')),
+            ],
+          ),
+          const SizedBox(height: 18),
+          if (_error != null)
+            Text(_error!, style: TextStyle(color: AppColors.error))
+          else if (list == null)
+            Center(child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ))
+          else if (list.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text('You haven\'t blocked anyone.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted)),
+            )
+          else
+            for (final email in list)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.block, color: AppColors.muted),
+                title: Text(email, maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: TextButton(onPressed: () => _unblock(email), child: const Text('Unblock')),
+              ),
+        ],
       ),
     );
   }

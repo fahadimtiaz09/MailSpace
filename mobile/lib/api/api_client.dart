@@ -186,11 +186,13 @@ class ApiClient {
 
   /// [login] can be the username ("username") or the full address
   /// ("username@domailit.com"). The backend field is called "login".
-  Future<User> login(String login, String password) async {
+  /// [add] = "Add another account": the accounts already on this phone stay signed in.
+  Future<User> login(String login, String password, {bool add = false}) async {
     await _ensureCsrf();
     final data = await _post('/auth/login', {
       'login': login.trim(),
       'password': password,
+      if (add) 'add': true,
     });
     return User.fromJson(data['user'] as Map<String, dynamic>);
   }
@@ -204,6 +206,7 @@ class ApiClient {
     String? recoveryEmail,
     String? securityQuestion,
     String? securityAnswer,
+    bool add = false,
   }) async {
     await _ensureCsrf();
     final data = await _post('/auth/signup', {
@@ -211,6 +214,7 @@ class ApiClient {
       'password': password,
       'account_type': accountType,
       'accept_terms': true, // only called after "I agree" on the Privacy and Terms page
+      if (add) 'add': true,
       if (recoveryEmail != null && recoveryEmail.isNotEmpty) 'recovery_email': recoveryEmail,
       if (securityQuestion != null && securityQuestion.isNotEmpty) 'security_question': securityQuestion,
       if (securityAnswer != null && securityAnswer.isNotEmpty) 'security_answer': securityAnswer,
@@ -218,13 +222,55 @@ class ApiClient {
     return User.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  Future<void> logout() async {
+  /// Logs out the account in use ([all] = every account on this phone).
+  /// Returns how many accounts are still signed in (0 = go to Welcome).
+  Future<int> logout({bool all = false}) async {
+    var remaining = 0;
     try {
-      await _post('/auth/logout');
-    } finally {
-      // Forget the cookies on the phone even if the server didn't answer.
-      await _cookieJar?.deleteAll();
+      final data = await _post('/auth/logout', {'all': all});
+      remaining = (data is Map ? data['remaining'] as int? : null) ?? 0;
+    } catch (_) {
+      remaining = 0;
     }
+    // Forget the cookies on the phone when nobody is signed in any more.
+    if (remaining == 0) await _cookieJar?.deleteAll();
+    return remaining;
+  }
+
+  /// Every account signed in on this phone (for the account switcher).
+  Future<List<SignedInAccount>> accounts() async {
+    final data = await _get('/auth/accounts');
+    return (data['accounts'] as List? ?? [])
+        .map((a) => SignedInAccount.fromJson(a as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Use another account that is already signed in on this phone.
+  Future<User> switchAccount(String id) async {
+    final data = await _post('/auth/switch', {'id': id});
+    return User.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Block senders / report emails  (backend/routes/safety.py)
+  // ---------------------------------------------------------------------------
+
+  Future<List<String>> blockedAddresses() async {
+    final data = await _get('/blocked');
+    return (data['blocked'] as List? ?? []).map((e) => e.toString()).toList();
+  }
+
+  Future<void> blockAddress(String email) async {
+    await _post('/blocked', {'email': email.trim().toLowerCase()});
+  }
+
+  Future<void> unblockAddress(String email) async {
+    await _post('/blocked/remove', {'email': email});
+  }
+
+  /// [reason]: spam, scam, harassment or other.
+  Future<void> reportMessage(String id, {required String reason, String note = '', bool block = false}) async {
+    await _post('/messages/$id/report', {'reason': reason, 'note': note, 'block': block});
   }
 
   // ---------------------------------------------------------------------------
@@ -334,9 +380,12 @@ class ApiClient {
   }
 
   /// Deletes the account for good (backend/routes/profile.py → delete_account).
-  Future<void> deleteAccount(String password) async {
-    await _post('/auth/delete-account', {'password': password, 'confirm': 'DELETE'});
-    await _cookieJar?.deleteAll();
+  /// Returns how many other accounts are still signed in on this phone.
+  Future<int> deleteAccount(String password) async {
+    final data = await _post('/auth/delete-account', {'password': password, 'confirm': 'DELETE'});
+    final remaining = (data is Map ? data['remaining'] as int? : null) ?? 0;
+    if (remaining == 0) await _cookieJar?.deleteAll();
+    return remaining;
   }
 
   /// [png] = an already shrunk square picture.

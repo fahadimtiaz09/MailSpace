@@ -29,14 +29,19 @@ class CallService {
   bool inCall = false;
   final Set<String> _handled = {}; // incoming calls already shown / declined
 
-  void start(String email, {bool admin = false}) {
+  Object? _owner; // the HomeShell that started it (switching accounts makes a new one)
+
+  void start(String email, {bool admin = false, Object? owner}) {
     myEmail = email;
     isAdmin = admin;
+    _owner = owner;
     _timer ??= Timer.periodic(heartbeatEvery, (_) => _beat());
     _beat();
   }
 
-  void stop() {
+  /// [owner]: only stop if that screen is still the one in charge.
+  void stop({Object? owner}) {
+    if (owner != null && owner != _owner) return;
     _timer?.cancel();
     _timer = null;
   }

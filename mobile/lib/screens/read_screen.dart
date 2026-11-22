@@ -311,19 +311,108 @@ class _ReadScreenState extends State<ReadScreen> {
           onPressed: _busy ? null : () => _action('not_spam', 'Moved to inbox'),
         ),
       IconButton(
-        tooltip: 'Mark as unread',
-        icon: const Icon(Icons.mark_email_unread_outlined),
-        onPressed: _busy ? null : () => _action('unread', 'Marked as unread'),
-      ),
-      IconButton(
         tooltip: m.isStarred ? 'Unstar' : 'Star',
         icon: Icon(m.isStarred ? Icons.star : Icons.star_border),
         onPressed: _busy
             ? null
             : () => _action(m.isStarred ? 'unstar' : 'star', m.isStarred ? 'Star removed' : 'Starred', close: false),
       ),
-      const SizedBox(width: 4),
+      // ⋮ More: mark unread · block sender · report (like Gmail)
+      PopupMenuButton<String>(
+        tooltip: 'More',
+        enabled: !_busy,
+        onSelected: (choice) {
+          if (choice == 'unread') _action('unread', 'Marked as unread');
+          if (choice == 'block') _toggleBlock(m);
+          if (choice == 'report') _report(m);
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'unread',
+            child: ListTile(
+                contentPadding: EdgeInsets.zero, leading: Icon(Icons.mark_email_unread_outlined), title: Text('Mark as unread')),
+          ),
+          if (m.canReport) ...[
+            PopupMenuItem(
+              value: 'block',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(m.senderBlocked ? Icons.check_circle_outline : Icons.block),
+                title: Text('${m.senderBlocked ? 'Unblock' : 'Block'} ${m.from}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+            PopupMenuItem(
+              value: 'report',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.flag_outlined, color: AppColors.error),
+                title: const Text('Report this email'),
+              ),
+            ),
+          ],
+        ],
+      ),
     ];
+  }
+
+  // ---------------- block / report ----------------
+
+  Future<void> _toggleBlock(Message m) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (m.senderBlocked) {
+      try {
+        await _api.unblockAddress(m.from);
+        if (mounted) setState(() => _message = m.copyWith(senderBlocked: false));
+        messenger.showSnackBar(SnackBar(content: Text('${m.from} is unblocked.')));
+      } on ApiException catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      }
+      return;
+    }
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Block ${m.from}?'),
+        content: const Text('Their emails will go straight to Spam, and they won\'t be able to call you. '
+            'You can unblock them any time in Settings.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Block', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    try {
+      await _api.blockAddress(m.from);
+      messenger.showSnackBar(SnackBar(content: Text('${m.from} is blocked. Their emails will go to Spam.')));
+      if (!mounted) return;
+      if (m.folder == 'inbox') {
+        Navigator.pop(context, true); // it moved to Spam — back to the list
+      } else {
+        setState(() => _message = m.copyWith(senderBlocked: true));
+      }
+    } on ApiException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _report(Message m) async {
+    final sent = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: AppColors.elevated,
+      builder: (_) => _ReportSheet(message: m),
+    );
+    if (sent == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks for reporting. Our team will review it.')),
+      );
+      Navigator.pop(context, true); // it moved to Spam — back to the list
+    }
   }
 
   Widget _content(Message m) {
@@ -534,6 +623,150 @@ class _ReadScreenState extends State<ReadScreen> {
     if (['jpg', 'jpeg', 'png', 'gif'].contains(ext)) return Icons.image_outlined;
     if (ext == 'pdf') return Icons.picture_as_pdf_outlined;
     return Icons.description_outlined;
+  }
+}
+
+/// "Report this email": why, an optional note, and "Also block the sender".
+class _ReportSheet extends StatefulWidget {
+  final Message message;
+  const _ReportSheet({required this.message});
+
+  @override
+  State<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends State<_ReportSheet> {
+  static const _reasons = [
+    ('spam', 'Spam', 'Ads or mail you didn\'t ask for'),
+    ('scam', 'Scam or phishing', 'Asks for passwords, money or personal details'),
+    ('harassment', 'Harassment or threats', 'Abusive, hateful or threatening'),
+    ('other', 'Something else', 'Tell us below'),
+  ];
+
+  String _reason = 'spam';
+  late bool _block = !widget.message.senderBlocked;
+  final _note = TextEditingController();
+  bool _sending = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      await ApiClient.instance.reportMessage(widget.message.id,
+          reason: _reason, note: _note.text.trim(), block: _block && !widget.message.senderBlocked);
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = widget.message;
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Report this email', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.ink)),
+              const SizedBox(height: 4),
+              Text('Our team will review it. The email moves to your Spam folder.',
+                  style: TextStyle(fontSize: 13, color: AppColors.muted)),
+              const SizedBox(height: 14),
+              for (final (value, label, hint) in _reasons)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => setState(() => _reason = value),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                      decoration: BoxDecoration(
+                        color: _reason == value ? AppColors.primarySoft : null,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _reason == value ? AppColors.primary : AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(
+                              _reason == value ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                              color: _reason == value ? AppColors.primary : AppColors.muted,
+                              size: 22,
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                Text(hint, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: _note,
+                maxLength: 500,
+                maxLines: 3,
+                minLines: 2,
+                decoration: const InputDecoration(hintText: 'Anything else we should know? (optional)'),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: m.senderBlocked ? true : _block,
+                onChanged: m.senderBlocked ? null : (v) => setState(() => _block = v ?? false),
+                title: Text(m.senderBlocked ? '${m.from} is already blocked' : 'Also block ${m.from}',
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+              ),
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: AppColors.error)),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _sending ? null : () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _sending ? null : _send,
+                      child: Text(_sending ? 'Reporting…' : 'Report'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

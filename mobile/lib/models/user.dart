@@ -71,3 +71,40 @@ class User {
 
 DateTime? _date(dynamic value) =>
     value is String && value.isNotEmpty ? DateTime.tryParse(value)?.toLocal() : null;
+
+
+/// One account signed in on this phone (Gmail-style switcher), from /api/auth/accounts.
+class SignedInAccount {
+  final String id;
+  final String email;
+  final String username;
+  final String? displayName;
+  final String? avatar;
+  final bool active;           // the account in use right now
+
+  SignedInAccount({
+    required this.id,
+    required this.email,
+    required this.username,
+    this.displayName,
+    this.avatar,
+    required this.active,
+  });
+
+  String get name => displayName ?? username;
+
+  String get initials {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
+  }
+
+  factory SignedInAccount.fromJson(Map<String, dynamic> json) => SignedInAccount(
+        id: json['id'] as String,
+        email: json['email'] as String? ?? '',
+        username: json['username'] as String? ?? '',
+        displayName: json['display_name'] as String?,
+        avatar: json['avatar'] as String?,
+        active: json['active'] as bool? ?? false,
+      );
+}
