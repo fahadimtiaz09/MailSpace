@@ -285,7 +285,7 @@ const Shell = (() => {
     user = u;
     People.remember(u.email, { name: u.display_name, avatar: u.avatar });
     const btn = document.querySelector(".account-btn");
-    btn.replaceChildren(avatar(u.email, "sm"), icon("chevron-down", "i-sm"));
+    btn.replaceChildren(avatar(u.email, "sm", u.display_name), icon("chevron-down", "i-sm"));
     const head = document.querySelector(".menu-head");
     const who = el("div", "menu-head-text");
     who.append(el("strong", null, u.display_name || u.username), el("span", null, u.email));
@@ -307,7 +307,7 @@ const Shell = (() => {
     const card = document.getElementById("plan-card");
     card.replaceChildren();
     const top = el("div", "plan-top");
-    top.append(avatar(u.email, "sm"));
+    top.append(avatar(u.email, "sm", u.display_name));
     const who = el("div", "plan-who");
     who.append(el("strong", "truncate", u.email), el("span", null, ACCOUNT_TYPES[u.account_type] || u.account_type));
     top.append(who);
