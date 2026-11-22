@@ -18,7 +18,7 @@ from database import addresses, attachment_files, calls, domains, mailboxes, mes
 from routes.calls import find_user_by_address
 from push import push_subscriptions
 from routes.messages import delete_files
-from security import login_required, now_utc, parse_object_id, rate_limited
+from security import drop_session_account, login_required, now_utc, parse_object_id, rate_limited
 
 profile_bp = Blueprint("profile", __name__, url_prefix="/api")
 
@@ -138,8 +138,8 @@ def delete_account():
         return error("You are the only admin. Make someone else an admin before deleting this account.", 409)
 
     delete_account_data(g.user)
-    session.clear()
-    return jsonify({"ok": True})
+    remaining = drop_session_account(g.user["_id"])  # other accounts here stay signed in
+    return jsonify({"ok": True, "remaining": remaining})
 
 
 @profile_bp.post("/auth/avatar")

@@ -639,7 +639,10 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
 }
 .menu-head { padding: 10px 12px 12px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
 .menu-head strong { display: block; font-size: .92rem; }
-.menu-head span { font-size: .82rem; color: var(--text-2); word-break: break-all; }
+.menu-head span:not(.avatar) { font-size: .82rem; color: var(--text-2); word-break: break-all; }
+.menu-head:has(.avatar) { display: flex; align-items: center; gap: 12px; }
+.menu-head .avatar { flex: none; }
+.menu-head-text { min-width: 0; }
 .menu-item {
   display: flex; align-items: center; gap: 10px;
   width: 100%;
@@ -655,6 +658,15 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
 .menu-item:hover { background: var(--surface-hover); text-decoration: none; }
 .menu-item .i { color: var(--text-2); width: 18px; height: 18px; }
 .menu-sep { height: 1px; margin: 6px 0; background: var(--border); }
+/* Account switcher (Gmail-style): other accounts signed in on this browser */
+.account-menu { min-width: 280px; max-width: min(340px, calc(100vw - 24px)); }
+.account-list:empty { display: none; }
+.account-row { gap: 12px; padding: 8px 12px; }
+.account-row .avatar { flex: none; }
+.account-row-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.account-row-text strong { font-size: .88rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-row-text small { font-size: .78rem; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-row:disabled { opacity: .6; cursor: progress; }
 
 /* Tooltips: <button data-tip="Refresh"> */
 [data-tip] { position: relative; }

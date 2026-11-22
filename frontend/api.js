@@ -26,10 +26,16 @@ function defaultErrorMessage(status) {
   return "Something went wrong on the server (" + status + ").";
 }
 
+// The account this page is showing (set by shell.js after /api/auth/me).
+// Sent with every request, so if another tab switched accounts the server
+// stops this tab instead of letting it act as the other account.
+let currentAccountId = null;
+
 // The ONE function every page uses to talk to Flask
 async function api(path, options = {}) {
   const opts = { method: "GET", credentials: "same-origin", ...options };
   opts.headers = { ...(options.headers || {}) };
+  if (currentAccountId) opts.headers["X-Account"] = currentAccountId;
 
   // Send the CSRF token on every request that changes data
   const csrf = getCookie("csrf_token");
@@ -54,6 +60,11 @@ async function api(path, options = {}) {
   const type = response.headers.get("Content-Type") || "";
   if (type.includes("application/json")) {
     data = await response.json();
+  }
+
+  if (response.status === 409 && data && data.account_switched) {
+    window.location.reload(); // show the account that is active now
+    return new Promise(() => {});
   }
 
   if (!response.ok) {

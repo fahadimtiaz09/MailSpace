@@ -61,15 +61,27 @@ const Push = (() => {
     await save(subscription);
   }
 
+  /** Turn notifications off on this browser, for every account signed in here. */
   async function disable() {
+    const subscription = await currentSubscription().catch(() => null);
+    if (!subscription) return;
+    try {
+      await api("/api/push/unsubscribe", { method: "POST", body: { kind: "web", subscription: subscription.toJSON(), all_accounts: true } });
+    } catch {
+      // still stop it on this browser
+    }
+    await subscription.unsubscribe().catch(() => {});
+  }
+
+  /** Stop only the account in use (when it logs out but others stay signed in here). */
+  async function forget() {
     const subscription = await currentSubscription().catch(() => null);
     if (!subscription) return;
     try {
       await api("/api/push/unsubscribe", { method: "POST", body: { kind: "web", subscription: subscription.toJSON() } });
     } catch {
-      // still stop it on this browser
+      // the server drops it when the account next gets a notification
     }
-    await subscription.unsubscribe().catch(() => {});
   }
 
   async function isOn() {
@@ -93,7 +105,9 @@ const Push = (() => {
       if (event.data?.type !== "open-url") return;
       const url = new URL(event.data.url, location.origin);
       const id = url.searchParams.get("open");
-      if (location.pathname.startsWith("/inbox") && id) {
+      const account = url.searchParams.get("u");
+      const sameAccount = !account || (typeof Shell !== "undefined" && Shell.user && Shell.user.id === account);
+      if (location.pathname.startsWith("/inbox") && id && sameAccount) {
         document.dispatchEvent(new CustomEvent("push-open", { detail: { id } }));
       } else if (location.href !== url.href) {
         location.href = url.href;
@@ -140,5 +154,5 @@ const Push = (() => {
     Shell.userReady.then(() => { sync(); setTimeout(offer, 2500); }).catch(() => {});
   }
 
-  return { supported, enable, disable, isOn, deviceName, permission: () => (supported ? Notification.permission : "unsupported") };
+  return { supported, enable, disable, forget, isOn, deviceName, permission: () => (supported ? Notification.permission : "unsupported") };
 })();

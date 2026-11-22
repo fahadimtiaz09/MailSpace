@@ -9,7 +9,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from config import Config
 from database import users
-from security import contact_address, is_expired, login_required, now_utc, rate_limited, to_iso
+from security import (MAX_ACCOUNTS, contact_address, drop_session_account, is_expired, login_required,
+                      now_utc, parse_object_id, rate_limited, session_account_ids, to_iso, usable)
 from email_service import ExternalSendError, external_sending_ready, send_external
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -62,10 +63,23 @@ def public_user(user):
     }
 
 
-def start_session(user):
+def start_session(user, add=False):
+    """Log in. With add=True ("Add another account") the accounts already
+    signed in on this browser stay signed in, and the new one becomes active."""
+    user_id = str(user["_id"])
+    keep = [i for i in session_account_ids() if i != user_id] if add else []
+    csrf = session.get("csrf_token") if add else None
     session.clear()  # fresh session on every login
     session.permanent = True
-    session["user_id"] = str(user["_id"])
+    if csrf:
+        session["csrf_token"] = csrf  # other open tabs keep working
+    session["accounts"] = ([user_id] + keep)[:MAX_ACCOUNTS]
+    session["user_id"] = user_id
+
+
+def adding_account(data):
+    """True when "Add another account" was used and there's room for one more."""
+    return data.get("add") is True and len(session_account_ids()) < MAX_ACCOUNTS
 
 
 @auth_bp.post("/signup")
@@ -130,7 +144,7 @@ def signup():
         return error("That username is already taken.", 409)
 
     user["_id"] = result.inserted_id
-    start_session(user)
+    start_session(user, add=adding_account(data))
     return jsonify({"user": public_user(user)}), 201
 
 
@@ -156,14 +170,60 @@ def login():
     if user.get("status") != "active" or is_expired(user):
         return error("This account has expired and can no longer be used.", 403)
 
-    start_session(user)
+    start_session(user, add=adding_account(data))
     return jsonify({"user": public_user(user)})
 
 
 @auth_bp.post("/logout")
 def logout():
-    session.clear()
-    return jsonify({"ok": True})
+    """Signs out the account in use. {"all": true} signs out every account here."""
+    data = request.get_json(silent=True) or {}
+    if data.get("all") is True or not session.get("user_id"):
+        session.clear()
+        return jsonify({"ok": True, "remaining": 0})
+    return jsonify({"ok": True, "remaining": drop_session_account(session["user_id"])})
+
+
+@auth_bp.get("/accounts")
+def accounts():
+    """Every account signed in on this browser (for the account switcher)."""
+    ids = session_account_ids()
+    object_ids = [o for o in (parse_object_id(i) for i in ids) if o]
+    found = {str(u["_id"]): u for u in users.find({"_id": {"$in": object_ids}})} if object_ids else {}
+    result, valid = [], []
+    for i in ids:
+        u = found.get(i)
+        if not usable(u):
+            continue
+        valid.append(i)
+        result.append({"id": i, "email": u["email"], "username": u["username"],
+                       "display_name": u.get("display_name") or None,
+                       "avatar": public_user(u)["avatar"],
+                       "active": i == session.get("user_id")})
+    if ids and valid != ids:  # forget accounts that were deleted or expired
+        if valid:
+            session["accounts"] = valid
+            if session.get("user_id") not in valid:
+                session["user_id"] = valid[0]
+                result[0]["active"] = True
+        else:
+            session.clear()
+    return jsonify({"accounts": result, "max": MAX_ACCOUNTS})
+
+
+@auth_bp.post("/switch")
+def switch_account():
+    """Use another account that is already signed in on this browser."""
+    data = request.get_json(silent=True) or {}
+    user_id = str(data.get("id", ""))
+    if user_id not in session_account_ids():
+        return error("That account isn't signed in here. Log in to it first.", 401)
+    user = users.find_one({"_id": parse_object_id(user_id)})
+    if not usable(user):
+        drop_session_account(user_id)
+        return error("That account can no longer be used. Log in again.", 401)
+    session["user_id"] = user_id
+    return jsonify({"user": public_user(user)})
 
 
 @auth_bp.get("/me")

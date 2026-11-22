@@ -101,18 +101,27 @@ const Shell = (() => {
     accountBtn.setAttribute("aria-haspopup", "menu");
     accountBtn.setAttribute("aria-label", "Account menu");
     accountBtn.append(el("span", "avatar avatar-sm skeleton"));
-    const menu = el("div", "menu");
+    const menu = el("div", "menu account-menu");
     menu.setAttribute("role", "menu");
     const menuHead = el("div", "menu-head");
     menuHead.append(el("strong", null, " "), el("span", null, " "));
+    // Other accounts signed in on this browser + "Add another account" (filled by renderAccounts)
+    const switcher = el("div", "account-list");
     const settingsLink = menuLink("/settings.html", "settings", "Settings");
     const domainsLink = menuLink("/domains.html", "globe", "My domains");
     const logout = el("button", "menu-item");
     logout.type = "button";
+    logout.id = "menu-logout";
     logout.setAttribute("role", "menuitem");
     logout.append(icon("log-out"), el("span", null, "Log out"));
-    logout.addEventListener("click", logOut);
-    menu.append(menuHead, settingsLink, domainsLink, el("div", "menu-sep"), logout);
+    logout.addEventListener("click", () => signOut(false));
+    const logoutAll = el("button", "menu-item hidden");
+    logoutAll.type = "button";
+    logoutAll.id = "menu-logout-all";
+    logoutAll.setAttribute("role", "menuitem");
+    logoutAll.append(icon("log-out"), el("span", null, "Log out of all accounts"));
+    logoutAll.addEventListener("click", () => signOut(true));
+    menu.append(menuHead, switcher, el("div", "menu-sep"), settingsLink, domainsLink, el("div", "menu-sep"), logout, logoutAll);
     wrap.append(accountBtn, menu);
 
     actions.append(searchToggle, themeBtn, wrap);
@@ -240,8 +249,27 @@ const Shell = (() => {
   async function loadUser() {
     try {
       const data = await api("/api/auth/me");
+      // A notification for another account signed in here: ?u=<account id>
+      const params = new URLSearchParams(location.search);
+      const wanted = params.get("u");
+      if (wanted) {
+        params.delete("u");
+        const clean = location.pathname + (params.toString() ? "?" + params : "") + location.hash;
+        if (wanted !== data.user.id) {
+          try {
+            await api("/api/auth/switch", { method: "POST", body: { id: wanted } });
+            window.location.replace(clean);
+            return new Promise(() => {});
+          } catch {
+            // not signed in here any more — stay on this account
+          }
+        }
+        history.replaceState(null, "", clean);
+      }
       user = data.user;
+      currentAccountId = user.id;
       fillUser(user);
+      loadAccounts();
       return user;
     } catch (err) {
       if (err.status === 401) {
@@ -259,7 +287,9 @@ const Shell = (() => {
     const btn = document.querySelector(".account-btn");
     btn.replaceChildren(avatar(u.email, "sm"), icon("chevron-down", "i-sm"));
     const head = document.querySelector(".menu-head");
-    head.replaceChildren(el("strong", null, u.display_name || u.username), el("span", null, u.email));
+    const who = el("div", "menu-head-text");
+    who.append(el("strong", null, u.display_name || u.username), el("span", null, u.email));
+    head.replaceChildren(avatar(u.email, "lg", u.display_name), who);
     if (u.role === "admin") {
       const link = document.getElementById("nav-admin");
       if (link) link.classList.remove("hidden");
@@ -370,20 +400,78 @@ const Shell = (() => {
     banner.replaceChildren(icon(type === "error" || type === "warning" ? "alert" : "info", "i-sm"), el("span", null, text), close);
   }
 
-  async function logOut() {
+  // ---------- Accounts signed in on this browser (Gmail-style) ----------
+  let accounts = [];
+
+  async function loadAccounts() {
     try {
-      // Stop this browser's notifications first, so the next person here doesn't get yours
-      if (typeof Push !== "undefined") await Push.disable();
-      await api("/api/auth/logout", { method: "POST" });
+      const data = await api("/api/auth/accounts");
+      accounts = data.accounts || [];
+      renderAccounts(data.max || 5);
+    } catch {
+      renderAccounts(5);
+    }
+  }
+
+  function renderAccounts(max) {
+    const list = document.querySelector(".account-list");
+    if (!list) return;
+    const others = accounts.filter((a) => !a.active);
+    const rows = others.map((a) => {
+      People.remember(a.email, { name: a.display_name, avatar: a.avatar });
+      const row = el("button", "menu-item account-row");
+      row.type = "button";
+      row.setAttribute("role", "menuitem");
+      const text = el("span", "account-row-text");
+      text.append(el("strong", null, a.display_name || a.username), el("small", null, a.email));
+      row.append(avatar(a.email, "sm", a.display_name), text);
+      row.addEventListener("click", () => switchTo(a.id, row));
+      return row;
+    });
+    if (accounts.length < max) {
+      const add = el("a", "menu-item");
+      add.href = "/login.html?add=1";
+      add.setAttribute("role", "menuitem");
+      add.append(icon("user-plus"), el("span", null, "Add another account"));
+      rows.push(add);
+    }
+    list.replaceChildren(...rows);
+    const many = accounts.length > 1;
+    document.getElementById("menu-logout-all")?.classList.toggle("hidden", !many);
+    const one = document.querySelector("#menu-logout span");
+    if (one && user) one.textContent = many ? "Log out of " + user.email : "Log out";
+  }
+
+  async function switchTo(id, row) {
+    row.disabled = true;
+    try {
+      await api("/api/auth/switch", { method: "POST", body: { id } });
+      window.location.href = "/inbox";
+    } catch (err) {
+      row.disabled = false;
+      showBanner(err.message, "error");
+      loadAccounts();
+    }
+  }
+
+  // all=false: only the account in use (the next signed-in account opens).
+  // all=true: every account on this browser.
+  async function signOut(all = false) {
+    let remaining = 0;
+    try {
+      // Stop notifications for the account(s) leaving, so the next person here doesn't get yours
+      if (typeof Push !== "undefined") await (all || accounts.length <= 1 ? Push.disable() : Push.forget());
+      const res = await api("/api/auth/logout", { method: "POST", body: { all } });
+      remaining = res.remaining || 0;
     } catch {
       // Even if this fails, go to the login page
     }
-    window.location.href = "/login.html";
+    window.location.href = remaining ? "/inbox" : "/login.html";
   }
 
   buildHeader();
   buildSidebar();
   userReady.then(refreshCounts).catch(() => {});
 
-  return { userReady, refreshCounts, setActiveFolder, showBanner, closeSidebar, refreshUser: fillUser, get user() { return user; } };
+  return { userReady, refreshCounts, setActiveFolder, showBanner, closeSidebar, signOut, refreshUser: fillUser, get user() { return user; }, get accounts() { return accounts; } };
 })();

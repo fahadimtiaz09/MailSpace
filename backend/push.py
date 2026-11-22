@@ -224,7 +224,11 @@ def _deliver(user_ids, data, urgent, ttl):
     from security import now_utc
     for sub in list(push_subscriptions.find({"user_id": {"$in": list(user_ids)}})):
         if sub["kind"] == "web":
-            result = send_web(sub["subscription"], data, urgent, ttl)
+            # u= tells the website which account the notification is for, so a
+            # browser signed in to several accounts opens the right one
+            url = data.get("url") or "/inbox"
+            mine = {**data, "url": url + ("&" if "?" in url else "?") + "u=" + str(sub["user_id"])}
+            result = send_web(sub["subscription"], mine, urgent, ttl)
         else:
             result = send_fcm(sub["key"], data, urgent, ttl)
         if result == "gone":

@@ -32,6 +32,26 @@ document.querySelectorAll(".pw-toggle").forEach((button) => {
   });
 });
 
+// "Add another account" (from the account menu): /login.html?add=1
+// The accounts already signed in on this browser stay signed in.
+const addingAccount = new URLSearchParams(location.search).get("add") === "1";
+
+if (addingAccount) {
+  const card = document.querySelector(".auth-card");
+  const title = card?.querySelector("h1");
+  const lead = card?.querySelector("p.muted");
+  const onSignup = Boolean(document.getElementById("signup-form"));
+  if (title) title.textContent = onSignup ? "Create another account" : "Add another account";
+  if (lead) lead.textContent = "You'll stay logged in to your other DoMailit accounts and can switch between them from your profile picture.";
+  // Keep ?add=1 when moving between Log in and Create account
+  card?.querySelectorAll('a[href="/signup.html"], a[href="/login.html"]').forEach((a) => (a.href += "?add=1"));
+  const back = el("p", "auth-switch");
+  const link = el("a", null, "Back to my inbox");
+  link.href = "/inbox";
+  back.append(link);
+  card?.append(back);
+}
+
 // ---------- Login page ----------
 const loginForm = document.getElementById("login-form");
 
@@ -53,7 +73,7 @@ if (loginForm) {
     const button = loginForm.querySelector("button[type=submit]");
     setBusy(button, true, "Logging in…");
     try {
-      await api("/api/auth/login", { method: "POST", body: { login, password } });
+      await api("/api/auth/login", { method: "POST", body: { login, password, add: addingAccount } });
       window.location.href = "/inbox";
     } catch (err) {
       setBusy(button, false);
@@ -129,7 +149,7 @@ if (signupForm) {
       await api("/api/auth/signup", {
         method: "POST",
           body: {
-          username, password, account_type: accountType, accept_terms: true,
+          username, password, account_type: accountType, accept_terms: true, add: addingAccount,
           recovery_email: (signupForm.elements.recovery_email?.value || "").trim(),
           security_question: (signupForm.elements.security_question?.value || "").trim(),
           security_answer: (signupForm.elements.security_answer?.value || "").trim(),
@@ -213,7 +233,7 @@ function termsDialog() {
 }
 
 // If the user is already logged in, skip these pages and open the inbox
-if (loginForm || signupForm) {
+if ((loginForm || signupForm) && !addingAccount) {
   api("/api/auth/me")
     .then(() => (window.location.href = "/inbox"))
     .catch(() => {}); // not logged in — stay here

@@ -60,32 +60,79 @@ def is_expired(user):
     expires_at = user.get("expires_at")
     return expires_at is not None and expires_at <= now_utc()
 
+# ---------- Signed-in accounts (Gmail-style "Add account") ----------
+# One browser can be signed in to several accounts at once:
+#   session["accounts"] = [user_id, ...]   every account signed in here
+#   session["user_id"]  = the account being used right now
+MAX_ACCOUNTS = 5
+
+
+def session_account_ids():
+    ids = [str(i) for i in (session.get("accounts") or []) if i]
+    current = session.get("user_id")
+    if current and current not in ids:
+        ids.insert(0, current)  # sessions from before this feature
+    return ids[:MAX_ACCOUNTS]
+
+
+def usable(user):
+    return user is not None and user.get("status") == "active" and not is_expired(user)
+
+
+def drop_session_account(user_id):
+    """Sign one account out of this browser. Moves to the next account, if any.
+    Returns how many accounts are still signed in."""
+    user_id = str(user_id)
+    rest = [i for i in session_account_ids() if i != user_id]
+    if not rest:
+        session.clear()
+        return 0
+    session["accounts"] = rest
+    if session.get("user_id") == user_id or session.get("user_id") not in rest:
+        session["user_id"] = rest[0]
+    return len(rest)
+
+
+def _current_user():
+    """(user, error_response). Checks the account in use and that this tab still shows it."""
+    user_id = parse_object_id(session.get("user_id"))
+    user = users.find_one({"_id": user_id}) if user_id else None
+    if not usable(user):
+        expired = user is not None and user.get("status") == "active" and is_expired(user)
+        if session.get("user_id"):
+            drop_session_account(session["user_id"])  # keep the other accounts signed in
+        message = "Your temporary account has expired." if expired else "Please log in first."
+        return None, (jsonify({"error": message}), 401)
+    # The website sends the account its tab is showing. If another tab switched
+    # accounts meanwhile, stop — otherwise this tab could act as the wrong account.
+    shown = request.headers.get("X-Account")
+    if shown and shown != str(user["_id"]):
+        return None, (jsonify({"error": "You switched to another account in a different tab.",
+                               "account_switched": True}), 409)
+    return user, None
+
+
 def admin_required(view):
     """Put @admin_required above a route to allow only platform admins."""
     @wraps(view)
     def wrapper(*args, **kwargs):
-        user_id = parse_object_id(session.get("user_id"))
-        user = users.find_one({"_id": user_id}) if user_id else None
-        if user is None or user.get("status") != "active" or is_expired(user):
-            session.clear()
-            return jsonify({"error": "Please log in first."}), 401
+        user, failed = _current_user()
+        if failed:
+            return failed
         if user.get("role") != "admin":
             return jsonify({"error": "Admins only."}), 403
         g.user = user
         return view(*args, **kwargs)
     return wrapper
+
+
 def login_required(view):
     """Put @login_required above a route to allow only logged-in, non-expired users."""
     @wraps(view)
     def wrapper(*args, **kwargs):
-        user_id = parse_object_id(session.get("user_id"))
-        user = users.find_one({"_id": user_id}) if user_id else None
-        if user is None or user.get("status") != "active":
-            session.clear()
-            return jsonify({"error": "Please log in first."}), 401
-        if is_expired(user):
-            session.clear()
-            return jsonify({"error": "Your temporary account has expired."}), 401
+        user, failed = _current_user()
+        if failed:
+            return failed
         g.user = user  # the logged-in user, available inside the route
         return view(*args, **kwargs)
     return wrapper

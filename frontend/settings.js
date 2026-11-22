@@ -367,15 +367,7 @@ document.getElementById("security-q-btn").addEventListener("click", () => {
     },
   });
 });
-document.getElementById("logout-here").addEventListener("click", async () => {
-  try {
-    if (typeof Push !== "undefined") await Push.disable();
-    await api("/api/auth/logout", { method: "POST" });
-  } catch {
-    // Even if this fails, go to the login page
-  }
-  window.location.href = "/login.html";
-});
+document.getElementById("logout-here").addEventListener("click", () => Shell.signOut(false));
 
 // ---------- Notifications on this browser ----------
 async function renderPush() {
@@ -493,8 +485,9 @@ document.getElementById("delete-account-btn").addEventListener("click", () => {
     msg.classList.add("hidden");
     setBusy(confirm, true, "Deleting…");
     try {
-      await api("/api/auth/delete-account", { method: "POST", body: { password: pw.value, confirm: cf.value } });
-      window.location.href = "/?deleted=1";
+      const res = await api("/api/auth/delete-account", { method: "POST", body: { password: pw.value, confirm: cf.value } });
+      // Other accounts signed in here stay signed in — open the next one
+      window.location.href = res.remaining ? "/inbox" : "/?deleted=1";
     } catch (err) {
       setBusy(confirm, false);
       ready();

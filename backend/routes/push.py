@@ -5,13 +5,19 @@ from flask import Blueprint, g, jsonify, request
 from pymongo import ASCENDING
 
 from push import fcm_account, notify, push_subscriptions, vapid_keys
-from security import login_required, now_utc
+from security import login_required, now_utc, parse_object_id, session_account_ids
 
 push_bp = Blueprint("push", __name__, url_prefix="/api/push")
 
 
 def init_push_indexes():
-    push_subscriptions.create_index("key", unique=True)
+    # One browser can get notifications for every account signed in on it,
+    # so a device key is unique per account (it used to be unique on its own).
+    try:
+        push_subscriptions.drop_index("key_1")
+    except Exception:
+        pass  # already gone
+    push_subscriptions.create_index([("key", ASCENDING), ("user_id", ASCENDING)], unique=True)
     push_subscriptions.create_index([("user_id", ASCENDING)])
 
 
@@ -65,10 +71,15 @@ def subscribe():
     if kind is None:
         return error("This device can't receive notifications.")
     device = str((request.get_json(silent=True) or {}).get("device", ""))[:80]
-    # The same browser/phone can only belong to the account logged in on it now
+    # The phone app is signed in to one account at a time. A browser gets
+    # notifications for the accounts signed in on it now — nobody else's.
+    keep = [g.user["_id"]]
+    if kind == "web":
+        keep += [o for o in (parse_object_id(i) for i in session_account_ids()) if o]
+    push_subscriptions.delete_many({"key": key, "user_id": {"$nin": keep}})
     push_subscriptions.update_one(
-        {"key": key},
-        {"$set": {"user_id": g.user["_id"], "kind": kind, "subscription": subscription,
+        {"key": key, "user_id": g.user["_id"]},
+        {"$set": {"kind": kind, "subscription": subscription,
                   "device": device, "updated_at": now_utc()},
          "$setOnInsert": {"created_at": now_utc()}},
         upsert=True)
@@ -81,7 +92,12 @@ def unsubscribe():
     kind, key, _ = read_device()
     if kind is None:
         return error("Unknown device.")
-    push_subscriptions.delete_one({"key": key, "user_id": g.user["_id"]})
+    # {"all_accounts": true}: stop this browser for every account signed in on it
+    if (request.get_json(silent=True) or {}).get("all_accounts") is True:
+        ids = [o for o in (parse_object_id(i) for i in session_account_ids()) if o]
+        push_subscriptions.delete_many({"key": key, "user_id": {"$in": ids + [g.user["_id"]]}})
+    else:
+        push_subscriptions.delete_one({"key": key, "user_id": g.user["_id"]})
     return jsonify({"ok": True})
 
 
