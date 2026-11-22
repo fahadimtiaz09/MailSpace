@@ -15,7 +15,7 @@ from database import addresses, attachment_files, domains, mailboxes, messages, 
 from email_service import download_bytes, fetch_received_attachments, fetch_received_email
 from html_safety import clean_email_html
 from safety import check_message
-from security import active_user_by_email, team_members, is_expired, now_utc
+from security import active_user_by_email, blocked_by, team_members, is_expired, now_utc
 
 inbound_bp = Blueprint("inbound", __name__, url_prefix="/api/inbound")
 
@@ -163,9 +163,12 @@ def receive(secret):
         "has_attachments": bool(attachments), "is_starred": False, "created_at": now,
     }
     uids = list(recipients)
+    # Blocked senders land in Spam, without a notification
+    folders = ["spam" if blocked_by(recipients[uid], from_email) else "inbox" for uid in uids]
     inserted = mailboxes.insert_many([
-        {**shared, "user_id": uid, "folder": "inbox", "is_read": False} for uid in uids
+        {**shared, "user_id": uid, "folder": folder, "is_read": False} for uid, folder in zip(uids, folders)
     ]).inserted_ids
-    for uid, entry_id in zip(uids, inserted):
-        notify_new_mail(uid, entry_id, from_email, from_name, subject)
+    for uid, folder, entry_id in zip(uids, folders, inserted):
+        if folder == "inbox":
+            notify_new_mail(uid, entry_id, from_email, from_name, subject)
     return jsonify({"ok": True})

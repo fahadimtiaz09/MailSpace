@@ -35,6 +35,7 @@ addresses = db["addresses"]
 presence = db["presence"]    # last time each user's website/app said "I'm online"
 calls = db["calls"]          # voice calls (who, when, how long)
 audit_logs = db["audit_logs"]  # record of every admin review of a user's mail
+reports = db["reports"]        # emails users reported to the admins (spam, scam, harassment)
 # Attachment files are stored inside MongoDB (GridFS), because the online server's disk is temporary
 attachment_files = GridFS(db, collection="attachment_files")
 

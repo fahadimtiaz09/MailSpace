@@ -505,3 +505,58 @@ Shell.userReady.then((u) => {
   refreshRecoveryNotes();
   highlightSection();
 }).catch(() => {});
+
+
+// ---------- Blocked addresses ----------
+async function renderBlocked() {
+  const list = document.getElementById("blocked-list");
+  try {
+    const data = await api("/api/blocked");
+    list.replaceChildren();
+    if (!data.blocked.length) {
+      list.append(el("li", "sub", "You haven't blocked anyone."));
+      return;
+    }
+    data.blocked.forEach((email) => {
+      const li = el("li");
+      const unblock = el("button", "btn btn-sm", "Unblock");
+      unblock.type = "button";
+      unblock.addEventListener("click", async () => {
+        setBusy(unblock, true, "…");
+        try {
+          await api("/api/blocked/remove", { method: "POST", body: { email } });
+          toast(email + " is unblocked.", "success");
+          renderBlocked();
+        } catch (err) {
+          setBusy(unblock, false);
+          toast(err.message, "error");
+        }
+      });
+      li.append(icon("block", "i-sm"), el("span", "truncate", email), unblock);
+      list.append(li);
+    });
+  } catch (err) {
+    list.replaceChildren(el("li", null, err.message));
+  }
+}
+
+document.getElementById("blocked-add").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = document.getElementById("blocked-email");
+  const email = input.value.trim().toLowerCase();
+  if (!email) { input.focus(); return; }
+  const button = event.target.querySelector("button");
+  setBusy(button, true, "Blocking…");
+  try {
+    await api("/api/blocked", { method: "POST", body: { email } });
+    input.value = "";
+    toast(email + " is blocked.", "success");
+    renderBlocked();
+  } catch (err) {
+    toast(err.message, "error");
+  } finally {
+    setBusy(button, false);
+  }
+});
+
+Shell.userReady.then(renderBlocked).catch(() => {});

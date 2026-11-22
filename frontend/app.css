@@ -971,3 +971,37 @@
   .setting-row { flex-wrap: wrap; }
   .setting-row .value { text-align: left; }
 }
+
+/* More menu (Block / Report) in the read toolbar */
+.read-toolbar .menu-wrap { display: inline-flex; }
+.menu.menu-left { left: 0; right: auto; transform-origin: top left; min-width: 260px; max-width: min(340px, calc(100vw - 24px)); }
+.menu.menu-left .menu-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#report-btn .i { color: var(--error-text, #B42318); }
+
+/* Report dialog */
+.report-modal { max-width: 480px; }
+.report-form { padding: 6px 24px 4px; display: grid; gap: 12px; }
+.report-label { font-weight: 600; font-size: .92rem; }
+.report-options { display: grid; gap: 8px; }
+.report-option { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-sm, 10px); cursor: pointer; transition: border-color var(--t-fast, .15s), background-color var(--t-fast, .15s); }
+.report-option:hover { background: var(--surface-hover); }
+.report-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.report-option input { margin-top: 3px; accent-color: var(--primary); }
+.report-option span { display: flex; flex-direction: column; }
+.report-option strong { font-size: .9rem; }
+.report-option small { font-size: .8rem; color: var(--text-2); }
+.report-note { resize: vertical; min-height: 72px; }
+.check-row { display: flex; gap: 10px; align-items: center; font-size: .9rem; }
+.check-row input { accent-color: var(--primary); width: 16px; height: 16px; }
+
+/* Settings: blocked addresses */
+.blocked-list li { display: flex; align-items: center; gap: 10px; }
+.blocked-list li .truncate { flex: 1; min-width: 0; }
+.blocked-add { display: flex; gap: 8px; margin-top: 14px; }
+.blocked-add .input { flex: 1; min-width: 0; }
+@media (max-width: 900px) {
+  /* Phones: the More menu spans the width under the toolbar, so it never runs off screen */
+  .read-toolbar { position: relative; }
+  .read-toolbar .menu-wrap { position: static; }
+  .read-toolbar .menu.menu-left { left: 12px; right: 12px; top: calc(100% - 4px); max-width: none; }
+}

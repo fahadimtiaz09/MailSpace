@@ -666,6 +666,10 @@ function updateToolbar(m) {
   $("forward-btn-top").classList.toggle("is-locked", m.can_forward === false);
   $("forward-btn-top").dataset.tip = m.can_forward === false ? "Forwarding disabled by the owner" : "Forward";
   $("reply-all-btn-top").classList.toggle("hidden", !canReplyAll(m));
+  // Block sender / Report (only for mail someone else sent you)
+  $("more-wrap").classList.toggle("hidden", !m.can_report);
+  $("block-btn").querySelector("span").textContent = (m.sender_blocked ? "Unblock " : "Block ") + m.from;
+  setIcon($("block-btn"), m.sender_blocked ? "check-circle" : "block");
 }
 
 async function toolbarAction(action, successText) {
@@ -1189,6 +1193,113 @@ $("unread-btn").addEventListener("click", async () => {
   }
 });
 $("spam-btn").addEventListener("click", () => toolbarAction("spam", "Moved to spam"));
+
+// ---------- Block sender / Report this email ----------
+$("block-btn").addEventListener("click", async () => {
+  const m = state.current;
+  if (!m) return;
+  if (m.sender_blocked) {
+    try {
+      await api("/api/blocked/remove", { method: "POST", body: { email: m.from } });
+      m.sender_blocked = false;
+      updateToolbar(m);
+      toast(m.from + " is unblocked.", "success");
+    } catch (err) { toast(err.message, "error"); }
+    return;
+  }
+  const ok = await confirmDialog({
+    title: "Block " + m.from + "?",
+    message: "Their emails will go straight to Spam, and they won't be able to call you. You can unblock them any time in Settings.",
+    confirmText: "Block", danger: true, iconName: "block",
+  });
+  if (!ok) return;
+  try {
+    await api("/api/blocked", { method: "POST", body: { email: m.from } });
+    toast(m.from + " is blocked. Their emails will go to Spam.", "success");
+    if (m.folder === "inbox") {
+      const id = m.id;
+      closeReader();
+      removeRow(id);
+      Shell.refreshCounts();
+    } else {
+      m.sender_blocked = true;
+      updateToolbar(m);
+    }
+  } catch (err) { toast(err.message, "error"); }
+});
+
+$("report-btn").addEventListener("click", () => {
+  const m = state.current;
+  if (m) reportDialog(m);
+});
+
+function reportDialog(m) {
+  const box = el("div", "modal report-modal");
+  box.setAttribute("aria-labelledby", "report-title");
+  const head = el("div", "modal-head");
+  const text = el("div");
+  const badge = el("div", "modal-icon");
+  badge.append(icon("flag"));
+  const h = el("h2", null, "Report this email");
+  h.id = "report-title";
+  text.append(badge, h, el("p", null, "Our team will review it. The email moves to your Spam folder."));
+  head.append(text);
+
+  const form = el("form", "modal-body report-form");
+  const legend = el("p", "report-label", "Why are you reporting it?");
+  const options = el("div", "report-options");
+  options.setAttribute("role", "radiogroup");
+  [["spam", "Spam", "Ads or mail you didn't ask for"],
+   ["scam", "Scam or phishing", "Asks for passwords, money or personal details"],
+   ["harassment", "Harassment or threats", "Abusive, hateful or threatening"],
+   ["other", "Something else", "Tell us below"]].forEach(([value, label, hint], i) => {
+    const row = el("label", "report-option");
+    const input = el("input");
+    input.type = "radio"; input.name = "reason"; input.value = value;
+    if (i === 0) input.checked = true;
+    const words = el("span");
+    words.append(el("strong", null, label), el("small", null, hint));
+    row.append(input, words);
+    options.append(row);
+  });
+  const note = el("textarea", "input report-note");
+  note.name = "note"; note.maxLength = 500; note.rows = 3;
+  note.placeholder = "Anything else we should know? (optional)";
+  const blockRow = el("label", "check-row");
+  const blockBox = el("input");
+  blockBox.type = "checkbox"; blockBox.name = "block"; blockBox.checked = !m.sender_blocked;
+  blockBox.disabled = Boolean(m.sender_blocked);
+  blockRow.append(blockBox, el("span", null, m.sender_blocked ? m.from + " is already blocked" : "Also block " + m.from));
+  form.append(legend, options, note, blockRow);
+
+  const foot = el("div", "modal-foot");
+  const cancel = el("button", "btn", "Cancel");
+  const send = el("button", "btn btn-primary", "Report");
+  cancel.type = send.type = "button";
+  foot.append(cancel, send);
+  box.append(head, form, foot);
+
+  const close = openModal(box);
+  cancel.addEventListener("click", close);
+  form.addEventListener("submit", (e) => e.preventDefault());
+  send.addEventListener("click", async () => {
+    setBusy(send, true, "Reporting…");
+    try {
+      await api("/api/messages/" + m.id + "/report", { method: "POST", body: {
+        reason: form.elements.reason.value, note: note.value.trim(), block: blockBox.checked && !blockBox.disabled,
+      } });
+      close();
+      toast("Thanks for reporting. Our team will review it.", "success");
+      const id = m.id;
+      closeReader();
+      if (m.folder === "inbox") removeRow(id);
+      Shell.refreshCounts();
+    } catch (err) {
+      setBusy(send, false);
+      toast(err.message, "error");
+    }
+  });
+}
 $("trash-btn").addEventListener("click", () => toolbarAction("trash", "Moved to trash"));
 $("restore-btn").addEventListener("click", () => {
   const inSpam = state.current && state.current.folder === "spam";

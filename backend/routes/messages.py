@@ -15,7 +15,7 @@ from routes.domains import allowed_from_addresses
 from push import notify, notify_new_mail
 from email_service import ExternalSendError, external_sending_ready, send_external
 from safety import check_message
-from security import active_user_by_email, team_members, is_expired, login_required, now_utc, parse_object_id, to_iso
+from security import active_user_by_email, blocked_by, team_members, is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
 
@@ -104,7 +104,8 @@ def delete_entry(entry):
     """Remove one user's copy. Delete the message itself when nobody has a copy left."""
     mailboxes.delete_one({"_id": entry["_id"]})
     if mailboxes.count_documents({"message_id": entry["message_id"]}, limit=1) == 0:
-        message = messages.find_one_and_delete({"_id": entry["message_id"]})
+        # A reported email is kept until the admins have reviewed it
+        message = messages.find_one_and_delete({"_id": entry["message_id"], "reported": {"$ne": True}})
         if message:
             delete_files(message.get("attachments", []))
 
@@ -246,6 +247,10 @@ def get_message(entry_id):
     item["body_html"] = message.get("body_html")  # email design (already cleaned), or None
     # Forwarding: the person who wrote the email decides (compose switch)
     item["allow_forward"] = message.get("allow_forward", True)
+    sender = (message.get("sender_email") or entry.get("from_email") or "").lower()
+    item["sender_blocked"] = blocked_by(g.user, sender)
+    item["can_report"] = (message.get("sender_id") != g.user["_id"]
+                          and entry["folder"] not in ("sent", "drafts") and bool(sender))
     item["can_forward"] = (item["allow_forward"] or message.get("sender_id") == g.user["_id"]
                            or g.user.get("role") == "admin")  # the admin may forward anything
     item["attachments"] = [
@@ -472,7 +477,9 @@ def send_message():
         }
         entries = [{**shared, "user_id": me["_id"], "folder": "sent", "is_read": True}]
         for recipient in recipients:
-            entries.append({**shared, "user_id": recipient["_id"], "folder": "inbox", "is_read": False})
+            # Blocked senders land in Spam (Settings → Blocked addresses)
+            folder = "spam" if blocked_by(recipient, from_email, me["email"]) else "inbox"
+            entries.append({**shared, "user_id": recipient["_id"], "folder": folder, "is_read": False})
         inserted = mailboxes.insert_many(entries).inserted_ids
     except Exception:
         delete_files(attachments)
@@ -480,7 +487,7 @@ def send_message():
 
     # Phone / browser notifications for the people it was sent to
     for entry, entry_id in zip(entries[1:], inserted[1:]):
-        if entry["user_id"] != me["_id"]:
+        if entry["user_id"] != me["_id"] and entry["folder"] == "inbox":
             notify_new_mail(entry["user_id"], entry_id, from_email, me.get("display_name"), subject)
 
     # If this was a draft, remove the draft now that it has been sent

@@ -60,6 +60,12 @@ def is_expired(user):
     expires_at = user.get("expires_at")
     return expires_at is not None and expires_at <= now_utc()
 
+def blocked_by(user, *emails):
+    """True if this user blocked any of these sender addresses (Settings → Blocked)."""
+    blocked = set(user.get("blocked_senders") or [])
+    return bool(blocked) and any((e or "").lower() in blocked for e in emails)
+
+
 # ---------- Signed-in accounts (Gmail-style "Add account") ----------
 # One browser can be signed in to several accounts at once:
 #   session["accounts"] = [user_id, ...]   every account signed in here

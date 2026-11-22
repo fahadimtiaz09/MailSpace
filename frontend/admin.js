@@ -26,7 +26,7 @@ function notice() {
 }
 
 function tabs() {
-  const row = el("div", "admin-tabs");  [["overview", "Overview"], ["users", "Users"], ["mail", "Mail"], ["flagged", "Flagged"], ["audit", "Audit log"]].forEach(([key, label]) => {
+  const row = el("div", "admin-tabs");  [["overview", "Overview"], ["users", "Users"], ["mail", "Mail"], ["flagged", "Flagged"], ["reports", "Reports"], ["audit", "Audit log"]].forEach(([key, label]) => {
 
     const b = el("button", "admin-tab" + (state.tab === key ? " active" : ""), label);
     b.type = "button";
@@ -48,6 +48,7 @@ function render() {
   else if (state.tab === "users") renderUsers();
   else if (state.tab === "mail") renderMail();
   else if (state.tab === "flagged") renderMail(true);
+  else if (state.tab === "reports") renderReports();
   else renderAudit();}
 
 function body(...nodes) {
@@ -292,6 +293,83 @@ function showContent(m) {
   box.append(foot);
   const close = openModal(box);
   done.addEventListener("click", close);
+}
+
+// ---------- Reports (emails users reported) ----------
+async function renderReports() {
+  const filter = el("div", "admin-search");
+  const select = el("select", "input");
+  select.style.maxWidth = "220px";
+  [["open", "Open"], ["resolved", "Resolved"], ["dismissed", "Dismissed"], ["all", "All"]].forEach(([v, t]) => {
+    const o = el("option", null, t);
+    o.value = v;
+    if ((state.reportStatus || "open") === v) o.selected = true;
+    select.append(o);
+  });
+  select.setAttribute("aria-label", "Show reports");
+  select.addEventListener("change", () => { state.reportStatus = select.value; state.page = 1; renderReports(); });
+  filter.append(select);
+
+  body(filter, el("div", null, "Loading…"));
+  try {
+    const data = await api("/api/admin/reports?page=" + state.page + "&status=" + (state.reportStatus || "open"));
+    state.totalPages = data.total_pages;
+    const table = el("table", "admin-table");
+    const thead = el("thead");
+    const htr = el("tr");
+    ["Reason", "Email", "Reported by", "When", ""].forEach((h) => htr.append(el("th", null, h)));
+    thead.append(htr);
+    const tbody = el("tbody");
+    if (!data.reports.length) {
+      const tr = el("tr");
+      const td = el("td", "sub", "No reports here.");
+      td.colSpan = 5;
+      tr.append(td);
+      tbody.append(tr);
+    }
+    const KIND = { spam: "warning", scam: "error", harassment: "error", other: "info" };
+    data.reports.forEach((r) => {
+      const tr = el("tr");
+      const why = el("td");
+      why.append(badge(r.reason_label, KIND[r.reason] || "info"));
+      if (r.count > 1) why.append(" ", el("span", "sub", "×" + r.count));
+      if (r.note) why.append(el("div", "sub clip", "“" + r.note + "”"));
+      tr.append(why);
+      const mail = el("td", "clip");
+      mail.append(el("div", null, r.subject || "(no subject)"), el("div", "sub", "From " + r.from));
+      tr.append(mail);
+      tr.append(el("td", "clip", r.reporter));
+      tr.append(el("td", "sub", shortDate(r.created_at)));
+      const act = el("td");
+      act.style.whiteSpace = "nowrap";
+      const open = el("button", "btn btn-sm", "Open");
+      open.type = "button";
+      open.addEventListener("click", () => openMessage({ id: r.message_id, subject: r.subject, from: r.from }));
+      act.append(open);
+      const next = r.status === "open" ? [["resolved", "Resolve"], ["dismissed", "Dismiss"]] : [["open", "Reopen"]];
+      next.forEach(([status, label]) => {
+        const b = el("button", "btn btn-sm btn-ghost", label);
+        b.type = "button";
+        b.addEventListener("click", async () => {
+          setBusy(b, true, "…");
+          try {
+            await api("/api/admin/reports/" + r.id, { method: "POST", body: { status } });
+            toast("Report " + (status === "open" ? "reopened" : status) + ".", "success");
+            renderReports();
+          } catch (err) { setBusy(b, false); toast(err.message, "error"); }
+        });
+        act.append(" ", b);
+      });
+      tr.append(act);
+      tbody.append(tr);
+    });
+    table.append(thead, tbody);
+    const wrap = el("div", "table-wrap");
+    wrap.append(table);
+    body(filter, wrap, pager(renderReports), countLine(data.total, "reports"));
+  } catch (err) {
+    body(filter, errorBox(err));
+  }
 }
 
 // ---------- Audit log ----------

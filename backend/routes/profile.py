@@ -14,7 +14,7 @@ from bson import ObjectId
 from flask import Blueprint, g, jsonify, request, send_file, session
 from werkzeug.security import check_password_hash
 
-from database import addresses, attachment_files, calls, domains, mailboxes, messages, presence, users
+from database import addresses, attachment_files, calls, domains, mailboxes, messages, presence, reports, users
 from routes.calls import find_user_by_address
 from push import push_subscriptions
 from routes.messages import delete_files
@@ -99,7 +99,8 @@ def delete_account_data(user):
     mailboxes.delete_many({"user_id": uid})
     for message_id in message_ids:
         if mailboxes.count_documents({"message_id": message_id}, limit=1) == 0:
-            message = messages.find_one_and_delete({"_id": message_id})
+            # a reported email is kept until the admins have reviewed it
+            message = messages.find_one_and_delete({"_id": message_id, "reported": {"$ne": True}})
             if message:
                 delete_files(message.get("attachments", []))
 
@@ -110,6 +111,7 @@ def delete_account_data(user):
     calls.delete_many({"$or": [{"caller_id": uid}, {"callee_id": uid}]})
     presence.delete_many({"user_id": uid})
     push_subscriptions.delete_many({"user_id": uid})
+    reports.update_many({"reporter_id": uid}, {"$set": {"reporter_id": None, "reporter_email": None}})
     remove_avatar_file(user)
 
     users.replace_one({"_id": uid}, {

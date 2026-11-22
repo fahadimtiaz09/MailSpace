@@ -40,6 +40,7 @@
             <a href="#addresses">Sending addresses</a>
             <a href="#notifications">Notifications</a>
             <a href="#privacy">Privacy</a>
+            <a href="#blocked">Blocked addresses</a>
             <a href="#security">Security</a>
             <a href="#delete-account">Delete account</a>
           </nav>
@@ -160,6 +161,23 @@
                   <a class="btn btn-sm" href="/terms.html" target="_blank" rel="noopener">Terms</a>
                 </div>
               </div>
+            </section>
+
+            <!-- Blocked addresses -->
+            <section id="blocked" class="panel surface" aria-labelledby="blocked-title">
+              <div class="panel-head">
+                <div>
+                  <h2 id="blocked-title">Blocked addresses</h2>
+                  <p>Emails from these addresses go straight to Spam, and they can't call you.</p>
+                </div>
+              </div>
+              <ul id="blocked-list" class="list-plain from-list blocked-list">
+                <li><span class="skeleton" style="width:50%;height:14px"></span></li>
+              </ul>
+              <form id="blocked-add" class="blocked-add" novalidate>
+                <input id="blocked-email" class="input" type="email" placeholder="name@example.com" aria-label="Email address to block" autocomplete="off" spellcheck="false">
+                <button type="submit" class="btn">Block</button>
+              </form>
             </section>
 
             <!-- Security -->
