@@ -870,3 +870,30 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
   .push-prompt { flex-wrap: wrap; }
   .push-prompt-actions { width: 100%; justify-content: flex-end; }
 }
+
+/* Official "Get it from Microsoft" badge (Microsoft's own image — keep it as is) */
+.store-badge { display: inline-block; margin-top: 0; line-height: 0; border-radius: 8px; transition: transform var(--t-fast, .15s) ease, opacity var(--t-fast, .15s) ease; }
+.store-badge img { display: block; height: auto; }
+.store-badge:hover { transform: translateY(-2px); }
+.store-badge:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+
+/* Microsoft badge + "Download for Android" side by side (same height, same black look) */
+.store-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 22px; }
+.store-row .store-badge img { height: 52px; width: auto; }
+.android-badge {
+  display: inline-flex; align-items: center; gap: 10px; height: 52px; padding: 0 18px 0 14px;
+  border-radius: 8px; background: #000; color: #fff; border: 1px solid #A6A6A6;
+  transition: transform var(--t-fast, .15s) ease;
+}
+.android-badge:hover { transform: translateY(-2px); color: #fff; }
+.android-badge:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.android-badge svg { width: 28px; height: 28px; flex: none; }
+.android-badge span { display: flex; flex-direction: column; line-height: 1.1; }
+.android-badge small { font-size: .7rem; letter-spacing: .01em; }
+.android-badge strong { font-size: 1.2rem; font-weight: 600; }
+.store-row-sm { gap: 10px; margin-top: 18px; }
+.store-row-sm .store-badge img { height: 42px; }
+.store-row-sm .android-badge { height: 42px; padding: 0 14px 0 10px; gap: 8px; }
+.store-row-sm .android-badge svg { width: 22px; height: 22px; }
+.store-row-sm .android-badge small { font-size: .62rem; }
+.store-row-sm .android-badge strong { font-size: 1rem; }
