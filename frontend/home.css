@@ -816,3 +816,12 @@ html { scroll-padding-top: 88px; }
 .founder-list strong { font-size: 1.05rem; color: var(--text); }
 .founder-list span { font-size: .9rem; color: var(--text-2); }
 @media (max-width: 560px) { .founder-list { grid-template-columns: minmax(0, 1fr); } }
+
+/* Official "Get it from Microsoft" badge (Microsoft's own image — keep it as is) */
+.store-badge { display: inline-block; margin-top: 22px; line-height: 0; border-radius: 8px; transition: transform var(--t-fast, .15s) ease, opacity var(--t-fast, .15s) ease; }
+.store-badge img { display: block; height: auto; }
+.store-badge:hover { transform: translateY(-2px); }
+.store-badge:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.store-badge-sm { margin-top: 18px; }
+.hero-copy .reveal-hero:nth-child(4) { animation-delay: 270ms; }
+@media (max-width: 1080px) { .hero-copy .store-badge { display: block; width: fit-content; margin-inline: auto; } }
