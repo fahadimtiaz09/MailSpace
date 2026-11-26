@@ -1,4 +1,5 @@
 """app.py — starts the DoMailit server (locally and online)."""
+import json
 import os
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -59,6 +60,36 @@ def create_app():
     def inbox():
         # The email app itself
         return send_from_directory(Config.FRONTEND_DIR, "index.html")
+
+    # Android app: "Download for Android" on the home page.
+    # The APK files are copied to Config.DOWNLOADS_DIR on the server (scp), not kept in git.
+    @app.route("/download/android")
+    @app.route("/download/android/<variant>")
+    def download_android(variant="arm64"):
+        files = {"arm64": "DoMailit-arm64.apk", "all": "DoMailit-universal.apk"}
+        name = files.get(variant)
+        if name is None or not os.path.isfile(os.path.join(Config.DOWNLOADS_DIR, name)):
+            return send_from_directory(Config.FRONTEND_DIR, "404.html"), 404
+        response = send_from_directory(Config.DOWNLOADS_DIR, name, as_attachment=True,
+                                       download_name="DoMailit.apk",
+                                       mimetype="application/vnd.android.package-archive")
+        response.headers["Cache-Control"] = "no-cache"  # always the newest version
+        return response
+
+    # The newest Android version on the server (android.json is uploaded next to
+    # the APKs by mobile/publish_android.ps1). The app compares it with its own
+    # build number and offers "Update available".
+    @app.route("/api/app/android")
+    def android_latest():
+        path = os.path.join(Config.DOWNLOADS_DIR, "android.json")
+        try:
+            with open(path, encoding="utf-8-sig") as f:  # PowerShell writes a BOM
+                info = json.load(f)
+            build = int(info["build"])
+        except (OSError, ValueError, KeyError, TypeError):
+            return jsonify({"error": "No Android version published yet."}), 404
+        return jsonify({"version_name": str(info.get("version_name", "")), "build": build,
+                        "url": "/download/android", "notes": str(info.get("notes", ""))[:500]})
 
     # Windows app (Microsoft Store): links to domailit.com open in the DoMailit app.
     # Windows reads this file to check that the app really belongs to this website.

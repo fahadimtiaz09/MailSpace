@@ -20,6 +20,8 @@ class Config:
     MAIL_DOMAIN = os.getenv("MAIL_DOMAIN", "mailspace.local").lower()
     RESEND_API_KEY = os.getenv("RESEND_API_KEY")            # for emails to Gmail, Outlook, ...
     INBOUND_SECRET = os.getenv("INBOUND_SECRET")            # protects the inbound webhook URL
+    # Android APKs for "Download for Android" (kept on the server, not on GitHub)
+    DOWNLOADS_DIR = os.getenv("DOWNLOADS_DIR", "/opt/domailit-downloads")
     # Microsoft Store app identity (Partner Center → Product identity → Package Family Name)
     WINDOWS_PACKAGE_FAMILY = os.getenv("WINDOWS_PACKAGE_FAMILY", "DoMailit.DoMailit_adge5cya5y3e4")
     # Where the website's "Contact us" form delivers (an address or alias of an account)

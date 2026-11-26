@@ -237,6 +237,12 @@ class ApiClient {
     return remaining;
   }
 
+  /// Newest Android version on domailit.com (for "Update available").
+  Future<Map<String, dynamic>?> latestAndroidVersion() async {
+    final data = await _get('/app/android');
+    return data is Map<String, dynamic> ? data : null;
+  }
+
   /// Every account signed in on this phone (for the account switcher).
   Future<List<SignedInAccount>> accounts() async {
     final data = await _get('/auth/accounts');
