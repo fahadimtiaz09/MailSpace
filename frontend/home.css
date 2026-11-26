@@ -56,6 +56,7 @@
   background: none;
   color: var(--text-2);
   font: inherit; font-weight: 500; font-size: .94rem;
+  white-space: nowrap;
   cursor: pointer;
   transition: color var(--t-fast), background-color var(--t-fast);
 }
@@ -87,7 +88,7 @@
 .nav-mobile-actions { display: none; }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .nav-cta { border-radius: 10px; }
-.nav-burger { display: none; }
+.nav-burger { display: none; color: var(--text); border: 1px solid var(--border); background: var(--surface); }
 
 /* ---------- Hero ---------- */
 .hero { padding: 140px 0 70px; isolation: isolate; }
@@ -641,7 +642,9 @@
   .sec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 920px) {
+/* Not enough room for every link in one row → the ☰ menu (was 920px; at
+   ~950–1180px "How it works" broke onto three lines and "Get started" was cut off) */
+@media (max-width: 1180px) {
   .nav-links {
     position: fixed; left: 0; right: 0; top: 76px;
     flex-direction: column; align-items: stretch; gap: 0;
@@ -660,8 +663,11 @@
   .nav-links > a, .nav-drop-btn { width: 100%; justify-content: space-between; padding: 14px 8px; font-size: 1.02rem; border-bottom: 1px solid var(--border); border-radius: 0; }
   .nav-drop-menu { position: static; width: auto; display: none; margin: 6px 0; box-shadow: none; opacity: 1; visibility: visible; transform: none; }
   .nav-drop.open .nav-drop-menu { display: grid; }
-  .nav-mobile-actions { display: grid; gap: 10px; margin-top: 18px; }
   .nav-burger { display: inline-grid; }
+}
+
+@media (max-width: 920px) {
+  .nav-mobile-actions { display: grid; gap: 10px; margin-top: 18px; }
   .nav-signin { display: none; }
   .pv-big .pv-app { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
   .pv-big .pv-side { display: none; }

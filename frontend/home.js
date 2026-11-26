@@ -31,7 +31,7 @@
   burger.addEventListener("click", () => setMenu(!nav.classList.contains("menu-open")));
   document.querySelectorAll("#nav-links > a, .nav-mobile-actions a").forEach((a) => a.addEventListener("click", () => setMenu(false)));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
-  window.addEventListener("resize", () => { if (window.innerWidth > 920) setMenu(false); });
+  window.addEventListener("resize", () => { if (window.innerWidth > 1180) setMenu(false); });
 
   // Features dropdown (click on touch, hover on desktop)
   const drop = document.querySelector(".nav-drop");
@@ -41,7 +41,7 @@
     dropBtn.setAttribute("aria-expanded", String(open));
   }
   dropBtn.addEventListener("click", (e) => { e.stopPropagation(); setDrop(!drop.classList.contains("open")); });
-  const canHover = window.matchMedia("(hover: hover) and (min-width: 921px)");
+  const canHover = window.matchMedia("(hover: hover) and (min-width: 1181px)");
   let leaveTimer;
   drop.addEventListener("mouseenter", () => { if (canHover.matches) { clearTimeout(leaveTimer); setDrop(true); } });
   drop.addEventListener("mouseleave", () => { if (canHover.matches) leaveTimer = setTimeout(() => setDrop(false), 160); });
