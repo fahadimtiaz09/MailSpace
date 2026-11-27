@@ -18,6 +18,7 @@ from routes.contact import contact_bp
 from routes.messages import messages_bp
 from routes.push import init_push_indexes, push_bp
 from routes.safety import init_safety_indexes, safety_bp
+from headers import add_security_headers
 from security import csrf_protect, set_csrf_cookie
 
 ERROR_TEXT = {
@@ -39,6 +40,7 @@ def create_app():
 
     app.before_request(csrf_protect)
     app.after_request(set_csrf_cookie)
+    app.after_request(add_security_headers)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(messages_bp)
