@@ -897,3 +897,6 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
 .store-row-sm .android-badge svg { width: 22px; height: 22px; }
 .store-row-sm .android-badge small { font-size: .62rem; }
 .store-row-sm .android-badge strong { font-size: 1rem; }
+/* "Review us on Trustpilot" — same black badge, green star */
+.trust-note { margin: 18px 0 0; color: var(--text-2); font-size: .92rem; }
+.trust-note + .store-row-sm { margin-top: 10px; }
