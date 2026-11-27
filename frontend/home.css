@@ -468,6 +468,20 @@
 .sec-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 18px; border-radius: 14px; background: var(--primary-soft); color: var(--primary); }
 .sec-card h3 { font-size: 1.05rem; margin-bottom: 8px; }
 .sec-card p { color: var(--text-2); font-size: .94rem; }
+/* "Independently verified": small grade badges under the security cards, each linking to the live report */
+.sec-verified { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; margin-top: 36px; }
+.sv-label { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 600; color: var(--text-2); }
+.sv-label .i { color: #2E9D57; }
+.sec-verified .mini-badges { justify-content: center; }
+.sec-verified .mini-badge { border-color: var(--border); }
+.sec-verified .mini-badge span { background: var(--surface); color: var(--text); }
+.sec-verified .mini-badge:hover { border-color: #2E9D57; }
+/* Footer: small two-tone grade badges */
+.mini-badges { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.mini-badge { display: inline-flex; border-radius: 6px; overflow: hidden; font-size: .74rem; line-height: 1; text-decoration: none; border: 1px solid rgba(255, 255, 255, .12); }
+.mini-badge span { padding: 6px 8px; background: rgba(255, 255, 255, .06); color: #C9D5EA; }
+.mini-badge b { padding: 6px 8px; background: #2E9D57; color: #fff; font-weight: 700; }
+.mini-badge:hover { border-color: rgba(255, 255, 255, .3); }
 
 /* ---------- Pricing ---------- */
 .pricing { padding: 110px 0; }

@@ -95,6 +95,18 @@ def create_app():
 
     # Windows app (Microsoft Store): links to domailit.com open in the DoMailit app.
     # Windows reads this file to check that the app really belongs to this website.
+    @app.route("/.well-known/security.txt")
+    def security_txt():
+        # Standard file that tells security researchers how to report a problem (RFC 9116).
+        body = (
+            "Contact: mailto:support@domailit.com\n"
+            "Expires: 2027-11-30T00:00:00.000Z\n"
+            "Preferred-Languages: en, ur\n"
+            "Canonical: https://domailit.com/.well-known/security.txt\n"
+            "Policy: https://domailit.com/terms.html\n"
+        )
+        return app.response_class(body, mimetype="text/plain")
+
     @app.route("/.well-known/windows-app-web-link")
     def windows_app_web_link():
         return jsonify([{
