@@ -14,7 +14,9 @@ function settingRow(label, value, note) {
   const text = el("div", "grow");
   text.append(el("strong", null, label));
   if (note) text.append(el("p", null, note));
-  row.append(text, el("div", "value", value));
+  const cell = el("div", "value");
+  if (value instanceof Node) cell.append(value); else cell.textContent = value;
+  row.append(text, cell);
   return row;
 }
 
@@ -560,3 +562,113 @@ document.getElementById("blocked-add").addEventListener("submit", async (event) 
 });
 
 Shell.userReady.then(renderBlocked).catch(() => {});
+
+
+// ---------- Plan: Free / Premium (paid through Binance Pay) ----------
+function formatBytes(n) {
+  if (n >= 1024 ** 3) return (n / 1024 ** 3).toFixed(n >= 10 * 1024 ** 3 ? 0 : 1) + " GB";
+  if (n >= 1024 ** 2) return Math.round(n / 1024 ** 2) + " MB";
+  return Math.max(1, Math.round(n / 1024)) + " KB";
+}
+
+async function startCheckout(period, button) {
+  setBusy(button, true, "Opening Binance Pay…");
+  try {
+    const { checkout_url } = await api("/api/premium/checkout", { method: "POST", body: { period } });
+    window.location.href = checkout_url;
+  } catch (err) {
+    toast(err.message, "error");
+    setBusy(button, false);
+  }
+}
+
+async function renderPlan() {
+  const box = document.getElementById("plan-body");
+  let p;
+  try {
+    p = await api("/api/premium");
+  } catch (err) {
+    box.replaceChildren(el("p", "hint", err.message));
+    return;
+  }
+  const premium = p.plan === "premium";
+  const rows = el("div");
+  const planName = el("span", "plan-name", premium ? "Premium" : "Free");
+  if (premium) planName.append(verifiedBadge("premium"));
+  rows.append(settingRow("Current plan", planName,
+    premium && p.premium_until ? "Renews only when you pay again. Active until "
+      + new Date(p.premium_until).toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" }) + "." : null));
+
+  // Storage bar
+  const pct = Math.min(100, Math.round((p.storage.used / p.storage.limit) * 100));
+  const bar = el("div", "storage-bar");
+  const fill = el("span");
+  fill.style.width = Math.max(pct, 1) + "%";
+  if (pct >= 90) bar.classList.add("full");
+  bar.append(fill);
+  const usage = el("div", "storage");
+  usage.append(bar, el("span", "hint", formatBytes(p.storage.used) + " of " + formatBytes(p.storage.limit) + " used"));
+  rows.append(settingRow("Storage", usage));
+
+  if (!premium) {
+    const offer = el("div", "plan-offer");
+    const list = el("ul", "plan-list");
+    ["Your own domains (up to 3, 10 addresses each)", "25 MB per attachment", "10 GB storage",
+     "Up to 5 accounts signed in at once", "Premium badge next to your name"].forEach((t) => {
+      const li = el("li"); li.append(icon("check", "i-sm"), el("span", null, t)); list.append(li);
+    });
+    const buttons = el("div", "plan-buttons");
+    const month = el("button", "btn btn-primary", "Upgrade · $1 / month");
+    const year = el("button", "btn", "$10 / year (2 months free)");
+    month.type = year.type = "button";
+    month.addEventListener("click", () => startCheckout("month", month));
+    year.addEventListener("click", () => startCheckout("year", year));
+    buttons.append(month, year);
+    offer.append(list, buttons,
+      el("p", "hint", p.payments_ready
+        ? "You pay with your Binance account (USDT). No card needed, and nothing renews by itself."
+        : "Payments open soon."));
+    if (!p.payments_ready) { month.disabled = year.disabled = true; }
+    rows.append(offer);
+  } else if (p.premium_until) {
+    const extend = el("div", "plan-buttons");
+    const month = el("button", "btn", "Add 1 month · $1");
+    const year = el("button", "btn", "Add 1 year · $10");
+    month.type = year.type = "button";
+    month.addEventListener("click", () => startCheckout("month", month));
+    year.addEventListener("click", () => startCheckout("year", year));
+    extend.append(month, year);
+    if (!p.payments_ready) { month.disabled = year.disabled = true; }
+    rows.append(extend);
+  }
+  box.replaceChildren(rows);
+}
+
+// Back from Binance Pay: settings.html?premium=<order no> (or =cancelled)
+async function checkPaymentReturn() {
+  const params = new URLSearchParams(location.search);
+  const trade = params.get("premium");
+  if (!trade) return;
+  history.replaceState(null, "", location.pathname + "#plan");
+  if (trade === "cancelled") { toast("Payment cancelled. You were not charged."); return; }
+  // Binance may need a few seconds to confirm, so ask a few times
+  for (let i = 0; i < 6; i++) {
+    try {
+      const r = await api("/api/premium/confirm", { method: "POST", body: { trade_no: trade } });
+      if (r.status === "paid") {
+        toast("Welcome to DoMailit Premium! Thank you.", "success");
+        const { user } = await api("/api/auth/me");
+        Shell.refreshUser(user);
+        return;
+      }
+      if (r.status === "failed") { toast("The payment didn't go through. You were not charged.", "error"); return; }
+    } catch (err) {
+      toast(err.message, "error");
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  toast("We're still waiting for Binance to confirm your payment. Refresh this page in a minute.");
+}
+
+Shell.userReady.then(async () => { await checkPaymentReturn(); renderPlan(); }).catch(() => {});

@@ -288,7 +288,9 @@ const Shell = (() => {
     btn.replaceChildren(avatar(u.email, "sm", u.display_name), icon("chevron-down", "i-sm"));
     const head = document.querySelector(".menu-head");
     const who = el("div", "menu-head-text");
-    who.append(el("strong", null, u.display_name || u.username), el("span", null, u.email));
+    const name = el("strong", null, u.display_name || u.username);
+    name.append(verifiedBadge(u.verified));
+    who.append(name, el("span", null, u.email));
     head.replaceChildren(avatar(u.email, "lg", u.display_name), who);
     if (u.role === "admin") {
       const link = document.getElementById("nav-admin");

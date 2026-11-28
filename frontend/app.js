@@ -14,7 +14,8 @@ const FOLDERS = {
 };
 
 const MAX_FILES = 5;
-const MAX_FILE_MB = 10;
+// 10 MB per file on the Free plan, 25 MB on Premium
+const maxFileMb = () => (Shell.user && Shell.user.plan === "premium" ? 25 : 10);
 const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx", "txt"];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -178,7 +179,7 @@ function renderRow(m) {
 
   const top = el("div", "msg-top");
   const from = el("span", "msg-from truncate", who);
-  if (!outgoing) from.title = m.from;
+  if (!outgoing) { from.title = m.from; from.append(verifiedBadge(m.from_verified)); }
   const flags = el("span", "msg-flags");
   if (m.folder === "drafts") flags.append(el("span", "badge badge-warning no-dot", "Draft"));
   if (m.has_attachments) flags.append(icon("paperclip"));
@@ -574,6 +575,7 @@ function renderReader(m) {
   const from = el("div", "read-from");
   const text = el("div", "read-from-text");
   const name = el("div", "read-from-name", m.from_name || nameFromEmail(m.from));
+  name.append(verifiedBadge(m.from_verified));
   name.append(el("span", null, "<" + m.from + ">"));
   text.append(name, el("div", "read-to", "To: " + ((m.to || []).join(", ") || "(no recipients)")));
   const date = el("time", "read-date", formatFullDate(m.created_at));
@@ -880,7 +882,7 @@ function renderFileList() {
   const total = state.files.reduce((sum, f) => sum + f.size, 0);
   $("compose-hint").textContent = state.files.length
     ? state.files.length + " of " + MAX_FILES + " files · " + formatSize(total)
-    : "Up to 5 files, 10 MB each";
+    : "Up to 5 files, " + maxFileMb() + " MB each";
 }
 
 // ---------- "To" suggestions (people you emailed before) ----------
@@ -1053,8 +1055,9 @@ $("attachments").addEventListener("change", (event) => {
       showComposeMessage("“" + file.name + "” can't be attached. Allowed: images, PDF, Word and text files.");
       continue;
     }
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      showComposeMessage("“" + file.name + "” is larger than " + MAX_FILE_MB + " MB.");
+    if (file.size > maxFileMb() * 1024 * 1024) {
+      showComposeMessage("“" + file.name + "” is larger than " + maxFileMb() + " MB."
+        + (maxFileMb() < 25 ? " Premium allows 25 MB per file." : ""));
       continue;
     }
     if (state.files.length >= MAX_FILES) {

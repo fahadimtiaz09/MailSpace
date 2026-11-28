@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../models/message.dart';
 import '../theme.dart';
 import 'brand.dart';
+import 'verified_seal.dart';
 
 class MessageRow extends StatelessWidget {
   final Message message;
@@ -64,10 +65,17 @@ class MessageRow extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(who,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 15, fontWeight: weight)),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(who,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 15, fontWeight: weight)),
+                              ),
+                              if (!showRecipient) VerifiedSeal(m.fromVerified, size: 15),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(shortTime(m.createdAt),

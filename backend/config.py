@@ -22,10 +22,14 @@ class Config:
     INBOUND_SECRET = os.getenv("INBOUND_SECRET")            # protects the inbound webhook URL
     # Android APKs for "Download for Android" (kept on the server, not on GitHub)
     DOWNLOADS_DIR = os.getenv("DOWNLOADS_DIR", "/opt/domailit-downloads")
-    # Microsoft Store app identity (Partner Center → Product identity → Package Family Name)
     # Visitor statistics on the public pages (home, sign-in, sign-up, legal). Never inside the inbox.
     GA_MEASUREMENT_ID = os.getenv("GA_MEASUREMENT_ID", "").strip()     # Google Analytics, e.g. G-ABC123XYZ
     CLARITY_PROJECT_ID = os.getenv("CLARITY_PROJECT_ID", "").strip()   # Microsoft Clarity heatmaps
+    # Premium payments (Binance Pay merchant account → API management)
+    BINANCE_PAY_API_KEY = os.getenv("BINANCE_PAY_API_KEY", "").strip()
+    BINANCE_PAY_SECRET = os.getenv("BINANCE_PAY_SECRET", "").strip()
+    SITE_URL = os.getenv("SITE_URL", "https://domailit.com")            # used in Binance return links
+    # Microsoft Store app identity (Partner Center → Product identity → Package Family Name)
     WINDOWS_PACKAGE_FAMILY = os.getenv("WINDOWS_PACKAGE_FAMILY", "DoMailit.DoMailit_adge5cya5y3e4")
     # Where the website's "Contact us" form delivers (an address or alias of an account)
     CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "").strip().lower()

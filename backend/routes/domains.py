@@ -10,6 +10,7 @@ from pymongo.errors import DuplicateKeyError
 
 from config import Config
 from database import addresses, domains
+from plans import is_premium
 from security import contact_address, login_required, now_utc, parse_object_id, rate_limited, to_iso
 
 domains_bp = Blueprint("domains", __name__, url_prefix="/api/domains")
@@ -108,6 +109,9 @@ def add_domain():
         return error("Please enter a domain like yourbusiness.com")
     if name == Config.MAIL_DOMAIN:
         return error("That is DoMailit's own domain.")
+    if not is_premium(g.user):
+        return error("Custom domains are part of DoMailit Premium ($1/month). "
+                     "Upgrade in Settings → Plan to add your own domain.", 403)
     if domains.count_documents({"owner_id": g.user["_id"]}) >= MAX_DOMAINS_PER_USER:
         return error(f"You can add up to {MAX_DOMAINS_PER_USER} domains.")
     if domains.find_one({"name": name, "status": "verified"}):

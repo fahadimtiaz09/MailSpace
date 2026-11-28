@@ -15,6 +15,7 @@ import '../models/user.dart';
 import '../services/push_service.dart';
 import '../theme.dart';
 import 'brand.dart';
+import 'verified_seal.dart';
 
 const maxAccounts = 5;
 
@@ -89,8 +90,17 @@ class _AccountSheetState extends State<_AccountSheet> {
                 children: [
                   Avatar(seed: u.email, text: u.initials, radius: 32),
                   const SizedBox(height: 10),
-                  Text(u.displayName ?? u.username,
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(u.displayName ?? u.username,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink)),
+                      ),
+                      VerifiedSeal(u.verified, size: 18),
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(u.email, style: TextStyle(fontSize: 13, color: AppColors.muted)),
                   const SizedBox(height: 12),

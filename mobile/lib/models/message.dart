@@ -22,6 +22,7 @@ class Message {
   final String folder;          // inbox, sent, drafts, starred, spam, trash
   final String from;
   final String? fromName;        // "Fahad Imtiaz" (null = only the address is known)
+  final String? fromVerified;    // 'premium' / 'team' = verified badge next to the sender
   final List<String> to;
   final String subject;
   final String snippet;         // short preview for the list
@@ -43,6 +44,7 @@ class Message {
     required this.folder,
     required this.from,
     this.fromName,
+    this.fromVerified,
     required this.to,
     required this.subject,
     required this.snippet,
@@ -65,6 +67,7 @@ class Message {
         folder: folder,
         from: from,
         fromName: fromName,
+        fromVerified: fromVerified,
         to: to,
         subject: subject,
         snippet: snippet,
@@ -87,6 +90,7 @@ class Message {
       folder: json['folder'] as String? ?? 'inbox',
       from: json['from'] as String? ?? '',
       fromName: json['from_name'] as String?,
+      fromVerified: json['from_verified'] as String?,
       to: rawTo is List ? rawTo.map((e) => e.toString()).toList() : [if (rawTo != null) rawTo.toString()],
       subject: json['subject'] as String? ?? '',
       snippet: json['snippet'] as String? ?? '',

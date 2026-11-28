@@ -34,7 +34,8 @@ class ComposeScreen extends StatefulWidget {
 
 class _ComposeScreenState extends State<ComposeScreen> {
   static const maxFiles = 5;
-  static const maxFileSize = 10 * 1024 * 1024; // 10 MB
+  // The server checks the real limit: 10 MB per file on Free, 25 MB on Premium
+  static const maxFileSize = 25 * 1024 * 1024;
   static const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt'];
 
   final _api = ApiClient.instance;
@@ -217,7 +218,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
         // Read the size from the file itself (works with every file_picker version).
         final size = File(f.path!).lengthSync();
         if (size > maxFileSize) {
-          problem = '${f.name} is bigger than 10 MB.';
+          problem = '${f.name} is bigger than 25 MB.';
           continue;
         }
         _files.add(UploadFile(path: f.path!, name: f.name, size: size));
@@ -509,7 +510,7 @@ class _ComposeScreenState extends State<ComposeScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Up to 5 files, 10 MB each', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                      child: Text('Up to 5 files · 10 MB each (25 MB on Premium)', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                     ),
                     TextButton(
                       onPressed: busy ? null : _saveDraftAndClose,

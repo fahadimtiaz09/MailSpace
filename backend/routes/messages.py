@@ -15,6 +15,7 @@ from routes.domains import allowed_from_addresses
 from push import notify, notify_new_mail
 from email_service import ExternalSendError, external_sending_ready, send_external
 from safety import check_message
+from plans import is_premium, max_file_bytes, storage_limit_bytes, storage_used, verified_emails, verified_kind
 from security import active_user_by_email, blocked_by, team_members, is_expired, login_required, now_utc, parse_object_id, to_iso
 
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
@@ -89,6 +90,14 @@ def list_item(entry):
     }
 
 
+def with_badges(items):
+    """Add "from_verified" ("premium" / "team") to list rows whose sender has the badge."""
+    kinds = verified_emails(i["from"] for i in items)
+    for i in items:
+        i["from_verified"] = kinds.get((i["from"] or "").lower())
+    return items
+
+
 def delete_files(attachments):
     for attachment in attachments:
         try:
@@ -117,7 +126,7 @@ def file_content_matches(data, ext):
     return any(head.startswith(sig) for sig in FILE_SIGNATURES.get(ext, []))
 
 
-def save_attachments(files):
+def save_attachments(files, max_bytes=None):
     files = [f for f in files if f and f.filename]
     if len(files) > Config.MAX_FILES:
         raise ValueError(f"You can attach up to {Config.MAX_FILES} files.")
@@ -134,10 +143,13 @@ def save_attachments(files):
             if not display_name.lower().endswith("." + ext):
                 display_name += "." + ext
 
-            # Read at most 10 MB + 1 byte, so a huge file is caught without loading all of it
-            data = file.read(Config.MAX_FILE_SIZE + 1)
-            if len(data) > Config.MAX_FILE_SIZE:
-                raise ValueError(f'"{display_name}" is larger than 10 MB.')
+            # Read at most the plan's limit + 1 byte, so a huge file is caught without loading all of it
+            limit = max_bytes or Config.MAX_FILE_SIZE
+            data = file.read(limit + 1)
+            if len(data) > limit:
+                mb = limit // (1024 * 1024)
+                hint = " Premium allows 25 MB per file." if mb < 25 else ""
+                raise ValueError(f'"{display_name}" is larger than {mb} MB.{hint}')
             if not file_content_matches(data, ext):
                 raise ValueError(f'"{display_name}" does not look like a real .{ext} file.')
 
@@ -214,7 +226,7 @@ def list_messages():
               .limit(PAGE_SIZE))
 
     return jsonify({
-        "messages": [list_item(e) for e in cursor],
+        "messages": with_badges([list_item(e) for e in cursor]),
         "page": page, "total_pages": total_pages, "total": total,
     })
 
@@ -253,6 +265,10 @@ def get_message(entry_id):
                           and entry["folder"] not in ("sent", "drafts") and bool(sender))
     item["can_forward"] = (item["allow_forward"] or message.get("sender_id") == g.user["_id"]
                            or g.user.get("role") == "admin")  # the admin may forward anything
+    # Verified badge next to a DoMailit sender's name (Premium or DoMailit team)
+    sender_user = (users.find_one({"_id": message["sender_id"]}, {"premium_until": 1, "role": 1})
+                   if message.get("sender_id") else None)
+    item["from_verified"] = verified_emails([sender]).get(sender) or verified_kind(sender_user)
     item["attachments"] = [
         {"id": a["id"], "filename": a["filename"], "size": a["size"]}
         for a in message.get("attachments", [])
@@ -432,9 +448,18 @@ def send_message():
     recipients = list({u["_id"]: u for u in found.values()}.values())
 
     try:
-        attachments = save_attachments(request.files.getlist("attachments"))
+        attachments = save_attachments(request.files.getlist("attachments"), max_file_bytes(me))
     except ValueError as exc:
         return error(str(exc))
+
+    # Storage: does the sender's plan have room for this email?
+    incoming = sum(a["size"] for a in attachments) + len(body.encode())
+    if storage_used(me["_id"]) + incoming > storage_limit_bytes(me):
+        delete_files(attachments)
+        gb = storage_limit_bytes(me) // (1024 ** 3)
+        more = (" Delete some emails or upgrade to Premium for 10 GB." if not is_premium(me)
+                else " Delete some emails to make room.")
+        return error(f"Your storage is full ({gb} GB).{more}", 403)
 
     # 1) Outside addresses first. If the provider refuses, nothing is saved.
     external_id = None

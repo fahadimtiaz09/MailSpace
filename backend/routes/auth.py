@@ -9,6 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from config import Config
 from database import users
+from plans import LIMITS, is_premium, plan_name, verified_kind
 from security import (MAX_ACCOUNTS, note_attempt, contact_address, drop_session_account, is_expired, login_required,
                       now_utc, parse_object_id, rate_limited, session_account_ids, to_iso, usable)
 from email_service import ExternalSendError, external_sending_ready, send_external
@@ -21,7 +22,7 @@ RESERVED_USERNAMES = {"support", "admin", "administrator", "calls", "alerts", "n
                       "postmaster", "abuse", "security", "help", "info", "contact", "team", "webmaster"}
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 ACCOUNT_DAYS = {"regular": None, "temp15": 15, "temp30": 30}
-TERMS_VERSION = "2026-11-21"  # change when terms.html / privacy.html change a lot
+TERMS_VERSION = "2026-11-29"  # change when terms.html / privacy.html change a lot
 RESET_CODE_TTL = timedelta(minutes=15)
 MAX_CODE_ATTEMPTS = 5
 
@@ -60,6 +61,9 @@ def public_user(user):
         "show_online": user.get("show_online", True),
         "avatar": (f"/api/avatar/{user['_id']}?v={user.get('avatar_version', 0)}"
                    if user.get("avatar_file_id") else None),
+        "plan": plan_name(user),
+        "verified": verified_kind(user),       # badge: "premium", "team" or None
+        "premium_until": to_iso(user.get("premium_until")) if user.get("role") != "admin" else None,
     }
 
 
@@ -77,9 +81,36 @@ def start_session(user, add=False):
     session["user_id"] = user_id
 
 
-def adding_account(data):
+def account_limit(extra_user=None):
+    """How many accounts can be signed in at once on this browser:
+    2 on the Free plan, 5 if any of them (or the one being added) is Premium."""
+    ids = session_account_ids()
+    people = list(users.find({"_id": {"$in": [o for o in (parse_object_id(i) for i in ids) if o]}},
+                             {"premium_until": 1, "role": 1})) if ids else []
+    if extra_user is not None:
+        people.append(extra_user)
+    return LIMITS["premium"]["accounts"] if any(is_premium(u) for u in people) else LIMITS["free"]["accounts"]
+
+
+def adding_account(data, user=None):
     """True when "Add another account" was used and there's room for one more."""
-    return data.get("add") is True and len(session_account_ids()) < MAX_ACCOUNTS
+    if data.get("add") is not True:
+        return False
+    ids = session_account_ids()
+    if user is not None and str(user["_id"]) in ids:
+        return True  # already signed in here: just switch to it
+    return len(ids) < account_limit(user)
+
+
+def account_limit_reached(data, user=None):
+    """An error reply when "Add another account" can't add one more, else None."""
+    if data.get("add") is True and not adding_account(data, user):
+        limit = account_limit(user)
+        if limit < LIMITS["premium"]["accounts"]:
+            return error(f"The Free plan keeps {limit} accounts signed in at once. "
+                         "Upgrade to Premium for up to 5.", 403)
+        return error(f"You can keep up to {limit} accounts signed in at once.", 403)
+    return None
 
 
 USERNAME_RULES = "Username must be 3–20 characters: lowercase letters, numbers, dot or underscore."
@@ -125,6 +156,10 @@ def signup():
     username = str(data.get("username", "")).strip().lower()
     password = str(data.get("password", ""))
     account_type = str(data.get("account_type", "regular"))
+
+    blocked = account_limit_reached(data)
+    if blocked:
+        return blocked
 
     problem = username_problem(username)
     if problem == "invalid":
@@ -173,7 +208,7 @@ def signup():
         return error("That username is already taken.", 409)
 
     user["_id"] = result.inserted_id
-    start_session(user, add=adding_account(data))
+    start_session(user, add=adding_account(data, user))
     return jsonify({"user": public_user(user)}), 201
 
 
@@ -206,7 +241,10 @@ def login():
     if user.get("status") != "active" or is_expired(user):
         return error("This account has expired and can no longer be used.", 403)
 
-    start_session(user, add=adding_account(data))
+    blocked = account_limit_reached(data, user)
+    if blocked:
+        return blocked
+    start_session(user, add=adding_account(data, user))
     return jsonify({"user": public_user(user)})
 
 
@@ -244,7 +282,7 @@ def accounts():
                 result[0]["active"] = True
         else:
             session.clear()
-    return jsonify({"accounts": result, "max": MAX_ACCOUNTS})
+    return jsonify({"accounts": result, "max": account_limit()})
 
 
 @auth_bp.post("/switch")

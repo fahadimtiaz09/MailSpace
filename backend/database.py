@@ -36,6 +36,7 @@ presence = db["presence"]    # last time each user's website/app said "I'm onlin
 calls = db["calls"]          # voice calls (who, when, how long)
 audit_logs = db["audit_logs"]  # record of every admin review of a user's mail
 reports = db["reports"]        # emails users reported to the admins (spam, scam, harassment)
+payments = db["payments"]        # Premium purchases through Binance Pay
 rate_limits = db["rate_limits"]  # recent login/sign-up attempts, shared by all server workers
 # Attachment files are stored inside MongoDB (GridFS), because the online server's disk is temporary
 attachment_files = GridFS(db, collection="attachment_files")

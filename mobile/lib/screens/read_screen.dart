@@ -36,6 +36,7 @@ import '../services/screen_guard.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/message_row.dart';
+import '../widgets/verified_seal.dart';
 
 class ReadScreen extends StatefulWidget {
   const ReadScreen({super.key});
@@ -447,10 +448,17 @@ class _ReadScreenState extends State<ReadScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(m.fromName ?? m.from,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(m.fromName ?? m.from,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                                ),
+                                VerifiedSeal(m.fromVerified),
+                              ],
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Text(_fullTime(m.createdAt), style: TextStyle(fontSize: 12, color: AppColors.muted)),

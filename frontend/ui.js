@@ -326,3 +326,19 @@ function formatFullDate(iso) {
     day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 }
+
+
+// Verified badge next to a name: "premium" (DoMailit Premium) or "team" (DoMailit staff)
+const SEAL_POINTS = "12.00,1.40 14.33,3.31 17.30,2.82 18.36,5.64 21.18,6.70 20.69,9.67 22.60,12.00 20.69,14.33 21.18,17.30 18.36,18.36 17.30,21.18 14.33,20.69 12.00,22.60 9.67,20.69 6.70,21.18 5.64,18.36 2.82,17.30 3.31,14.33 1.40,12.00 3.31,9.67 2.82,6.70 5.64,5.64 6.70,2.82 9.67,3.31";
+function verifiedBadge(kind) {
+  if (kind !== "premium" && kind !== "team") return document.createTextNode("");
+  const label = kind === "team" ? "Verified · Official DoMailit" : "Verified · DoMailit Premium";
+  const wrap = document.createElement("span");
+  wrap.className = "vbadge vbadge-" + kind;
+  wrap.title = label;
+  wrap.setAttribute("role", "img");
+  wrap.setAttribute("aria-label", label);
+  wrap.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="' + SEAL_POINTS + '"/>'
+    + '<path d="M7.6 12.3l3 3 5.8-6.2"/></svg>';
+  return wrap;
+}

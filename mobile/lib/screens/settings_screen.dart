@@ -23,10 +23,12 @@ import '../models/user.dart';
 import '../services/people.dart';
 import '../services/push_service.dart';
 import '../theme.dart';
+import '../widgets/verified_seal.dart';
 import '../widgets/brand.dart';
 import '../widgets/legal.dart';
 import '../widgets/message_row.dart';
 import '../widgets/password_field.dart';
+import '../widgets/verified_badges.dart';
 
 class SettingsScreen extends StatefulWidget {
   final User user;
@@ -334,6 +336,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _kv('Member since', u.createdAt == null ? '—' : MessageRow.fullTime(u.createdAt).split(',').first),
             if (u.expiresAt != null) _kv('Account expires', MessageRow.fullTime(u.expiresAt)),
 
+            // Plan: Free / Premium (bought on the website with Binance Pay)
+            const _Section('Plan'),
+            ListTile(
+              leading: Icon(u.isPremium ? Icons.workspace_premium : Icons.workspace_premium_outlined,
+                  color: u.isPremium ? VerifiedSeal.blue : null),
+              title: Row(children: [Text(u.isPremium ? 'Premium' : 'Free'), VerifiedSeal(u.verified)]),
+              subtitle: Text(u.isPremium
+                  ? (u.premiumUntil != null ? 'Active until ${MessageRow.fullTime(u.premiumUntil)}' : 'Active')
+                  : 'Premium: your own domain, 25 MB files, 10 GB storage, 5 accounts. \$1/month or \$10/year.'),
+              trailing: const Icon(Icons.open_in_new, size: 18),
+              onTap: () => openLegalPage(context, 'settings.html#plan'),
+            ),
+
             // ② appearance
             const _Section('Appearance'),
             Padding(
@@ -459,6 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(fontSize: 12, height: 1.6, color: AppColors.muted),
               ),
             ),
+            const VerifiedBadges(),
 
             // Admin console (admins only)
             if (u.isAdmin) ...[

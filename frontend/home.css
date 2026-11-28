@@ -468,20 +468,19 @@
 .sec-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 18px; border-radius: 14px; background: var(--primary-soft); color: var(--primary); }
 .sec-card h3 { font-size: 1.05rem; margin-bottom: 8px; }
 .sec-card p { color: var(--text-2); font-size: .94rem; }
-/* "Independently verified": small grade badges under the security cards, each linking to the live report */
-.sec-verified { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; margin-top: 36px; }
-.sv-label { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 600; color: var(--text-2); }
-.sv-label .i { color: #2E9D57; }
-.sec-verified .mini-badges { justify-content: center; }
-.sec-verified .mini-badge { border-color: var(--border); }
-.sec-verified .mini-badge span { background: var(--surface); color: var(--text); }
-.sec-verified .mini-badge:hover { border-color: #2E9D57; }
-/* Footer: small two-tone grade badges */
-.mini-badges { display: inline-flex; flex-wrap: wrap; gap: 8px; }
-.mini-badge { display: inline-flex; border-radius: 6px; overflow: hidden; font-size: .74rem; line-height: 1; text-decoration: none; border: 1px solid rgba(255, 255, 255, .12); }
-.mini-badge span { padding: 6px 8px; background: rgba(255, 255, 255, .06); color: #C9D5EA; }
-.mini-badge b { padding: 6px 8px; background: #2E9D57; color: #fff; font-weight: 700; }
-.mini-badge:hover { border-color: rgba(255, 255, 255, .3); }
+/* Security line (Security section) and "Verified & available on" row (footer) */
+.sec-verified { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 40px auto 0; max-width: 760px; color: var(--text-2); font-size: .95rem; text-align: left; }
+.sec-verified a, .cert-text a { color: inherit; font-weight: 600; text-decoration: underline; text-decoration-color: rgba(127, 145, 180, .45); text-underline-offset: 3px; }
+.sec-verified a:hover, .cert-text a:hover { color: var(--primary); text-decoration-color: currentColor; }
+.cert-ic { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(46, 157, 87, .12); color: #2E9D57; }
+.cert-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.certified { padding-top: 28px; padding-bottom: 28px; border-top: 1px solid rgba(255, 255, 255, .08); }
+.certified h3 { font-size: 1rem; font-weight: 700; color: #fff; margin: 0 0 16px; }
+.cert-row { display: flex; flex-wrap: wrap; align-items: center; gap: 22px 40px; }
+.cert-text { display: flex; align-items: center; gap: 14px; max-width: 520px; }
+.cert-text p { margin: 0; color: #E4ECFA; font-size: .92rem; line-height: 1.5; }
+.cert-text p > span { color: #9FB2D3; font-size: .82rem; }
+.cert-text a:hover { color: #fff; }
 
 /* ---------- Pricing ---------- */
 .pricing { padding: 110px 0; }
@@ -499,7 +498,27 @@
 .price-card:hover { transform: translateY(-4px); }
 .price-card.featured { border: 1.5px solid var(--primary); box-shadow: 0 30px 60px -30px rgba(36, 89, 214, .55); }
 .price-tag { position: absolute; top: -13px; left: 32px; padding: 4px 12px; border-radius: 999px; background: var(--primary-btn); color: #fff; font-size: .76rem; font-weight: 700; }
-.price-card h3 { font-size: 1.15rem; }
+.price-card h3 { font-size: 1.15rem; display: flex; align-items: center; }
+.price-sub { margin: 6px 0 0; color: var(--text-2); font-size: .9rem; }
+.price-save { margin: -12px 0 22px; font-size: .88rem; color: var(--text-2); }
+.price-save span { display: inline-block; margin-right: 6px; padding: 2px 9px; border-radius: 999px; background: #16A36A; color: #fff; font-size: .74rem; font-weight: 800; }
+/* Premium card: deep navy in both themes, so it always stands out */
+.price-card.premium { background: linear-gradient(165deg, #0B1F3A 0%, #12306E 55%, #1D4ED8 130%); border: 1px solid rgba(96, 165, 250, .45); color: #fff; box-shadow: 0 40px 80px -30px rgba(29, 78, 216, .65), 0 0 0 1px rgba(255, 255, 255, .04) inset; transform: translateY(-8px); }
+.price-card.premium h3, .price-card.premium .price strong { color: #fff; }
+.price-card.premium .price span, .price-card.premium .price-sub, .price-card.premium .price-save { color: #C7D5F2; }
+.price-card.premium li { color: #E8EEFB; }
+.price-card.premium li .i { background: rgba(96, 165, 250, .22); color: #93C5FD; }
+.price-card.premium .price-tag { background: #1D9BF0; color: #fff; letter-spacing: .08em; text-transform: uppercase; font-size: .7rem; font-weight: 800; box-shadow: 0 4px 14px rgba(29,155,240,.45); }
+.btn-premium { background: #fff; color: #0B1F3A; border: 0; font-weight: 800; }
+.btn-premium:hover { background: #EAF1FF; color: #0B1F3A; }
+.js .price-card.premium.reveal.in { transform: translateY(-8px); }
+.js .price-card.premium.reveal.in:hover { transform: translateY(-12px); }
+/* verified seal (same as the app's) */
+.vbadge { display: inline-flex; flex: none; width: 1.05em; height: 1.05em; margin-left: .3em; vertical-align: -0.16em; }
+.vbadge svg { width: 100%; height: 100%; overflow: visible; }
+.vbadge polygon { fill: #1D9BF0; stroke: #1D9BF0; stroke-width: 1.6; stroke-linejoin: round; }
+.vbadge path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.price-card li .vbadge { width: 16px; height: 16px; padding: 0; background: none; margin: 0 2px; vertical-align: -3px; }
 .price { display: flex; align-items: baseline; gap: 10px; margin: 14px 0 22px; }
 .price strong { font-family: var(--font-display); font-size: 2.6rem; font-weight: 800; letter-spacing: -0.04em; color: var(--navy); }
 :root[data-theme="dark"] .price strong { color: var(--text); }

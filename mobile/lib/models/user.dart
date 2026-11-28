@@ -14,6 +14,9 @@ class User {
   final String? displayName;     // "Nimra Noor" — shown to people you email
   final String? avatar;          // /api/avatar/<id>?v=… (null = no picture)
   final bool showOnline;         // false = appear offline to everyone (no one can call you)
+  final String plan;             // 'free' or 'premium'
+  final DateTime? premiumUntil;  // when Premium ends (null for Free / admins)
+  final String? verified;        // 'premium' / 'team' = verified badge, null = none
 
   User({
     required this.id,
@@ -28,10 +31,14 @@ class User {
     this.displayName,
     this.avatar,
     this.showOnline = true,
+    this.plan = 'free',
+    this.premiumUntil,
+    this.verified,
   });
 
   bool get isTemporary => accountType != 'regular';
   bool get isAdmin => role == 'admin';
+  bool get isPremium => plan == 'premium';
 
   /// Days left for a temporary account (null for regular accounts).
   int? get daysLeft {
@@ -65,6 +72,9 @@ class User {
       displayName: json['display_name'] as String?,
       avatar: json['avatar'] as String?,
       showOnline: json['show_online'] as bool? ?? true,
+      plan: json['plan'] as String? ?? 'free',
+      premiumUntil: _date(json['premium_until']),
+      verified: json['verified'] as String?,
     );
   }
 }
