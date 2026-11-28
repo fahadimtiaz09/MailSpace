@@ -15,12 +15,14 @@ from flask import request
 
 CSP = "; ".join([
     "default-src 'self'",
-    "script-src 'self'",
+    # Google Analytics + Microsoft Clarity (public pages only, see /analytics.js)
+    "script-src 'self' https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms",
     "style-src 'self' 'unsafe-inline' https:",
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' data: https:",
     "media-src 'self' blob:",
-    "connect-src 'self'",
+    "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com"
+    " https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com",
     "worker-src 'self'",
     "manifest-src 'self'",
     "frame-src 'self'",

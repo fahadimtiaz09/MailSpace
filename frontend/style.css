@@ -342,6 +342,12 @@ code, kbd { font-family: var(--font-mono); font-size: .9em; }
   color: var(--text);
 }
 .hint { font-size: .8rem; color: var(--text-2); }
+/* Live "username available / taken" line under the username box */
+.field-status { display: block; margin: 6px 0 2px; font-size: .82rem; font-weight: 600; color: var(--text-2); }
+.field-status.ok { color: var(--success-text); }
+.field-status.bad { color: var(--error-text); }
+.field-status.ok::before { content: "✓ "; }
+.field-status.bad::before { content: "✕ "; }
 
 .input, .select, .textarea {
   width: 100%;

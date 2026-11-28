@@ -1,6 +1,7 @@
 """app.py — starts the DoMailit server (locally and online)."""
 import json
 import os
+import re
 
 from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
@@ -28,6 +29,34 @@ ERROR_TEXT = {
     413: "The upload is too large.",
 }
 
+
+ANALYTICS_JS = """// analytics.js: visitor statistics for the public pages of domailit.com
+(function () {
+  var GA = "__GA__", CLARITY = "__CLARITY__";
+  if (!GA && !CLARITY) return;
+  // Respect "Do Not Track" / "Global Privacy Control", and never count local testing
+  if (navigator.globalPrivacyControl || navigator.doNotTrack === "1") return;
+  if (!/(^|\\.)domailit\\.com$/.test(location.hostname)) return;
+
+  if (GA) {
+    var g = document.createElement("script");
+    g.async = true;
+    g.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(GA);
+    document.head.appendChild(g);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag("js", new Date());
+    window.gtag("config", GA);
+  }
+  if (CLARITY) {
+    window.clarity = window.clarity || function () { (window.clarity.q = window.clarity.q || []).push(arguments); };
+    var c = document.createElement("script");
+    c.async = true;
+    c.src = "https://www.clarity.ms/tag/" + encodeURIComponent(CLARITY);
+    document.head.appendChild(c);
+  }
+})();
+"""
 
 def create_app():
     app = Flask(__name__, static_folder=str(Config.FRONTEND_DIR), static_url_path="")
@@ -95,6 +124,17 @@ def create_app():
 
     # Windows app (Microsoft Store): links to domailit.com open in the DoMailit app.
     # Windows reads this file to check that the app really belongs to this website.
+    @app.route("/analytics.js")
+    def analytics_js():
+        # Loads Google Analytics and Microsoft Clarity on the public pages only.
+        # Turned on by GA_MEASUREMENT_ID / CLARITY_PROJECT_ID in /etc/domailit.env.
+        ga = Config.GA_MEASUREMENT_ID if re.fullmatch(r"G-[A-Z0-9]{4,20}", Config.GA_MEASUREMENT_ID) else ""
+        clarity = Config.CLARITY_PROJECT_ID if re.fullmatch(r"[a-z0-9]{6,20}", Config.CLARITY_PROJECT_ID) else ""
+        body = ANALYTICS_JS.replace("__GA__", ga).replace("__CLARITY__", clarity)
+        response = app.response_class(body, mimetype="text/javascript")
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        return response
+
     @app.route("/.well-known/security.txt")
     def security_txt():
         # Standard file that tells security researchers how to report a problem (RFC 9116).

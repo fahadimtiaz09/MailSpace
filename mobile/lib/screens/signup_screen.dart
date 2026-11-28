@@ -7,6 +7,8 @@
 //   ④ Account recovery (optional, tap to open)
 //   ⑤ Create account → "Privacy and Terms" (I agree) → Inbox ('/home')   ·   "Log in" → A3 ('/login')
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api/api_client.dart';
@@ -34,6 +36,14 @@ class _SignupScreenState extends State<SignupScreen> {
 
   String _accountType = 'regular'; // 'regular' | 'temp15' | 'temp30'
   bool _hidePassword = true;
+  bool _hideConfirm = true;
+
+  // Live "already taken?" check while typing the username
+  Timer? _usernameTimer;
+  int _usernameCheck = 0;
+  String _lastChecked = '';
+  String? _usernameStatus; // message under the box, e.g. "That username is already taken."
+  bool? _usernameOk;       // true = free, false = taken / not allowed, null = checking or nothing yet
   bool _showRecovery = false;
   bool _loading = false;
   String? _error;
@@ -42,12 +52,42 @@ class _SignupScreenState extends State<SignupScreen> {
   void initState() {
     super.initState();
     // Redraw while typing: live address preview + strength meter.
-    _usernameCtrl.addListener(() => setState(() {}));
+    _usernameCtrl.addListener(() {
+      setState(() {});
+      _checkUsernameSoon();
+    });
     _passwordCtrl.addListener(() => setState(() {}));
+  }
+
+  void _checkUsernameSoon() {
+    final name = _usernameCtrl.text.trim().toLowerCase();
+    if (name == _lastChecked) return; // only the text changed, e.g. cursor moved
+    _lastChecked = name;
+    _usernameTimer?.cancel();
+    if (name.length < 3) {
+      setState(() { _usernameStatus = null; _usernameOk = null; });
+      return;
+    }
+    setState(() { _usernameStatus = 'Checking…'; _usernameOk = null; });
+    _usernameTimer = Timer(const Duration(milliseconds: 400), () async {
+      final mine = ++_usernameCheck;
+      try {
+        final res = await ApiClient.instance.usernameAvailable(name);
+        if (!mounted || mine != _usernameCheck) return; // they kept typing
+        setState(() {
+          _usernameOk = res['available'] == true;
+          _usernameStatus = res['message'] as String?;
+        });
+      } catch (_) {
+        // Offline: the server checks again when they tap "Create account".
+        if (mounted && mine == _usernameCheck) setState(() { _usernameStatus = null; _usernameOk = null; });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _usernameTimer?.cancel();
     for (final c in [_usernameCtrl, _passwordCtrl, _confirmCtrl, _recoveryEmailCtrl, _questionCtrl, _answerCtrl]) {
       c.dispose();
     }
@@ -93,6 +133,8 @@ class _SignupScreenState extends State<SignupScreen> {
     String? problem;
     if (usernameProblem != null) {
       problem = usernameProblem;
+    } else if (_usernameOk == false) {
+      problem = _usernameStatus ?? 'That username is already taken.';
     } else if (password.length < 8 || password.length > 128) {
       problem = 'Password must be between 8 and 128 characters.';
     } else if (password != _confirmCtrl.text) {
@@ -128,7 +170,13 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } on ApiException catch (e) {
-      setState(() => _error = e.message); // e.g. "That username is already taken."
+      setState(() {
+        _error = e.message; // e.g. "That username is already taken."
+        if (e.statusCode == 409) {
+          _usernameOk = false;
+          _usernameStatus = e.message;
+        }
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -170,8 +218,27 @@ class _SignupScreenState extends State<SignupScreen> {
               autocorrect: false,
               enableSuggestions: false,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(hintText: 'username'),
+              decoration: InputDecoration(
+                hintText: 'username',
+                suffixIcon: _usernameOk == null
+                    ? null
+                    : Icon(_usernameOk! ? Icons.check_circle : Icons.cancel,
+                        color: _usernameOk! ? AppColors.success : AppColors.error, size: 20),
+              ),
             ),
+            if (_usernameStatus != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                _usernameStatus!,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: _usernameOk == null
+                      ? AppColors.muted
+                      : (_usernameOk! ? AppColors.success : AppColors.errorText),
+                ),
+              ),
+            ],
             const SizedBox(height: 6),
             Text.rich(
               TextSpan(children: [
@@ -219,8 +286,15 @@ class _SignupScreenState extends State<SignupScreen> {
             const _Label('Confirm password'),
             TextField(
               controller: _confirmCtrl,
-              obscureText: _hidePassword,
+              obscureText: _hideConfirm,
               textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  tooltip: _hideConfirm ? 'Show password' : 'Hide password',
+                  icon: Icon(_hideConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  onPressed: () => setState(() => _hideConfirm = !_hideConfirm),
+                ),
+              ),
             ),
             const SizedBox(height: 18),
 

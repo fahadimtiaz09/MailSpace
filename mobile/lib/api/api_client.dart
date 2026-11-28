@@ -137,6 +137,8 @@ class ApiClient {
         message = 'The server is taking too long. Please try again.';
       } else if (e.type == DioExceptionType.connectionError) {
         message = 'No internet connection.';
+      } else if (e.response?.statusCode == 429) {
+        message = 'Too many attempts. Please wait a minute and try again.';
       } else {
         message = 'Something went wrong. Please try again.';
       }
@@ -235,6 +237,12 @@ class ApiClient {
     // Forget the cookies on the phone when nobody is signed in any more.
     if (remaining == 0) await _cookieJar?.deleteAll();
     return remaining;
+  }
+
+  /// Sign-up form: is this username free? Returns {available, reason, message}.
+  Future<Map<String, dynamic>> usernameAvailable(String username) async {
+    final data = await _get('/auth/username-available', query: {'u': username});
+    return data is Map<String, dynamic> ? data : const <String, dynamic>{};
   }
 
   /// Newest Android version on domailit.com (for "Update available").

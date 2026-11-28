@@ -9,7 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from config import Config
 from database import users
-from security import (MAX_ACCOUNTS, contact_address, drop_session_account, is_expired, login_required,
+from security import (MAX_ACCOUNTS, note_attempt, contact_address, drop_session_account, is_expired, login_required,
                       now_utc, parse_object_id, rate_limited, session_account_ids, to_iso, usable)
 from email_service import ExternalSendError, external_sending_ready, send_external
 
@@ -82,6 +82,39 @@ def adding_account(data):
     return data.get("add") is True and len(session_account_ids()) < MAX_ACCOUNTS
 
 
+USERNAME_RULES = "Username must be 3–20 characters: lowercase letters, numbers, dot or underscore."
+
+
+def username_problem(username):
+    """None if the username can be used; otherwise "invalid" or "taken"."""
+    if not USERNAME_PATTERN.fullmatch(username) or ".." in username \
+            or username.startswith(".") or username.endswith("."):
+        return "invalid"
+    # A renamed account keeps its old address, so nobody else can take it
+    taken_email = f"{username}@{Config.MAIL_DOMAIN}"
+    if username in RESERVED_USERNAMES or taken_email == contact_address() \
+            or users.find_one({"$or": [{"username": username}, {"old_usernames": username},
+                                       {"old_emails": taken_email}, {"aliases": taken_email}]},
+                              {"_id": 1}):
+        return "taken"
+    return None
+
+
+@auth_bp.get("/username-available")
+def username_available():
+    """Sign-up form asks while you type: is this username free?"""
+    if rate_limited("uname:" + (request.remote_addr or "?"), 60, 60):
+        return error("Too many checks. Please wait a minute.", 429)
+    username = str(request.args.get("u", "")).strip().lower()[:40]
+    problem = username_problem(username)
+    messages = {
+        None: f"{username}@{Config.MAIL_DOMAIN} is available.",
+        "invalid": USERNAME_RULES,
+        "taken": "That username is already taken.",
+    }
+    return jsonify({"available": problem is None, "reason": problem, "message": messages[problem]})
+
+
 @auth_bp.post("/signup")
 def signup():
     if rate_limited("signup:" + (request.remote_addr or "?"), 10, 3600):
@@ -93,20 +126,16 @@ def signup():
     password = str(data.get("password", ""))
     account_type = str(data.get("account_type", "regular"))
 
-    if not USERNAME_PATTERN.fullmatch(username) or ".." in username \
-            or username.startswith(".") or username.endswith("."):
-        return error("Username must be 3–20 characters: lowercase letters, numbers, dot or underscore.")
+    problem = username_problem(username)
+    if problem == "invalid":
+        return error(USERNAME_RULES)
     if not 8 <= len(password) <= 128:
         return error("Password must be between 8 and 128 characters.")
     if account_type not in ACCOUNT_DAYS:
         return error("Unknown account type.")
     if data.get("accept_terms") is not True:
         return error("To create an account, please agree to the Terms of Service and Privacy Policy.")
-    # A renamed account keeps its old address, so nobody else can take it
-    taken_email = f"{username}@{Config.MAIL_DOMAIN}"
-    if username in RESERVED_USERNAMES or taken_email == contact_address() \
-            or users.find_one({"$or": [{"old_usernames": username}, {"old_emails": taken_email},
-                                       {"aliases": taken_email}]}):
+    if problem == "taken":
         return error("That username is already taken.", 409)
 
     created = now_utc()
@@ -150,14 +179,19 @@ def signup():
 
 @auth_bp.post("/login")
 def login():
-    if rate_limited("login:" + (request.remote_addr or "?"), 10, 300):
-        return error("Too many login attempts. Please wait 5 minutes.", 429)
-
     data = request.get_json(silent=True) or {}
-    login_value = str(data.get("login", "")).strip().lower()
+    login_value = str(data.get("login", "")).strip().lower()[:254]
     password = str(data.get("password", ""))
     if not login_value or not password:
         return error("Please enter your username/email and password.")
+
+    # Only WRONG passwords are counted, so a whole class on one Wi-Fi can still sign in.
+    # Per computer: 30 wrong tries in 15 min. Per account: 10 wrong tries in 15 min
+    # (stops attackers who guess one account's password from many computers).
+    ip_key = "loginfail:" + (request.remote_addr or "?")
+    account_key = "loginfail-acct:" + login_value
+    if rate_limited(ip_key, 30, 900, record=False) or rate_limited(account_key, 10, 900, record=False):
+        return error("Too many wrong passwords. Please wait 15 minutes and try again.", 429)
 
     field = "email" if "@" in login_value else "username"
     # also the old address/username of a renamed account
@@ -166,6 +200,8 @@ def login():
     # Same message for "no such user" and "wrong password", so attackers learn nothing
     if user is None or not user.get("password_hash") \
             or not check_password_hash(user["password_hash"], password):
+        note_attempt(ip_key, 900)
+        note_attempt(account_key, 900)
         return error("Wrong username/email or password.", 401)
     if user.get("status") != "active" or is_expired(user):
         return error("This account has expired and can no longer be used.", 403)

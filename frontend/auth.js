@@ -96,7 +96,41 @@ if (signupForm) {
     const name = usernameInput.value || "username";
     document.getElementById("email-preview").textContent = name + "@" + MAIL_DOMAIN;
     markInvalid(usernameInput, false);
+    checkUsernameSoon();
   });
+
+  // "Already taken?" — asks the server a moment after you stop typing
+  const usernameStatus = document.getElementById("username-status");
+  let usernameTimer = null;
+  let usernameCheck = 0;
+  let usernameTaken = false;
+
+  function showUsernameStatus(text, ok) {
+    usernameStatus.hidden = !text;
+    usernameStatus.textContent = text || "";
+    usernameStatus.classList.toggle("ok", ok === true);
+    usernameStatus.classList.toggle("bad", ok === false);
+  }
+
+  function checkUsernameSoon() {
+    clearTimeout(usernameTimer);
+    usernameTaken = false;
+    const name = usernameInput.value.trim();
+    if (name.length < 3) return showUsernameStatus("");
+    showUsernameStatus("Checking…");
+    usernameTimer = setTimeout(async () => {
+      const mine = ++usernameCheck;
+      try {
+        const res = await api("/api/auth/username-available?u=" + encodeURIComponent(name));
+        if (mine !== usernameCheck || name !== usernameInput.value.trim()) return;  // they kept typing
+        usernameTaken = res.reason === "taken";
+        showUsernameStatus(res.message, res.available);
+        markInvalid(usernameInput, !res.available);
+      } catch {
+        if (mine === usernameCheck) showUsernameStatus("");  // offline: the server checks again on submit
+      }
+    }, 400);
+  }
 
   // Simple strength hint (the server only requires 8+ characters)
   passwordInput.addEventListener("input", () => {
@@ -122,6 +156,12 @@ if (signupForm) {
     // Quick checks in the browser (the backend checks again — never trust only the browser)
     if (!/^[a-z0-9._]{3,20}$/.test(username) || username.includes("..") || username.startsWith(".") || username.endsWith(".")) {
       showMessage("Username must be 3–20 characters: lowercase letters, numbers, dot or underscore, and can't start or end with a dot.");
+      markInvalid(usernameInput, true);
+      usernameInput.focus();
+      return;
+    }
+    if (usernameTaken) {
+      showMessage("That username is already taken. Please choose another one.");
       markInvalid(usernameInput, true);
       usernameInput.focus();
       return;
@@ -155,12 +195,15 @@ if (signupForm) {
           security_answer: (signupForm.elements.security_answer?.value || "").trim(),
         },
       });
+      if (window.gtag) window.gtag("event", "sign_up", { method: accountType });  // counted in Google Analytics
       showMessage("Account created. Opening your inbox…", "success");
       setTimeout(() => (window.location.href = "/inbox"), 700);
     } catch (err) {
       setBusy(button, false);
       showMessage(err.message);
       if (err.status === 409) {
+        usernameTaken = true;
+        showUsernameStatus("That username is already taken.", false);
         markInvalid(usernameInput, true);
         usernameInput.focus();
       }

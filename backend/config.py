@@ -23,6 +23,9 @@ class Config:
     # Android APKs for "Download for Android" (kept on the server, not on GitHub)
     DOWNLOADS_DIR = os.getenv("DOWNLOADS_DIR", "/opt/domailit-downloads")
     # Microsoft Store app identity (Partner Center → Product identity → Package Family Name)
+    # Visitor statistics on the public pages (home, sign-in, sign-up, legal). Never inside the inbox.
+    GA_MEASUREMENT_ID = os.getenv("GA_MEASUREMENT_ID", "").strip()     # Google Analytics, e.g. G-ABC123XYZ
+    CLARITY_PROJECT_ID = os.getenv("CLARITY_PROJECT_ID", "").strip()   # Microsoft Clarity heatmaps
     WINDOWS_PACKAGE_FAMILY = os.getenv("WINDOWS_PACKAGE_FAMILY", "DoMailit.DoMailit_adge5cya5y3e4")
     # Where the website's "Contact us" form delivers (an address or alias of an account)
     CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "").strip().lower()

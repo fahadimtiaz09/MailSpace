@@ -9,6 +9,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/pwa.js" defer></script>
+  <script src="/analytics.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
@@ -56,6 +57,7 @@
           <label for="username">Username</label>
           <input id="username" name="username" class="input" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" required aria-describedby="username-hint">
           <div class="address-preview"><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#at"/></svg><span>Your address: <strong id="email-preview">username@domailit.com</strong></span></div>
+          <span id="username-status" class="field-status" role="status" aria-live="polite" hidden></span>
           <span id="username-hint" class="hint">3–20 characters: lowercase letters, numbers, dot (.) or underscore (_).</span>
         </div>
 
@@ -71,7 +73,10 @@
 
         <div class="field">
           <label for="confirm_password">Confirm password</label>
-          <input id="confirm_password" name="confirm_password" class="input" type="password" autocomplete="new-password" required>
+          <div class="input-group">
+            <input id="confirm_password" name="confirm_password" class="input" type="password" autocomplete="new-password" required>
+            <button type="button" class="icon-btn icon-btn-sm pw-toggle" aria-label="Show password"><svg class="i i-sm" aria-hidden="true"><use href="/icons.svg#eye"/></svg></button>
+          </div>
         </div>
 
         <fieldset class="field" style="border:0;padding:0;margin:0 0 18px">

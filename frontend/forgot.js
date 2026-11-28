@@ -23,16 +23,32 @@ function backLink(text, onClick) {
   p.append(a);
   return p;
 }
+function passwordInput() {
+  // A password box with its own show / hide (eye) button
+  const group = el("div", "input-group");
+  const input = el("input", "input"); input.type = "password"; input.autocomplete = "new-password";
+  const toggle = iconButton("eye", "Show password", "icon-btn icon-btn-sm pw-toggle");
+  toggle.type = "button";
+  toggle.addEventListener("click", () => {
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    toggle.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    toggle.querySelector("use").setAttribute("href", "/icons.svg#" + (show ? "eye-off" : "eye"));
+    input.focus();
+  });
+  group.append(input, toggle);
+  return { group, input };
+}
 function newPasswordFields() {
   const nw = el("div", "field");
   nw.append(el("label", null, "New password"));
-  const nwi = el("input", "input"); nwi.type = "password"; nwi.autocomplete = "new-password";
-  nw.append(nwi);
+  const a = passwordInput();
+  nw.append(a.group);
   const cf = el("div", "field");
   cf.append(el("label", null, "Confirm new password"));
-  const cfi = el("input", "input"); cfi.type = "password"; cfi.autocomplete = "new-password";
-  cf.append(cfi);
-  return { nw, nwi, cf, cfi };
+  const b = passwordInput();
+  cf.append(b.group);
+  return { nw, nwi: a.input, cf, cfi: b.input };
 }
 function validateNew(nwi, cfi) {
   if (nwi.value.length < 8) return "New password must be at least 8 characters.";

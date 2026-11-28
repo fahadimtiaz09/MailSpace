@@ -10,7 +10,9 @@ from bson.errors import InvalidId
 from flask import g, jsonify, request, session
 
 from config import Config
-from database import users
+from pymongo.errors import PyMongoError
+
+from database import rate_limits, users
 
 CSRF_COOKIE = "csrf_token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
@@ -169,17 +171,47 @@ def set_csrf_cookie(response):
     return response
 
 
-# ---------- Simple rate limiting ----------
-# Remembers recent attempts in memory. Resets when the server restarts.
+# ---------- Rate limiting ----------
+# Attempts are counted in the database, so all server workers share one count
+# (with 3 workers, a memory-only count would let attackers try 3x as often).
+# If the database can't be reached, a per-worker memory count is used instead.
 _attempts = defaultdict(deque)
 
 
-def rate_limited(key, limit, window_seconds):
-    now = time.time()
+def _rate_limited_memory(key, limit, window_seconds, now, record):
     attempts = _attempts[key]
     while attempts and attempts[0] <= now - window_seconds:
         attempts.popleft()
     if len(attempts) >= limit:
         return True
-    attempts.append(now)
+    if record:
+        attempts.append(now)
     return False
+
+
+def rate_limited(key, limit, window_seconds, record=True):
+    """True if `key` already used up `limit` tries in the last `window_seconds`.
+    Otherwise counts this try (unless record=False) and returns False."""
+    now = time.time()
+    try:
+        recent = rate_limits.count_documents(
+            {"key": key, "at": {"$gt": now - window_seconds}}, limit=limit)
+        if recent >= limit:
+            return True
+        if record:
+            note_attempt(key, window_seconds, now)
+        return False
+    except PyMongoError:
+        return _rate_limited_memory(key, limit, window_seconds, now, record)
+
+
+def note_attempt(key, window_seconds, now=None):
+    """Count one try for `key` (e.g. a wrong password)."""
+    now = now or time.time()
+    try:
+        rate_limits.insert_one({
+            "key": key, "at": now,
+            "expires": datetime.fromtimestamp(now + window_seconds, timezone.utc),
+        })
+    except PyMongoError:
+        _attempts[key].append(now)

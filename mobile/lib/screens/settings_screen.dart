@@ -26,6 +26,7 @@ import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/legal.dart';
 import '../widgets/message_row.dart';
+import '../widgets/password_field.dart';
 
 class SettingsScreen extends StatefulWidget {
   final User user;
@@ -581,13 +582,14 @@ Widget _field(String label, TextEditingController c, {bool secret = false, Strin
         children: [
           Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
-          TextField(
-            controller: c,
-            obscureText: secret,
-            keyboardType: type,
-            autocorrect: !secret,
-            decoration: InputDecoration(hintText: hint),
-          ),
+          if (secret)
+            PasswordField(controller: c, hint: hint)
+          else
+            TextField(
+              controller: c,
+              keyboardType: type,
+              decoration: InputDecoration(hintText: hint),
+            ),
         ],
       ),
     );

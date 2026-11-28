@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../theme.dart';
 import '../widgets/theme_button.dart';
+import '../widgets/password_field.dart';
 
 class ForgotScreen extends StatefulWidget {
   const ForgotScreen({super.key});
@@ -285,10 +286,10 @@ class _ForgotScreenState extends State<ForgotScreen> {
   List<Widget> _stepFour() => [
         _heading('Set a new password', 'At least 8 characters.'),
         const _Label('New password'),
-        TextField(controller: _passwordCtrl, obscureText: true),
+        PasswordField(controller: _passwordCtrl, textInputAction: TextInputAction.next),
         const SizedBox(height: 14),
         const _Label('Confirm new password'),
-        TextField(controller: _confirmCtrl, obscureText: true, onSubmitted: (_) => _busy ? null : _reset()),
+        PasswordField(controller: _confirmCtrl, onSubmitted: (_) => _busy ? null : _reset()),
         const SizedBox(height: 20),
         _mainButton('Reset password', _reset),
       ];
