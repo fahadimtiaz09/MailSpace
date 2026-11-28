@@ -8,5 +8,14 @@ git -C "$APP_DIR" pull --ff-only
 "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/backend/requirements.txt"
 chown -R domailit:domailit "$APP_DIR"
 systemctl restart domailit
-sleep 3
-curl -fsS -H "Host: domailit.com" http://127.0.0.1/api/health && echo && echo "✅ Updated and running."
+# Health check: ask the app itself (gunicorn on port 8000), not nginx —
+# nginx sends plain http to https, which only prints "301 Moved Permanently".
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS http://127.0.0.1:8000/api/health; then
+    echo && echo "✅ Updated and running."
+    exit 0
+  fi
+  sleep 2
+done
+echo "❌ The app did not start. See: journalctl -u domailit -n 50"
+exit 1
